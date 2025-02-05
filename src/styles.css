@@ -112,3 +112,35 @@ button {
     background-color: #0f0f0f69;
   }
 }
+
+.scroll-area {
+  position: absolute;
+  top: 18rem;
+  left: 5rem;
+  right: 5rem;
+  bottom: 5rem;
+  overflow-y: scroll;
+  padding-top: 10rem;
+  border-top: 2px solid;
+  border-top-color: lawngreen;
+  border: 1px solid;
+  border-left-color:aqua;
+  @apply border-r-pink-500; 
+  @apply border-r-[2px];
+    border-radius: 0.5rem;
+    background: rgba(255, 181, 181, 0.2);
+  :focus {
+    outline: none;
+  }
+}
+
+.editor-wrapper {
+  height: 50%;
+  @apply bg-amber-500;
+}
+
+.editor-content {
+  height: 100%;
+  padding: 4rem;
+  @apply bg-amber-100;
+}
