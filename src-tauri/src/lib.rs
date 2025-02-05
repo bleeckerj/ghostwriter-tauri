@@ -37,7 +37,15 @@ use async_openai::{
 };
 mod logger;
 use logger::{CompletionLogEntry, Logger, VectorSearchResult};
+use std::env;
+use lazy_static::lazy_static;
 
+lazy_static! {
+    static ref OPENAI_API_KEY: String = {
+        dotenv::dotenv().ok();
+        env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY must be set")
+    };
+}
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -51,7 +59,7 @@ pub fn run() {
         Ok(_) => println!("Successfully loaded .env file"),
         Err(e) => eprintln!("Error loading .env file: {}", e),
     }
-    let some_variable = std::env::var("SOME_VARIABLE").expect("SOME_VARIABLE not set");
+    let some_variable = std::env::var("OPENAI_API_KEY").expect("SOME_VARIABLE not set");
 
     let embedding_generator = EmbeddingGenerator::new();
     let path = PathBuf::from("./resources/ghostwriter-selectric/vector_store/");
