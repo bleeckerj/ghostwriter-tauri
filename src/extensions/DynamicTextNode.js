@@ -1,12 +1,15 @@
+import { Editor } from '@tiptap/core'
+import StarterKit from '@tiptap/starter-kit'
 import { Node } from '@tiptap/core'
 import { Plugin, PluginKey } from 'prosemirror-state'
 
 // Define the custom node
 const DynamicTextNode = Node.create({
   name: 'dynamicText',
-  group: 'block',
+  group: 'inline', // Change group to inline
+  inline: true, // Ensure the node is treated as inline
   content: 'text*',
-  
+
   addAttributes() {
     return {
       textColor: {
@@ -14,7 +17,7 @@ const DynamicTextNode = Node.create({
         parseHTML: element => element.getAttribute('data-color'),
         renderHTML: attributes => ({
           'data-color': attributes.textColor,
-          style: `color: ${attributes.textColor}`,
+          style: `color: ${attributes.textColor};`,
         })
       },
       id: {
@@ -28,13 +31,13 @@ const DynamicTextNode = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['div', HTMLAttributes, 0]
+    return ['span', HTMLAttributes, 0]
   },
 
   parseHTML() {
     return [
       {
-        tag: 'div[data-type="dynamic-text"]'
+        tag: 'span[data-type="dynamic-text"]'
       }
     ]
   },
@@ -53,5 +56,4 @@ const DynamicTextNode = Node.create({
   }
 })
 
-export default DynamicTextNode  // Use default export
-
+export default DynamicTextNode

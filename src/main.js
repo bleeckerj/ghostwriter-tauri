@@ -18,11 +18,11 @@ async function greet() {
   invoke("greet", { name: greetInputEl.value }).then((res) => {
     greetMsgEl.textContent = res;
     console.log(editor);
-    editor.chain().focus().insertContent('Hello World from Rust Backend '+greetInputEl.value+'<').run()
+    //editor.chain().focus().insertContent('Hello World from Rust Backend '+greetInputEl.value+'<').run()
     editor.chain()
       .focus()
       // First insert regular content
-      .insertContent('Hello World from Rust Backend ' + greetInputEl.value)
+      //.insertContent('Hello World from Rust Backend ' + greetInputEl.value)
       // Then insert our dynamic node as a separate block
       .insertContent({
         type: 'dynamicText',
@@ -30,7 +30,7 @@ async function greet() {
           id: 'node1',
           textColor: 'white'
         },
-        content: [{ type: 'text', text: 'First dynamic node ' }]
+        content: [{ type: 'text', text: 'First node ' }]
       })
       .run()
 
