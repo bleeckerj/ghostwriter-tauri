@@ -2,6 +2,8 @@
 import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import DynamicTextNode from './extensions/DynamicTextNode'
+import DynamicTextMark from './extensions/DynamicTextMark'
+console.log('DynamicTextMark:', DynamicTextMark)
 console.log('DynamicTextNode:', DynamicTextNode)
 
 
@@ -16,23 +18,56 @@ async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
   //greetMsgEl.textContent = await invoke("greet", { name: greetInputEl.value });
   invoke("greet", { name: greetInputEl.value }).then((res) => {
-    greetMsgEl.textContent = res;
+    greetMsgEl.textContent = res + '. And this is JS Frontend saying hello!';
     console.log(editor);
-    //editor.chain().focus().insertContent('Hello World from Rust Backend '+greetInputEl.value+'<').run()
     editor.chain()
-      .focus()
-      // First insert regular content
-      //.insertContent('Hello World from Rust Backend ' + greetInputEl.value)
-      // Then insert our dynamic node as a separate block
-      .insertContent({
-        type: 'dynamicText',
+    .focus()
+    .insertContent([
+      {
+        type: 'text',
+        text: ' '
+      },
+      {
+      type: 'text',
+      text: 'Hello World from Rust Backend ' + greetInputEl.value + ' ',
+      marks: [{
+        type: 'dynamicTextMark',
         attrs: { 
-          id: 'node1',
-          textColor: 'white'
-        },
-        content: [{ type: 'text', text: 'First node ' }]
-      })
-      .run()
+          textColor: 'blue',
+          backgroundColor: '#f3f4f6',
+          twMisc: 'font-semibold px-1 rounded',
+          id: 'backend-id-123',
+          timestamp: Date.now()
+        }  
+      }]
+    },
+    {
+      type: 'text',
+      text: ' '
+    }
+    ])
+    .run()
+    const pos = editor.state.selection.from + 2
+    console.log(pos)
+    // Set selection to after the inserted content
+    editor.commands.setTextSelection(pos)    //editor.chain().focus().insertContent('Hello World from Rust Backend '+greetInputEl.value+'<').run()
+    // editor.chain()
+    //   .focus().insertContent({
+    //     type: 'highlight',
+    //     content
+    //   })
+      // First insert regular content
+      //.focus().insertContent('Hello World from Rust Backend ' + greetInputEl.value)
+      // Then insert our dynamic node as a separate block
+      // .insertContent({
+      //   type: 'dynamicText',
+      //   attrs: { 
+      //     id: 'node1',
+      //     textColor: 'white'
+      //   },
+      //   content: [{ type: 'text', text: 'First node' }]
+      // })
+      // .run()
 
   });
 }
@@ -52,8 +87,9 @@ const editor = new Editor({
   extensions: [
     StarterKit,
     DynamicTextNode,
+    DynamicTextMark
   ],
-  content: '<p>Hello World! This is the Editor</p>',
+  // content: '<p>Hello World! This is the Editor</p>',
 })
 
 

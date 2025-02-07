@@ -9,22 +9,21 @@
 </head>
 
 <body>
-  <p class="bg-amber-300 rounded-2xl p-8 mb-10 mx-auto font-extrabold">Welcome to Ghostwriter</p>
+  <main class="container">
+  <p class="bg-amber-300 rounded-2xl p-4 mx-auto w-11/12 text-center font-extrabold">Welcome to Ghostwriter</p>
   
-  <form class="row" id="greet-form">
+  <form class="row my-4" id="greet-form">
     <input id="greet-input" placeholder="Enter a name..." />
     <button type="submit">Greet</button>
   </form>
-  <p id="greet-msg"></p>
-  <div class="mb-2"> SKIP </div>
+
   <div class="scroll-area">
     <!-- <div class="editor-wrapper"> -->
-      <div class="editor-content">
-        <div class="element"></div>
+      <div class="editor-content  h-full">
+        <div class="element bg-gradient-animated"></div>
       </div>
     </div>
 
-  <main class="container">
       
       <!-- <div class="row">
         <a href="https://tauri.app" target="_blank">
@@ -45,7 +44,8 @@
     
     <!-- <p>Click on the Tauri logo to learn more about the framework</p> -->
     
-    
+    <p id="greet-msg"></p>
+
   </main>
   
 </body>

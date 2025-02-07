@@ -9,6 +9,7 @@ const DynamicTextNode = Node.create({
   group: 'inline', // Change group to inline
   inline: true, // Ensure the node is treated as inline
   content: 'text*',
+  inclusive: false,
 
   addAttributes() {
     return {
@@ -42,18 +43,18 @@ const DynamicTextNode = Node.create({
     ]
   },
 
-  addProseMirrorPlugins() {
-    return [
-      new Plugin({
-        key: new PluginKey('dynamicTextPlugin'),
-        view: () => ({
-          update: (view, prevState) => {
-            // Optional: Add update logic here if needed
-          }
-        })
-      })
-    ]
-  }
+//   addProseMirrorPlugins() {
+//     return [
+//       new Plugin({
+//         key: new PluginKey('dynamicTextPlugin'),
+//         view: () => ({
+//           update: (view, prevState) => {
+//             // Optional: Add update logic here if needed
+//           }
+//         })
+//       })
+//     ]
+//   }
 })
 
 export default DynamicTextNode
