@@ -19,17 +19,6 @@
   -webkit-text-size-adjust: 100%;
 }
 
-.container {
-  margin: 0;  /* Already have this */
-  padding-top: 1vh;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  width: 100%;  /* Add this */
-  max-width: 100%;  /* Add this */
-  padding-left: 0.5rem;  /* Optional, if you want some padding */
-  padding-right: 0.5rem;  /* Optional, if you want some padding */
-}
 
 .logo {
   height: 6em;
@@ -116,9 +105,23 @@ button {
   }
 }
 
+.container {
+  margin: 0;
+  padding-top: 1vh;
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Changed from min-height to fixed height */
+  width: 100%;
+  max-width: 100%;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  overflow: hidden; /* Add this to prevent container scrolling */
+}
+
 .scroll-area {
   position: relative;
   flex: 1;
+  min-height: 0; /* Add this - very important for flex containers! */
   overflow-y: auto;  /* changed from scroll to prevent double scrollbars */
   @apply border-[1px] border-gray-400;
   border-radius: 0.25rem;
@@ -129,16 +132,19 @@ button {
   :focus {
     outline: none;
   }
+  overscroll-behavior: none; /* Completely prevents bouncing */
+  scroll-behavior: smooth; /* Optional: makes programmatic scrolling smooth */
+
+
 }
 
 .ProseMirror {
   padding: 1rem;
   border-radius: 0.5rem;
-  @apply text-gray-700;
-  height: 100%;
-  min-height: 100%;
+  color: rgb(55 65 81); /* Tailwind gray-700 equivalent */
+  flex: 1;
   overflow-y: auto;
-  /* background: rgba(255, 0, 155, 1.0); */
+  line-height: 1.75rem;
 }
 
 /* .editor-wrapper {
@@ -166,4 +172,16 @@ button {
   background: linear-gradient(270deg, #ffb3ba, #ffdfba, #ffffba, #baffc9, #bae1ff);
   background-size: 600% 600%;
   animation: gradient 35s ease infinite;
+}
+
+@keyframes highlight {
+  0% { background-color: rgb(148 163 184); 
+    filter: blur(2px);
+  }
+  100% { background: rgb(148 163 184 / 0.25); color: inherit; padding: 2px 6px; border-radius:0.2rem; filter: blur(0px);
+  }
+}
+
+.animated-highlight {
+  animation: highlight 1s ease-out forwards;
 }

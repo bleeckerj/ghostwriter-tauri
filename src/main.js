@@ -29,15 +29,16 @@ async function greet() {
       },
       {
       type: 'text',
-      text: 'Hello World from Rust Backend ' + greetInputEl.value + ' ',
+      text: res,
       marks: [{
         type: 'dynamicTextMark',
         attrs: { 
           textColor: 'blue',
           backgroundColor: '#f3f4f6',
-          twMisc: 'font-semibold px-1 rounded',
+          twMisc: 'font-semibold rounded animated-highlight',
           id: 'backend-id-123',
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          raw: res
         }  
       }]
     },

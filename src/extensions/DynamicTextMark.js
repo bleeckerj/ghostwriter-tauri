@@ -43,7 +43,14 @@ const DynamicTextMark = Mark.create({
         renderHTML: attributes => ({
           'data-timestamp': attributes.timestamp
         })
-      }
+      },
+      raw: {
+        default: null,
+        parseHTML: element => element.getAttribute('data-raw'),
+        renderHTML: attributes => ({
+          'data-raw': attributes.raw
+        })
+      },
     }
   },
 
