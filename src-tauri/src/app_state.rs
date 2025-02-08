@@ -12,7 +12,7 @@ pub struct AppState {
     pub embedding_generator: Arc<EmbeddingGenerator>,
     pub conversation: Mutex<Conversation>,
     pub buffer: Mutex<String>,
-    pub logger: Mutex<Logger>,
+    //pub logger: Mutex<Logger>,
 }
 
 impl AppState {
@@ -22,10 +22,10 @@ impl AppState {
         log_path: &str,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         // Initialize logger
-        let logger = Logger::new(log_path)?;
+        //let logger = Logger::new(log_path)?;
 
         Ok(Self {
-            logger: Mutex::new(logger),
+            //logger: Mutex::new(logger),
             doc_store: Arc::new(Mutex::new(doc_store)),
             embedding_generator: Arc::new(embedding_generator),
             conversation: Mutex::new(Conversation::new(16000)),

@@ -105,6 +105,16 @@ button {
   }
 }
 
+.ProseMirror {
+  flex: 1 1 auto;
+  min-height: 100%;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  color: rgb(55 65 81); /* Tailwind gray-700 equivalent */
+  overflow-y: auto;
+  line-height: 1.75rem;
+}
+
 .container {
   margin: 0;
   padding-top: 1vh;
@@ -121,7 +131,7 @@ button {
 
 .scroll-area {
   position: relative;
-  flex: 1;
+  flex: 2; /* controls height of the scroll area in relation to other stuff */
   min-height: 0; /* Add this - very important for flex containers! */
   overflow-y: auto;  /* changed from scroll to prevent double scrollbars */
   @apply border-[1px] border-gray-400;
@@ -135,62 +145,54 @@ button {
   }
   overscroll-behavior: none; /* Completely prevents bouncing */
   scroll-behavior: smooth; /* Optional: makes programmatic scrolling smooth */
-
-
 }
 
 .diagnostics-scroll-area {
   position: relative;
-  flex: 1;
-  min-height: 0; /* Add this - very important for flex containers! */
-  overflow-y: auto;  /* changed from scroll to prevent double scrollbars */
+  flex: 2;
+  min-height: 0;
+  overflow-y: auto;
   @apply border-[1px] border-gray-400;
   border-radius: 0.25rem;
   @apply bg-blue-300;
-  display: flex;  /* Add this */
-  flex-direction: column;  /* Add this */
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0rem;
   :focus {
     outline: none;
   }
-  overscroll-behavior: none; /* Completely prevents bouncing */
-  scroll-behavior: smooth; /* Optional: makes programmatic scrolling smooth */
-
-
+  overscroll-behavior: none;
+  scroll-behavior: smooth;
 }
 
-.ProseMirror {
-  padding: 1rem;
-  border-radius: 0.5rem;
-  color: rgb(55 65 81); /* Tailwind gray-700 equivalent */
-  flex: 1;
-  overflow-y: auto;
-  line-height: 1.75rem;
-}
 
-.editor-content {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
 
 .element {
-  flex: 1 0 0;
-  min-height: 0; /* This can be important in nested flex contexts */
-
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  z-index: 1;
 }
 
 .diagnostics {
-  flex: 1 0 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  z-index: 1;
+}
+
+.editor-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
   min-height: 0;
 }
 
 .diagnostics-content {
+  height: 100%;
   display: flex;
   flex-direction: column;
   flex: 1;
-  @apply bg-amber-300;
-  @apply border-[1px] border-gray-400;
 }
 
 

@@ -4,6 +4,7 @@ import StarterKit from '@tiptap/starter-kit'
 import DynamicTextNode from './extensions/DynamicTextNode'
 import DynamicTextMark from './extensions/DynamicTextMark'
 import { DiagnosticLogEntryNode } from './extensions/DiagnosticLogEntryNode'
+import { listen } from '@tauri-apps/api/event';
 
 // import { Editor } from 'https://esm.sh/@tiptap/core'
 // import StarterKit from 'https://esm.sh/@tiptap/starter-kit'
@@ -73,15 +74,38 @@ async function greet() {
   });
 }
 
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
   greetInputEl = document.querySelector("#greet-input");
   greetMsgEl = document.querySelector("#greet-msg");
   document.querySelector("#greet-form").addEventListener("submit", (e) => {
     e.preventDefault();
     greet();
   });
-});
+  // Add Tauri event listener here
+  let unlistenFn;
+  try {
+    unlistenFn = await listen('diagnostic-log', (event) => {
+      console.log('Received event:', event);
+      if (event.payload) {
+        addLogEntry({
+          id: Date.now(),
+          timestamp: event.payload.timestamp,
+          message: event.payload.message,
+          level: 'info'
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Failed to setup event listener:', error);
+  }
 
+  // Cleanup when window unloads
+  window.addEventListener('unload', () => {
+    if (unlistenFn) {
+      unlistenFn();
+    }
+  });
+});
 
 const editor = new Editor({
   element: document.querySelector('.element'),
@@ -141,8 +165,3 @@ function updateNodeColor(id, newColor) {
     view.dispatch(tr)
   }
 }
-
-// Example: Change color after 3 seconds
-setTimeout(() => {
-  updateNodeColor('123', '#ff0000')
-}, 3000)
