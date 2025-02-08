@@ -47,19 +47,26 @@ async function greet() {
     }
     ])
     .run()
+
     const pos = editor.state.selection.from + 2
     console.log(pos)
+    editor.commands.setTextSelection(pos)   
+    
+    
+    //editor.chain().focus().insertContent('Hello World from Rust Backend '+greetInputEl.value+'<').run()
+    editor.chain()
+      //First insert regular content
+      .focus().insertContent('Hello World from Rust Backend ' + greetInputEl.value)
+
+
     addLogEntry({  
       id: '1',
       timestamp: new Date().toISOString(),
       message: 'Application started Now what? Writing objects: 100% (11/11), 1.55 KiB | 1.55 MiB/s, done.',
       level: 'info'
-    })
+    }).run()
     // Set selection to after the inserted content
-    editor.commands.setTextSelection(pos)    //editor.chain().focus().insertContent('Hello World from Rust Backend '+greetInputEl.value+'<').run()
-    editor.chain()
-      //First insert regular content
-      .focus().insertContent('Hello World from Rust Backend ' + greetInputEl.value)
+
       //Then insert our dynamic node as a separate block
       // .insertContent({
       //   type: 'dynamicText',
@@ -69,7 +76,7 @@ async function greet() {
       //   },
       //   content: [{ type: 'text', text: 'First node' }]
       // })
-      .run()
+   
 
   });
 }
