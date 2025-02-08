@@ -3,9 +3,7 @@ import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import DynamicTextNode from './extensions/DynamicTextNode'
 import DynamicTextMark from './extensions/DynamicTextMark'
-console.log('DynamicTextMark:', DynamicTextMark)
-console.log('DynamicTextNode:', DynamicTextNode)
-
+import { DiagnosticLogEntryNode } from './extensions/DiagnosticLogEntryNode'
 
 // import { Editor } from 'https://esm.sh/@tiptap/core'
 // import StarterKit from 'https://esm.sh/@tiptap/starter-kit'
@@ -50,16 +48,18 @@ async function greet() {
     .run()
     const pos = editor.state.selection.from + 2
     console.log(pos)
+    addLogEntry({  
+      id: '1',
+      timestamp: new Date().toISOString(),
+      message: 'Application started Now what? Writing objects: 100% (11/11), 1.55 KiB | 1.55 MiB/s, done.',
+      level: 'info'
+    })
     // Set selection to after the inserted content
     editor.commands.setTextSelection(pos)    //editor.chain().focus().insertContent('Hello World from Rust Backend '+greetInputEl.value+'<').run()
-    // editor.chain()
-    //   .focus().insertContent({
-    //     type: 'highlight',
-    //     content
-    //   })
-      // First insert regular content
-      //.focus().insertContent('Hello World from Rust Backend ' + greetInputEl.value)
-      // Then insert our dynamic node as a separate block
+    editor.chain()
+      //First insert regular content
+      .focus().insertContent('Hello World from Rust Backend ' + greetInputEl.value)
+      //Then insert our dynamic node as a separate block
       // .insertContent({
       //   type: 'dynamicText',
       //   attrs: { 
@@ -68,7 +68,7 @@ async function greet() {
       //   },
       //   content: [{ type: 'text', text: 'First node' }]
       // })
-      // .run()
+      .run()
 
   });
 }
@@ -88,10 +88,37 @@ const editor = new Editor({
   extensions: [
     StarterKit,
     DynamicTextNode,
-    DynamicTextMark
+    DynamicTextMark,
+    DiagnosticLogEntryNode
   ],
   // content: '<p>Hello World! This is the Editor</p>',
 })
+
+const diagnostics = new Editor({
+  element: document.querySelector('.diagnostics'),
+  extensions: [
+    StarterKit,
+    DiagnosticLogEntryNode,
+    DynamicTextMark,
+  ],
+})
+
+function addLogEntry(entry) {
+  let pos = editor.state.selection.from + 2
+  editor.commands.setTextSelection(pos)
+  diagnostics.commands.insertContent({
+    type: 'logEntry',
+    attrs: {
+      id: entry.id,
+      timestamp: entry.timestamp,
+      message: entry.message,
+      level: entry.level,
+    }
+  })
+  pos = diagnostics.state.selection.from + 2
+  diagnostics.commands.setTextSelection(pos)
+}
+
 
 
 // Function to update node color

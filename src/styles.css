@@ -110,6 +110,7 @@ button {
   padding-top: 1vh;
   display: flex;
   flex-direction: column;
+  @apply gap-y-1;
   height: 100vh; /* Changed from min-height to fixed height */
   width: 100%;
   max-width: 100%;
@@ -128,7 +129,26 @@ button {
   @apply bg-blue-300;
   display: flex;  /* Add this */
   flex-direction: column;  /* Add this */
-  margin-bottom: 1rem;  /* Add some space at bottom */
+  margin-bottom: 0rem;  /* Add some space at bottom */
+  :focus {
+    outline: none;
+  }
+  overscroll-behavior: none; /* Completely prevents bouncing */
+  scroll-behavior: smooth; /* Optional: makes programmatic scrolling smooth */
+
+
+}
+
+.diagnostics-scroll-area {
+  position: relative;
+  flex: 1;
+  min-height: 0; /* Add this - very important for flex containers! */
+  overflow-y: auto;  /* changed from scroll to prevent double scrollbars */
+  @apply border-[1px] border-gray-400;
+  border-radius: 0.25rem;
+  @apply bg-blue-300;
+  display: flex;  /* Add this */
+  flex-direction: column;  /* Add this */
   :focus {
     outline: none;
   }
@@ -147,11 +167,6 @@ button {
   line-height: 1.75rem;
 }
 
-/* .editor-wrapper {
-  height: 50%;
-  @apply bg-amber-500;
-} */
-
 .editor-content {
   height: 100%;
   display: flex;
@@ -160,7 +175,22 @@ button {
 }
 
 .element {
+  flex: 1 0 0;
+  min-height: 0; /* This can be important in nested flex contexts */
+
+}
+
+.diagnostics {
+  flex: 1 0 0;
+  min-height: 0;
+}
+
+.diagnostics-content {
+  display: flex;
+  flex-direction: column;
   flex: 1;
+  @apply bg-amber-300;
+  @apply border-[1px] border-gray-400;
 }
 
 
@@ -184,4 +214,58 @@ button {
 
 .animated-highlight {
   animation: highlight 1s ease-out forwards;
+}
+
+
+.log-entry {
+  @apply rounded-md;
+  @apply px-2 py-1;
+  @apply my-2;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  @apply shadow-[2px_2px_2px_2px__rgba(0,0,0,0.5)];
+  user-select: none;
+}
+
+.log-level-info {
+  background-color: #f8f9fa;
+}
+
+.log-level-warning {
+  background-color: #fff3cd;
+}
+
+.log-level-error {
+  background-color: #f8d7da;
+}
+
+.log-timestamp {
+  color: #666;
+  font-size: 0.9em;
+  min-width: 150px;
+  @apply font-mono;
+  @apply self-start;
+}
+
+.log-message {
+  flex: 1;
+  @apply leading-5;
+  @apply pt-1;
+  @apply self-start;
+}
+
+.log-delete-btn {
+  @apply bg-red-500 text-black;
+  @apply border-[0.5px] border-gray-400;
+  @apply rounded-md;
+  @apply px-4;
+  @apply text-[0.8em];
+  transform: scale(0.95);
+  transition: transform 0.2s;
+}
+
+.log-delete-btn:hover {
+  transform: scale(1);
+  @apply bg-red-600;
 }
