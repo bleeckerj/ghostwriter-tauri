@@ -51,9 +51,15 @@ lazy_static! {
 }
 
 #[derive(Serialize, Clone)]
-struct DiagnosticLog {
+struct RichLog {
     message: String,
     data: String,
+    timestamp: String,
+}
+
+#[derive(Serialize, Clone)]
+struct SimpleLog {
+    message: String,
     timestamp: String,
 }
 
@@ -64,27 +70,18 @@ async fn completion_from_context(
     input: String,
 ) -> Result<String, String> {
     
-    // Step 1: Create diagnostic log
-    let log_data = DiagnosticLog {
-        message: "Processing completion request".to_string(),
-        data: input.clone(),
+    // Step 1: Create rich log
+    // let log_data = RichLog {
+    //     message: "Processing completion request".to_string(),
+    //     data: input.clone(),
+    //     timestamp: chrono::Local::now().to_rfc3339(),
+    // };
+    let simple_log_data = SimpleLog {
+        message: format!("Processing completion request. Input: `{}`", input),
         timestamp: chrono::Local::now().to_rfc3339(),
     };
-    println!("Attempting to emit diagnostic log");
-
-    // app_handle.emit_all("diagnostic-log", ());
-    app_handle.emit("diagnostic-log", log_data).map_err(|e| e.to_string())?;
-    println!("Emitted diagnostic log");
-
-    // app_handle.emit("diagnostic-log", DiagnosticLog {
-    //     message: "Processing completion request".to_string(),
-    //     data: "Hello".to_string(),
-    //     timestamp: chrono::Local::now().to_rfc3339(),
-    // }).map_err(|e| e.to_string())?;
-    
-    // let document: Value = serde_json::from_str(&input)
-    // .map_err(|e| e.to_string())?;
-    
+    app_handle.emit("simple-log-message", simple_log_data).unwrap();
+    println!("Processing completion request. `{}`", truncate(&input, 20));
     Ok("Hello".to_string())
 }
 
@@ -96,13 +93,13 @@ async fn greet(
     name: &str
 ) -> Result<String, String> {
     // Call completion_from_context with received parameters
-    completion_from_context(state, app_handle, name.to_string()).await?;
+    //completion_from_context(state, app_handle, name.to_string()).await?;
 
     let message;
     if name.is_empty() {
         message = format!("Hello! You've been greeted from Rust!")
     } else {
-        message = format!("Hello, {}! You've been greeted from Rust!", name)
+        message = format!("Hello, `{}`! You've been greeted from Rust!", name)
     }
     Ok(message)
     
@@ -150,4 +147,12 @@ pub fn run() {
     
     // Load .env file
     
+}
+
+
+fn truncate(s: &str, max_chars: usize) -> String {
+    match s.char_indices().nth(max_chars) {
+        None => s.to_string(),
+        Some((idx, _)) => format!("{}...", &s[..idx])
+    }
 }

@@ -1,9 +1,9 @@
-// DiagnosticLogEntryNode.js
+// RichLogEntryNode.js
 import { Node } from '@tiptap/core'
 import { mergeAttributes } from '@tiptap/core'
 
-export const DiagnosticLogEntryNode = Node.create({
-  name: 'logEntry',
+export const RichLogEntryNode = Node.create({
+  name: 'richLogEntry',
   
   group: 'block',
   
@@ -54,8 +54,11 @@ export const DiagnosticLogEntryNode = Node.create({
       // Timestamp
       const timestamp = document.createElement('span')
       timestamp.classList.add('log-timestamp')
-      timestamp.textContent = new Date(node.attrs.timestamp).toLocaleString()
-      
+      timestamp.textContent = new Date(node.attrs.timestamp)
+      .toISOString()
+      .replace('T', ' ')
+      .replace('Z', '')
+      + new Date().toString().match(/GMT([+-]\d{4})/)[1]     
       // Message
       const message = document.createElement('span')
       message.classList.add('log-message')

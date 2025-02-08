@@ -143,13 +143,11 @@ button {
   :focus {
     outline: none;
   }
-  overscroll-behavior: none; /* Completely prevents bouncing */
-  scroll-behavior: smooth; /* Optional: makes programmatic scrolling smooth */
 }
 
 .diagnostics-scroll-area {
   position: relative;
-  flex: 2;
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
   @apply border-[1px] border-gray-400;
@@ -161,8 +159,14 @@ button {
   :focus {
     outline: none;
   }
-  overscroll-behavior: none;
-  scroll-behavior: smooth;
+}
+.diagnostics-scroll-area.hidden {
+  display: none !important;
+  visibility: collapse;
+  flex: 0;
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 
@@ -172,6 +176,9 @@ button {
   min-height: 0;
   overflow-y: auto;
   z-index: 1;
+  overscroll-behavior: none; /* Completely prevents bouncing */
+  scroll-behavior: smooth; /* Optional: makes programmatic scrolling smooth */
+
 }
 
 .diagnostics {
@@ -179,6 +186,9 @@ button {
   min-height: 0;
   overflow-y: auto;
   z-index: 1;
+  overscroll-behavior: none; /* Completely prevents bouncing */
+  scroll-behavior: smooth; /* Optional: makes programmatic scrolling smooth */
+
 }
 
 .editor-content {
@@ -223,6 +233,7 @@ button {
   @apply rounded-md;
   @apply px-2 py-1;
   @apply my-2;
+  @apply font-mono;
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -270,4 +281,40 @@ button {
 .log-delete-btn:hover {
   transform: scale(1);
   @apply bg-red-600;
+}
+
+/* simple log entry */
+.simple-log-entry {
+@apply text-green-400;
+@apply font-mono;
+@apply text-[0.6em];
+@apply pl-2;
+@apply leading-[1rem];
+@apply mb-6;
+@apply border-l-4;
+}
+
+.simple-log-level-info {
+  @apply text-green-400;
+}
+
+.simple-log-level-warning {
+  @apply text-yellow-400;
+}
+
+.simple-log-level-error {
+  @apply text-red-500;  
+}
+
+.simple-log-timestamp {
+  @apply text-green-500;
+  @apply bg-gray-800;
+  @apply px-2 py-1;
+  @apply block mb-1;
+  @apply w-fit;
+  @apply rounded-sm
+}
+
+.simple-log-message {
+
 }

@@ -3,7 +3,8 @@ import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import DynamicTextNode from './extensions/DynamicTextNode'
 import DynamicTextMark from './extensions/DynamicTextMark'
-import { DiagnosticLogEntryNode } from './extensions/DiagnosticLogEntryNode'
+import { RichLogEntryNode } from './extensions/RichLogEntryNode'
+import { SimpleLogEntryNode } from './extensions/SimpleLogEntryNode'
 import { listen } from '@tauri-apps/api/event';
 
 // import { Editor } from 'https://esm.sh/@tiptap/core'
@@ -17,8 +18,8 @@ async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
   //greetMsgEl.textContent = await invoke("greet", { name: greetInputEl.value });
   invoke("greet", { name: greetInputEl.value }).then((res) => {
-    greetMsgEl.textContent = res + '. And this is JS Frontend saying hello!';
-    console.log(editor);
+    greetMsgEl.textContent = truncateText(res, 60);
+
     editor.chain()
     .focus()
     .insertContent([
@@ -47,19 +48,11 @@ async function greet() {
     }
     ])
     .run()
-    const pos = editor.state.selection.from + 2
-    console.log(pos)
-    addLogEntry({  
-      id: '1',
-      timestamp: new Date().toISOString(),
-      message: 'Application started Now what? Writing objects: 100% (11/11), 1.55 KiB | 1.55 MiB/s, done.',
-      level: 'info'
-    })
-    // Set selection to after the inserted content
+
+    let pos = editor.state.selection.from + 2
     editor.commands.setTextSelection(pos)    //editor.chain().focus().insertContent('Hello World from Rust Backend '+greetInputEl.value+'<').run()
-    editor.chain()
-      //First insert regular content
-      .focus().insertContent('Hello World from Rust Backend ' + greetInputEl.value)
+    //editor.chain()
+    //  .focus().insertContent('Hello World from Rust Backend ' + greetInputEl.value)
       //Then insert our dynamic node as a separate block
       // .insertContent({
       //   type: 'dynamicText',
@@ -70,6 +63,14 @@ async function greet() {
       //   content: [{ type: 'text', text: 'First node' }]
       // })
       .run()
+
+
+    // Just to do something 
+    console.log('Editor content:', editor.getText());
+    invoke("completion_from_context", {input: editor.getText() }).then((res) => {
+      console.log('Completion from context:', res);
+    });
+  
 
   });
 }
@@ -83,11 +84,12 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
   // Add Tauri event listener here
   let unlistenFn;
+  console.log('***** Setting up event listener...');
   try {
-    unlistenFn = await listen('diagnostic-log', (event) => {
-      console.log('Received event:', event);
+    unlistenFn = await listen('simple-log-message', (event) => {
+      console.log('Received simple-log-message:', event);
       if (event.payload) {
-        addLogEntry({
+        addSimpleLogEntry({
           id: Date.now(),
           timestamp: event.payload.timestamp,
           message: event.payload.message,
@@ -113,7 +115,6 @@ const editor = new Editor({
     StarterKit,
     DynamicTextNode,
     DynamicTextMark,
-    DiagnosticLogEntryNode
   ],
   // content: '<p>Hello World! This is the Editor</p>',
 })
@@ -122,16 +123,17 @@ const diagnostics = new Editor({
   element: document.querySelector('.diagnostics'),
   extensions: [
     StarterKit,
-    DiagnosticLogEntryNode,
+    RichLogEntryNode,
     DynamicTextMark,
+    SimpleLogEntryNode,
   ],
 })
 
-function addLogEntry(entry) {
+function addRichLogEntry(entry) {
   let pos = editor.state.selection.from + 2
   editor.commands.setTextSelection(pos)
   diagnostics.commands.insertContent({
-    type: 'logEntry',
+    type: 'richLogEntry',
     attrs: {
       id: entry.id,
       timestamp: entry.timestamp,
@@ -141,6 +143,25 @@ function addLogEntry(entry) {
   })
   pos = diagnostics.state.selection.from + 2
   diagnostics.commands.setTextSelection(pos)
+}
+
+function addSimpleLogEntry(entry) {
+  let pos = editor.state.selection.from + 2
+  editor.commands.setTextSelection(pos)
+  diagnostics.commands.insertContent({
+    type: 'simpleLogEntry',
+    attrs: {
+      id: entry.id,
+      timestamp: entry.timestamp,
+      message: entry.message,
+      level: entry.level,
+    }
+  })
+  pos = diagnostics.state.selection.from + 1
+  diagnostics.commands.setTextSelection(pos)
+  setTimeout(() => {
+    diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, 0);
 }
 
 
@@ -164,4 +185,10 @@ function updateNodeColor(id, newColor) {
   if (hasUpdated) {
     view.dispatch(tr)
   }
+}
+
+function truncateText(text, maxLength = 100) {
+  return text.length > maxLength 
+      ? text.slice(0, maxLength) + '...' 
+      : text;
 }
