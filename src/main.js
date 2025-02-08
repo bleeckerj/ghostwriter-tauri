@@ -18,8 +18,8 @@ async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
   //greetMsgEl.textContent = await invoke("greet", { name: greetInputEl.value });
   invoke("greet", { name: greetInputEl.value }).then((res) => {
-    greetMsgEl.textContent = truncateText(res, 60);
-
+    greetMsgEl.textContent = res + '. And this is JS Frontend saying hello!';
+    console.log(editor);
     editor.chain()
     .focus()
     .insertContent([
@@ -48,11 +48,19 @@ async function greet() {
     }
     ])
     .run()
-
-    let pos = editor.state.selection.from + 2
+    const pos = editor.state.selection.from + 2
+    console.log(pos)
+    addLogEntry({  
+      id: '1',
+      timestamp: new Date().toISOString(),
+      message: 'Application started Now what? Writing objects: 100% (11/11), 1.55 KiB | 1.55 MiB/s, done.',
+      level: 'info'
+    })
+    // Set selection to after the inserted content
     editor.commands.setTextSelection(pos)    //editor.chain().focus().insertContent('Hello World from Rust Backend '+greetInputEl.value+'<').run()
-    //editor.chain()
-    //  .focus().insertContent('Hello World from Rust Backend ' + greetInputEl.value)
+    editor.chain()
+      //First insert regular content
+      .focus().insertContent('Hello World from Rust Backend ' + greetInputEl.value)
       //Then insert our dynamic node as a separate block
       // .insertContent({
       //   type: 'dynamicText',
@@ -63,14 +71,6 @@ async function greet() {
       //   content: [{ type: 'text', text: 'First node' }]
       // })
       .run()
-
-
-    // Just to do something 
-    console.log('Editor content:', editor.getText());
-    invoke("completion_from_context", {input: editor.getText() }).then((res) => {
-      console.log('Completion from context:', res);
-    });
-  
 
   });
 }
@@ -84,12 +84,24 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
   // Add Tauri event listener here
   let unlistenFn;
+  let unlistenRichLogMsg;
   console.log('***** Setting up event listener...');
   try {
     unlistenFn = await listen('simple-log-message', (event) => {
       console.log('Received simple-log-message:', event);
       if (event.payload) {
         addSimpleLogEntry({
+          id: Date.now(),
+          timestamp: event.payload.timestamp,
+          message: event.payload.message,
+          level: 'info'
+        });
+      }
+    });
+    unlistenRichLogMsg = await listen('rich-log-message', (event) => {
+      console.log('Received rich-log-message:', event);
+      if (event.payload) {
+        addRichLogEntry({
           id: Date.now(),
           timestamp: event.payload.timestamp,
           message: event.payload.message,
@@ -105,6 +117,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   window.addEventListener('unload', () => {
     if (unlistenFn) {
       unlistenFn();
+    }
+    if (unlistenRichLogMsg) {
+      unlistenRichLogMsg();
     }
   });
 });
