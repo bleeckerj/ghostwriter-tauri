@@ -70,19 +70,29 @@ async fn completion_from_context(
     input: String,
 ) -> Result<String, String> {
     
+    //println!("Processing completion request. `{}`", truncate(&input, 20));
+    Ok("Hello".to_string())
+}
+
+#[tauri::command]
+async fn test_log_emissions(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    input: String,
+) -> Result<String, String> {
     // Step 1: Create rich log
-    // let log_data = RichLog {
-    //     message: "Processing completion request".to_string(),
-    //     data: input.clone(),
-    //     timestamp: chrono::Local::now().to_rfc3339(),
-    // };
+    let rich_log_data = RichLog {
+        message: "This might be a piece of the canon".to_string(),
+        data: input.clone(),
+        timestamp: chrono::Local::now().to_rfc3339(),
+    };
     let simple_log_data = SimpleLog {
         message: format!("Processing completion request. Input: `{}`", input),
         timestamp: chrono::Local::now().to_rfc3339(),
     };
     app_handle.emit("simple-log-message", simple_log_data).unwrap();
-    println!("Processing completion request. `{}`", truncate(&input, 20));
-    Ok("Hello".to_string())
+    app_handle.emit("rich-log-message", rich_log_data).unwrap();
+    Ok("Logged".to_string())
 }
 
 
@@ -141,7 +151,9 @@ pub fn run() {
     .plugin(tauri_plugin_opener::init())
     .invoke_handler(tauri::generate_handler![
         greet,
-        completion_from_context])
+        completion_from_context,
+        test_log_emissions,
+    ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
     

@@ -3,8 +3,7 @@ import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import DynamicTextNode from './extensions/DynamicTextNode'
 import DynamicTextMark from './extensions/DynamicTextMark'
-import { RichLogEntryNode } from './extensions/RichLogEntryNode'
-import { SimpleLogEntryNode } from './extensions/SimpleLogEntryNode'
+//import DiagnosticLogEntryNode from './extensions/DiagnosticLogEntryNode'
 import { listen } from '@tauri-apps/api/event';
 
 // import { Editor } from 'https://esm.sh/@tiptap/core'
@@ -84,24 +83,11 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
   // Add Tauri event listener here
   let unlistenFn;
-  let unlistenRichLogMsg;
-  console.log('***** Setting up event listener...');
   try {
-    unlistenFn = await listen('simple-log-message', (event) => {
-      console.log('Received simple-log-message:', event);
+    unlistenFn = await listen('diagnostic-log', (event) => {
+      console.log('Received event:', event);
       if (event.payload) {
-        addSimpleLogEntry({
-          id: Date.now(),
-          timestamp: event.payload.timestamp,
-          message: event.payload.message,
-          level: 'info'
-        });
-      }
-    });
-    unlistenRichLogMsg = await listen('rich-log-message', (event) => {
-      console.log('Received rich-log-message:', event);
-      if (event.payload) {
-        addRichLogEntry({
+        addLogEntry({
           id: Date.now(),
           timestamp: event.payload.timestamp,
           message: event.payload.message,
@@ -118,9 +104,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (unlistenFn) {
       unlistenFn();
     }
-    if (unlistenRichLogMsg) {
-      unlistenRichLogMsg();
-    }
   });
 });
 
@@ -130,6 +113,7 @@ const editor = new Editor({
     StarterKit,
     DynamicTextNode,
     DynamicTextMark,
+    //DiagnosticLogEntryNode
   ],
   // content: '<p>Hello World! This is the Editor</p>',
 })
@@ -138,17 +122,16 @@ const diagnostics = new Editor({
   element: document.querySelector('.diagnostics'),
   extensions: [
     StarterKit,
-    RichLogEntryNode,
+    //DiagnosticLogEntryNode,
     DynamicTextMark,
-    SimpleLogEntryNode,
   ],
 })
 
-function addRichLogEntry(entry) {
+function addLogEntry(entry) {
   let pos = editor.state.selection.from + 2
   editor.commands.setTextSelection(pos)
   diagnostics.commands.insertContent({
-    type: 'richLogEntry',
+    type: 'logEntry',
     attrs: {
       id: entry.id,
       timestamp: entry.timestamp,
@@ -158,25 +141,6 @@ function addRichLogEntry(entry) {
   })
   pos = diagnostics.state.selection.from + 2
   diagnostics.commands.setTextSelection(pos)
-}
-
-function addSimpleLogEntry(entry) {
-  let pos = editor.state.selection.from + 2
-  editor.commands.setTextSelection(pos)
-  diagnostics.commands.insertContent({
-    type: 'simpleLogEntry',
-    attrs: {
-      id: entry.id,
-      timestamp: entry.timestamp,
-      message: entry.message,
-      level: entry.level,
-    }
-  })
-  pos = diagnostics.state.selection.from + 1
-  diagnostics.commands.setTextSelection(pos)
-  setTimeout(() => {
-    diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, 0);
 }
 
 
@@ -200,10 +164,4 @@ function updateNodeColor(id, newColor) {
   if (hasUpdated) {
     view.dispatch(tr)
   }
-}
-
-function truncateText(text, maxLength = 100) {
-  return text.length > maxLength 
-      ? text.slice(0, maxLength) + '...' 
-      : text;
 }
