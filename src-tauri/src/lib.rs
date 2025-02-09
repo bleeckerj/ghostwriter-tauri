@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use serde::Serialize;
 use serde_json::Value;
-
+use tokio::time::{sleep, Duration};
 use tauri::{generate_handler, Builder, Emitter, AppHandle, Manager};
 use tauri::{
     menu::{Menu, MenuItem},
@@ -102,6 +102,16 @@ async fn greet(
     // Call completion_from_context with received parameters
     //completion_from_context(state, app_handle, name.to_string()).await?;
 
+    let progress_indicator = ProgressIndicator {
+        progress_id: "embedder".to_string(),
+        current_step: "0".to_string(),
+        total_steps: "4".to_string(),
+        current_file: "the-myth".to_string(),
+        meta: "Ingesting/Embedding".to_string(),
+    };
+
+    load_progress_indicator(&app_handle, progress_indicator);
+
     let message;
     if name.is_empty() {
         message = "Hello".to_string();
@@ -135,89 +145,30 @@ async fn rich_log_message(
 }
 
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    
-    match dotenv::dotenv() {
-        Ok(_) => println!("Successfully loaded .env file"),
-        Err(e) => eprintln!("Error loading .env file: {}", e),
-    }
-    let some_variable = std::env::var("OPENAI_API_KEY").expect("SOME_VARIABLE not set");
-    
-    let embedding_generator = EmbeddingGenerator::new();
-    let path = PathBuf::from("./resources/ghostwriter-selectric/vector_store/");
-    
-    println!("Initializing DocumentStore with path: {:?}", path);
 
-    let doc_store = DocumentStore::new(path.clone()).expect(&format!(
-        "Failed to initialize document store at path: {:?}",
-        path
-    ));
-    println!("DocumentStore successfully initialized.");
-    let embedding_generator = EmbeddingGenerator::new();
-    let app_state = AppState::new(
-        doc_store,
-        embedding_generator,
-        "path/to/log.txt"
-    ).expect("Failed to create AppState");
-
-
-    tauri::Builder::default()
-    .manage(app_state)
-    .setup(|app| {
-        let app_handle = app.handle();
-        let new_logger = NewLogger::new(app_handle.clone());
-        new_logger.simple_log_message(
-            "Ghostwriter Up.".to_string(),
-            "start".to_string(),
-            "info".to_string());
-        new_logger.rich_log_message(
-            "Ghostwriter Up.".to_string(),
-            "Ghostwriter is up and running.".to_string(),
-            "info".to_string()
-        );
-        let progress_indicator = ProgressIndicator {
-            progress_id: "embedder".to_string(),
-            current_step: "0".to_string(),
-            total_steps: "987".to_string(),
-            current_file: "the-myth".to_string(),
-        };
-
-        load_progress_indicator(app_handle, progress_indicator);
-
-        app.manage(new_logger.clone());
-        // Load .env file
-        dotenv::dotenv().ok();
-        Ok(())
-    })
-    .plugin(tauri_plugin_clipboard_manager::init())
-    .plugin(tauri_plugin_dialog::init())
-    .plugin(tauri_plugin_opener::init())
-    .invoke_handler(tauri::generate_handler![
-        greet,
-        completion_from_context,
-        test_log_emissions,
-        simple_log_message,
-        rich_log_message,
-    ])
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
-    
-
-    
-}
 
 #[derive(Serialize, Clone)]
 struct ProgressIndicator {
     progress_id: String,
     current_step: String,
     total_steps: String,
-    current_file: String
+    current_file: String,
+    meta: String,
+}
+#[derive(Serialize, Clone)]
+struct ProgressUpdate {
+    current_step: String,
+    current_file: String,
+    progress_id: String,
+    total_steps: String,
+    meta: String,
 }
 
 fn load_progress_indicator(app_handle: &AppHandle, progress_indicator: ProgressIndicator)  
 {
 
+    let handle = app_handle.clone();
+    
     match app_handle.emit("load-progress-indicator", progress_indicator.clone()) {
         Ok(_) => println!("Progress indicator emitted successfully"),
         Err(e) => {
@@ -226,6 +177,30 @@ fn load_progress_indicator(app_handle: &AppHandle, progress_indicator: ProgressI
             //new_logger.simple_log_message(message, "".to_string(), "error".to_string());
         },
     }
+    // TEST TEST TEST TEST
+    // Spawn a test loop that updates progress
+    tauri::async_runtime::spawn(async move {
+        // Change from 0..=99 to include 100
+        for i in 0..=progress_indicator.total_steps.parse::<i32>().unwrap() {
+            let update = ProgressUpdate {
+                current_step: i.to_string(),
+                current_file: progress_indicator.current_file.clone(),
+                progress_id: progress_indicator.progress_id.clone(),
+                total_steps: progress_indicator.total_steps.clone(),
+                meta: progress_indicator.meta.clone(),
+            };
+            
+            match handle.emit("progress-indicator-update", update) {
+                Ok(_) => println!("Progress indicator emitted successfully: step {}", i),
+                Err(e) => eprintln!("Failed to emit progress indicator: {}", e),
+            }
+
+            // Don't sleep on the final iteration
+            if i < 100 {
+                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+            }
+        }
+    });
     //progress_indicator
 }
 
@@ -271,7 +246,12 @@ impl NewLogger {
             timestamp: chrono::Local::now().to_rfc3339(),
             id: Some(id.clone()),
         };
-        self.app_handle.emit("simple-log-message", simple_log_data).unwrap();
+        match self.app_handle.emit("simple-log-message", simple_log_data) {
+            Ok(_) => println!("Simple log emitted successfully"),
+            Err(e) => {
+                eprintln!("Failed to emit simple log: {}", e);
+            }
+        }
     }
 
     fn rich_log_message(&self, message: String, data: String, level: String) {
@@ -281,6 +261,77 @@ impl NewLogger {
             timestamp: chrono::Local::now().to_rfc3339(),
             level: level.clone(),
         };
-        self.app_handle.emit("rich-log-message", rich_log_data).unwrap();
+        match self.app_handle.emit("rich-log-message", rich_log_data) {
+            Ok(_) => println!("Rich log emitted successfully"),
+            Err(e) => {
+                eprintln!("Failed to emit rich log: {}", e);
+            }   
+        }
     }
+}
+
+
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    
+    match dotenv::dotenv() {
+        Ok(_) => println!("Successfully loaded .env file"),
+        Err(e) => eprintln!("Error loading .env file: {}", e),
+    }
+    let some_variable = std::env::var("OPENAI_API_KEY").expect("SOME_VARIABLE not set");
+    
+    let embedding_generator = EmbeddingGenerator::new();
+    let path = PathBuf::from("./resources/ghostwriter-selectric/vector_store/");
+    
+    println!("Initializing DocumentStore with path: {:?}", path);
+
+    let doc_store = DocumentStore::new(path.clone()).expect(&format!(
+        "Failed to initialize document store at path: {:?}",
+        path
+    ));
+    println!("DocumentStore successfully initialized.");
+    let embedding_generator = EmbeddingGenerator::new();
+    let app_state = AppState::new(
+        doc_store,
+        embedding_generator,
+        "path/to/log.txt"
+    ).expect("Failed to create AppState");
+
+
+    tauri::Builder::default()
+    .manage(app_state)
+    .setup(|app| {
+        let app_handle = app.handle();
+        let new_logger = NewLogger::new(app_handle.clone());
+        new_logger.simple_log_message(
+            "Ghostwriter Up.".to_string(),
+            "start".to_string(),
+            "info".to_string());
+        new_logger.rich_log_message(
+            "Ghostwriter Up.".to_string(),
+            "Ghostwriter is up and running.".to_string(),
+            "info".to_string()
+        );
+
+        app.manage(new_logger.clone());
+        // Load .env file
+        dotenv::dotenv().ok();
+        Ok(())
+    })
+    .plugin(tauri_plugin_clipboard_manager::init())
+    .plugin(tauri_plugin_dialog::init())
+    .plugin(tauri_plugin_opener::init())
+    .invoke_handler(tauri::generate_handler![
+        greet,
+        completion_from_context,
+        test_log_emissions,
+        simple_log_message,
+        rich_log_message,
+    ])
+    .run(tauri::generate_context!())
+    .expect("error while running tauri application");
+    
+
+    
 }

@@ -319,3 +319,50 @@ button {
   transform: scale(1);
   @apply bg-red-600;
 }
+
+
+.progress-indicator {
+  @apply bg-gray-50;
+  @apply pb-8 px-3 pt-4;
+  @apply my-3;
+  @apply rounded-sm;
+  @apply font-mono;
+  @apply text-[0.8em];
+}
+
+.progress-count {
+  @apply font-mono;
+  @apply bg-amber-200;
+  @apply px-2 rounded-sm;
+  @apply w-fit;
+  @apply text-center;
+  @apply border-[1px] border-gray-400;
+  @apply justify-self-start;  /* Add this */
+
+}
+
+.progress-time {
+  @apply font-mono;
+  @apply justify-self-start;  /* Add this */
+}
+
+.progress-elapsed {
+  @apply font-mono;
+  @apply justify-self-start;  /* Add this */
+}
+
+.progress-meta {
+  @apply font-mono;
+  @apply text-gray-600;
+  @apply text-sm;
+  @apply justify-self-end;
+}
+
+.progress-stats {
+  @apply grid;
+  @apply grid-cols-[auto_auto_auto_1fr_auto];
+  @apply gap-4;
+  @apply w-full;
+  @apply items-center;
+}
+

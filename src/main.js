@@ -8,8 +8,6 @@ import SimpleLogEntryNode from './extensions/SimpleLogEntryNode'
 import { listen } from '@tauri-apps/api/event';
 import RichLogEntryNode from './extensions/RichLogEntryNode'
 import { ProgressExtension } from './extensions/ProgressNode';
-// import { Editor } from 'https://esm.sh/@tiptap/core'
-// import StarterKit from 'https://esm.sh/@tiptap/starter-kit'
 const { invoke } = window.__TAURI__.core;
 
 let greetInputEl;
@@ -127,10 +125,11 @@ window.addEventListener("DOMContentLoaded", async () => {
       console.log('Progress Indicator Received event:', event);
       if (event.payload) {
         addProgressIndicatorNode({
-          progressId: event.payload.progressId,
-          currentStep: event.currentStep,
-          totalSteps: event.totalSteps,
-          currentFile: event.payload.currentFile
+          progress_id: event.payload.progress_id,
+          current_step: event.current_step,
+          total_steps: event.total_steps,
+          current_file: event.payload.current_file,
+          meta: event.payload.meta
         });
       }
     });
@@ -142,9 +141,19 @@ window.addEventListener("DOMContentLoaded", async () => {
     unlistenProgressIndicatorUpdateFn = await listen('progress-indicator-update', (event) => {
       console.log('Received event:', event);
       if (event.payload) {
-        window.updateProgressNode(editor, event.payload.progressId, {
-          currentStep: event.payload.currentStep,
-          currentFile: event.payload.currentFile
+        window.updateProgressNode(diagnostics, event.payload.progress_id, {
+          current_step: event.payload.current_step,
+          current_file: event.payload.current_file,
+          total_steps: event.payload.total_steps,
+          meta: event.payload.meta
+        })
+      }
+      if (event.payload && event.payload.current_step === event.payload.total_steps) {
+        window.updateProgressNode(diagnostics, event.payload.progress_id, {
+          current_step: event.payload.current_step,
+          current_file: event.payload.current_file,
+          total_steps: event.payload.total_steps,
+          meta: "Completed Ingestion"
         })
       }
     });
@@ -222,10 +231,10 @@ function addProgressIndicatorNode(entry) {
   diagnostics.commands.insertContent({
     type: 'progressIndicator',
     attrs: {
-      progressId: entry.progressId,
-      currentStep: 0,
-      totalSteps: 300,
-      currentFile: 'document.pdf'
+      progress_id: entry.progress_id,
+      current_step: entry.current_step,
+      total_steps: entry.total_steps,
+      current_file: entry.current_file
     }
   })
   pos = diagnostics.state.selection.from + 2
