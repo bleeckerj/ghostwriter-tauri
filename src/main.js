@@ -1,4 +1,3 @@
-
 import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 //import DynamicTextNode from './extensions/DynamicTextNode'
@@ -45,32 +44,11 @@ async function greet() {
       type: 'text',
       text: ' '
     }
-    ])
-    .run()
+    ]).run()
     
     const pos = editor.state.selection.from + 3
     console.log(pos)
     editor.commands.setTextSelection(pos)   
-    
-    
-    //editor.chain().focus().insertContent('Hello World from Rust Backend '+greetInputEl.value+'<').run()
-    // editor.chain()
-    // .focus()
-    // .insertContent('Hello World from Rust Backend ' + greetInputEl.value)
-    // .run()
-
-    // invoke("rich_log_message", { message: 'Hello from JS Frontend!', level: "warn" }).then((res) => {
-    //   console.log('test_log_emissions:', res);
-    // });
-
-    // addSimpleLogEntry({  
-    //   id: '1',
-    //   timestamp: new Date().toISOString(),
-    //   message: 'Application started Now what? Writing objects: 100% (11/11), 1.55 KiB | 1.55 MiB/s, done.',
-    //   level: 'info'
-    // }).run()
-    // Set selection to after the inserted content
-   
 
   });
 }
@@ -85,8 +63,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   // Add Tauri event listener here
   let unlistenSimpleLogMessageFn;
   let unlistenRichLogMessageFn;
-  let unlistenProgressIndicatorUpdateFn;
-  let unlistenProgressIndicatoLoadrFn;
   let unlistenProgressIndicatorUpdateFn;
   let unlistenProgressIndicatoLoadrFn;
   try {

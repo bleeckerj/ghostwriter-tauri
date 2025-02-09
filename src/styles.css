@@ -268,9 +268,11 @@ button {
 
 .rich-log-entry {
   @apply rounded-md;
-  @apply bg-amber-100;
+  @apply bg-black;
+  @apply text-amber-500;
   @apply px-2 py-1;
-  @apply text-[0.8em];
+  @apply font-mono;
+  @apply text-[0.7em];
   display: flex;
   align-items: center;
   gap: 1rem;
