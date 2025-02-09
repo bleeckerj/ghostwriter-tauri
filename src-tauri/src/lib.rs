@@ -80,13 +80,14 @@ async fn test_log_emissions(
     };
     let simple_log_data = SimpleLog {
         message: format!("Processing completion request. Input: `{}`", message),
+        id: None,
         timestamp: chrono::Local::now().to_rfc3339(),
         level: "error".to_string(),
     };
     logger.simple_log_message(
         format!("{}", message),
-        "error".to_string()
-    );    // app_handle.emit("simple-log-message", simple_log_data).unwrap();
+        "".to_string(),
+        "info".to_string());    // app_handle.emit("simple-log-message", simple_log_data).unwrap();
     // app_handle.emit("rich-log-message", rich_log_data).unwrap();
     Ok("Logged".to_string())
 }
@@ -115,9 +116,10 @@ async fn greet(
 async fn simple_log_message(
     logger: tauri::State<'_, NewLogger>,
     message: String,
+    id: String,
     level: String,
 ) -> Result<String, String> {
-    logger.simple_log_message(message, level);
+    logger.simple_log_message(message, id, level);
     Ok("Simple Logged".to_string())
 }
 
@@ -167,13 +169,22 @@ pub fn run() {
         let new_logger = NewLogger::new(app_handle.clone());
         new_logger.simple_log_message(
             "Ghostwriter Up.".to_string(),
-            "info".to_string()
-        );
+            "start".to_string(),
+            "info".to_string());
         new_logger.rich_log_message(
             "Ghostwriter Up.".to_string(),
             "Ghostwriter is up and running.".to_string(),
             "info".to_string()
         );
+        let progress_indicator = ProgressIndicator {
+            progress_id: "embedder".to_string(),
+            current_step: "0".to_string(),
+            total_steps: "987".to_string(),
+            current_file: "the-myth".to_string(),
+        };
+
+        load_progress_indicator(app_handle, progress_indicator);
+
         app.manage(new_logger.clone());
         // Load .env file
         dotenv::dotenv().ok();
@@ -197,6 +208,28 @@ pub fn run() {
 }
 
 #[derive(Serialize, Clone)]
+struct ProgressIndicator {
+    progress_id: String,
+    current_step: String,
+    total_steps: String,
+    current_file: String
+}
+
+fn load_progress_indicator(app_handle: &AppHandle, progress_indicator: ProgressIndicator)  
+{
+
+    match app_handle.emit("load-progress-indicator", progress_indicator.clone()) {
+        Ok(_) => println!("Progress indicator emitted successfully"),
+        Err(e) => {
+            eprintln!("Failed to emit progress indicator: {}", e);
+            let message = format!("Failed to emit progress indicator: {}", e);
+            //new_logger.simple_log_message(message, "".to_string(), "error".to_string());
+        },
+    }
+    //progress_indicator
+}
+
+#[derive(Serialize, Clone)]
 struct RichLog {
     message: String,
     data: String,
@@ -209,7 +242,9 @@ struct SimpleLog {
     message: String,
     timestamp: String,
     level: String,
+    id: Option<String>,  // Make id optional
 }
+
 
 
 fn truncate(s: &str, max_chars: usize) -> String {
@@ -229,11 +264,12 @@ impl NewLogger {
         Self { app_handle }
     }
 
-    fn simple_log_message(&self, message: String, level: String) {
+    fn simple_log_message(&self, message: String, id: String, level: String) {
         let simple_log_data = SimpleLog {
             message: format!("{}", message),
             level: level.clone(),
             timestamp: chrono::Local::now().to_rfc3339(),
+            id: Some(id.clone()),
         };
         self.app_handle.emit("simple-log-message", simple_log_data).unwrap();
     }
