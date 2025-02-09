@@ -169,6 +169,11 @@ pub fn run() {
             "Ghostwriter Up.".to_string(),
             "info".to_string()
         );
+        new_logger.rich_log_message(
+            "Ghostwriter Up.".to_string(),
+            "Ghostwriter is up and running.".to_string(),
+            "info".to_string()
+        );
         app.manage(new_logger.clone());
         // Load .env file
         dotenv::dotenv().ok();

@@ -123,6 +123,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   invoke("simple_log_message", { message: 'Ghostwriter Up.', level: "info" }).then((res) => {
     console.log('simple_log_emissions', res);
   });
+  invoke("rich_log_message", { message: 'Ghostwriter Up.', data: "no data", level: "info" }).then((res) => {
+    console.log('rich_log_emissions', res);
+  });
   // Cleanup when window unloads
   window.addEventListener('unload', () => {
     if (unlistenFn) {
@@ -189,6 +192,7 @@ function addRichLogEntry(entry) {
       id: entry.id,
       timestamp: entry.timestamp,
       message: entry.message,
+      data: entry.data,
       level: entry.level,
     }
   })

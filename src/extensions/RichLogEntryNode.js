@@ -25,6 +25,9 @@ const RichLogEntryNode = Node.create({
       message: {
         default: '',
       },
+      data: {
+        default: null,
+      },
       level: {
         default: 'info',
       }
