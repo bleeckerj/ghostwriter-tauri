@@ -143,13 +143,11 @@ button {
   :focus {
     outline: none;
   }
-  overscroll-behavior: none; /* Completely prevents bouncing */
-  scroll-behavior: smooth; /* Optional: makes programmatic scrolling smooth */
 }
 
 .diagnostics-scroll-area {
   position: relative;
-  flex: 2;
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
   @apply border-[1px] border-gray-400;
@@ -161,8 +159,7 @@ button {
   :focus {
     outline: none;
   }
-  overscroll-behavior: none;
-  scroll-behavior: smooth;
+
 }
 
 
@@ -172,6 +169,8 @@ button {
   min-height: 0;
   overflow-y: auto;
   z-index: 1;
+  overscroll-behavior: none;
+  scroll-behavior: smooth;
 }
 
 .diagnostics {
@@ -179,6 +178,8 @@ button {
   min-height: 0;
   overflow-y: auto;
   z-index: 1;
+  overscroll-behavior: none; /* Completely prevents bouncing */
+  scroll-behavior: smooth; /* Optional: makes programmatic scrolling smooth */
 }
 
 .editor-content {
@@ -219,10 +220,57 @@ button {
 }
 
 
-.log-entry {
+.simple-log-entry {
   @apply rounded-md;
   @apply px-2 py-1;
   @apply my-2;
+  @apply text-green-400;
+  @apply font-mono;
+  @apply text-[0.7em];
+  user-select: none;
+}
+
+.simple-log-level-info {
+  background-color: black;
+}
+
+.simple-log-level-warn {
+  background-color: #eeff00;
+  color: black;
+}
+
+.simple-log-level-error {
+  background-color:#ff1500;
+  color: white;
+  @apply font-bold;
+}
+
+.simple-log-timestamp {
+  color: #666;
+  font-size: 0.9em;
+  /*min-width: 150px;*/
+  @apply w-fit;
+  @apply px-2;
+  @apply rounded-sm;
+  @apply bg-gray-700 text-green-400;
+  @apply mb-0;
+  @apply font-mono;
+  @apply self-start;
+}
+
+.simple-log-message {
+  flex: 1;
+  @apply leading-5;
+  @apply pt-1;
+  @apply self-start;
+}
+
+
+.rich-log-entry {
+  @apply rounded-md;
+  @apply bg-amber-100;
+  @apply px-2 py-1;
+  @apply text-[0.8em];
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -230,19 +278,19 @@ button {
   user-select: none;
 }
 
-.log-level-info {
+.rich-log-level-info {
   background-color: #f8f9fa;
 }
 
-.log-level-warning {
+.rich-log-level-warn {
   background-color: #fff3cd;
 }
 
-.log-level-error {
+.rich-log-level-error {
   background-color: #f8d7da;
 }
 
-.log-timestamp {
+.rich-log-timestamp {
   color: #666;
   font-size: 0.9em;
   min-width: 150px;
@@ -250,14 +298,14 @@ button {
   @apply self-start;
 }
 
-.log-message {
+.rich-log-message {
   flex: 1;
   @apply leading-5;
   @apply pt-1;
   @apply self-start;
 }
 
-.log-delete-btn {
+.rich-log-delete-btn {
   @apply bg-red-500 text-black;
   @apply border-[0.5px] border-gray-400;
   @apply rounded-md;
@@ -267,7 +315,7 @@ button {
   transition: transform 0.2s;
 }
 
-.log-delete-btn:hover {
+.rich-log-delete-btn:hover {
   transform: scale(1);
   @apply bg-red-600;
 }

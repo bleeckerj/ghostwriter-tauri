@@ -4,7 +4,7 @@
 use crate::conversations::Conversation;
 use crate::document_store::DocumentStore;
 use crate::embeddings::EmbeddingGenerator;
-use crate::logger::Logger;
+//use crate::logger::Logger;
 use std::sync::{Arc, Mutex};
 
 pub struct AppState {

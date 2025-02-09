@@ -2,7 +2,7 @@
 import { Node } from '@tiptap/core'
 import { mergeAttributes } from '@tiptap/core'
 
-export const SimpleLogEntryNode = Node.create({
+const SimpleLogEntryNode = Node.create({
   name: 'simpleLogEntry',
   
   group: 'block',
@@ -78,4 +78,5 @@ export const SimpleLogEntryNode = Node.create({
     }
   },
 })
+export default SimpleLogEntryNode
 

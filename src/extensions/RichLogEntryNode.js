@@ -2,7 +2,7 @@
 import { Node } from '@tiptap/core'
 import { mergeAttributes } from '@tiptap/core'
 
-export const RichLogEntryNode = Node.create({
+const RichLogEntryNode = Node.create({
   name: 'richLogEntry',
   
   group: 'block',
@@ -92,3 +92,4 @@ export const RichLogEntryNode = Node.create({
   },
 })
 
+export default RichLogEntryNode
