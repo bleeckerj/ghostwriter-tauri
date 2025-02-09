@@ -7,6 +7,7 @@ import SimpleLogEntryNode from './extensions/SimpleLogEntryNode'
 import { listen } from '@tauri-apps/api/event';
 import RichLogEntryNode from './extensions/RichLogEntryNode'
 import { ProgressExtension } from './extensions/ProgressNode';
+//import { Placeholder } from '@tiptap/extension-placeholder'
 const { invoke } = window.__TAURI__.core;
 
 let greetInputEl;
@@ -159,6 +160,8 @@ window.addEventListener("DOMContentLoaded", async () => {
 //     level: 'info'
 //   }).run()
 
+  // Initialize the resize handle
+  initializeResizeHandle();
 });
 
 const editor = new Editor({
@@ -265,4 +268,82 @@ function updateNodeColor(id, newColor) {
   if (hasUpdated) {
     view.dispatch(tr)
   }
+}
+
+function initializeResizeHandle() {
+    const handle = document.querySelector('.resize-handle');
+    const topArea = document.querySelector('.scroll-area');
+    const bottomArea = document.querySelector('.diagnostics-scroll-area');
+    let startY;
+    let startHeights;
+    const MIN_HEIGHT_BOTTOM = 16; // 1rem = 16px typically
+    const MIN_HEIGHT_TOP = 48; // 3rem = 48px typically
+
+    function startResize(e) {
+        startY = e.clientY;
+        startHeights = {
+            top: topArea.offsetHeight,
+            bottom: bottomArea.offsetHeight
+        };
+        
+        document.addEventListener('mousemove', resize);
+        document.addEventListener('mouseup', stopResize);
+        document.body.style.cursor = 'row-resize';
+    }
+
+    function resize(e) {
+        const delta = e.clientY - startY;
+        const containerHeight = topArea.parentElement.offsetHeight;
+        const newTopHeight = startHeights.top + delta;
+        const newBottomHeight = startHeights.bottom - delta;
+        
+        // Check if bottom area should collapse (dragging down)
+        if (newBottomHeight < MIN_HEIGHT_BOTTOM) {
+            bottomArea.classList.add('collapsed');
+            topArea.style.flex = '1';
+            bottomArea.style.flex = '0';  // Add this line
+            return;
+        }
+
+        // Check if top area would become too small (dragging up)
+        if (newTopHeight < MIN_HEIGHT_TOP) {
+            return;
+        }
+
+        // Only remove collapsed class if explicitly uncollapsing
+        if (bottomArea.classList.contains('collapsed') && delta < 0) {  // Only when dragging up
+            bottomArea.classList.remove('collapsed');
+            bottomArea.style.flex = '1';
+        }
+
+        // Only update flex values if not collapsed
+        if (!bottomArea.classList.contains('collapsed')) {
+            const availableHeight = containerHeight - MIN_HEIGHT;
+            const topPercent = (newTopHeight / availableHeight) * 100;
+            const bottomPercent = (newBottomHeight / availableHeight) * 100;
+            
+            topArea.style.flex = `${topPercent} 1 0`;
+            bottomArea.style.flex = `${bottomPercent} 1 0`;
+        }
+    }
+
+    function stopResize() {
+        document.removeEventListener('mousemove', resize);
+        document.removeEventListener('mouseup', stopResize);
+        document.body.style.cursor = '';
+    }
+
+    // Double-click handler to toggle collapse
+    handle.addEventListener('dblclick', () => {
+        if (bottomArea.classList.contains('collapsed')) {
+            bottomArea.classList.remove('collapsed');
+            topArea.style.flex = '2';
+            bottomArea.style.flex = '1';
+        } else {
+            bottomArea.classList.add('collapsed');
+            topArea.style.flex = '1';
+        }
+    });
+
+    handle.addEventListener('mousedown', startResize);
 }

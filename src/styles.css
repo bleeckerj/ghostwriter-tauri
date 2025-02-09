@@ -127,6 +127,7 @@ button {
   padding-left: 0.5rem;
   padding-right: 0.5rem;
   overflow: hidden; /* Add this to prevent container scrolling */
+  @apply select-none; /* Prevent text selection while dragging */
 }
 
 .scroll-area {
@@ -159,10 +160,19 @@ button {
   :focus {
     outline: none;
   }
-
+  transition: flex-basis 0.2s ease;
+  min-height: 1rem;
 }
 
-
+.diagnostics-scroll-area.collapsed {
+  flex: 0;
+  min-height: 0;
+  height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
 
 .element {
   flex: 1 1 auto;
@@ -368,3 +378,22 @@ button {
   @apply items-center;
 }
 
+.resize-handle {
+  @apply w-full;
+  @apply h-2;
+  @apply bg-gray-200;
+  @apply hover:bg-gray-300;
+  @apply cursor-row-resize;
+  @apply transition-colors;
+  @apply flex items-center justify-center;
+  position: relative;
+}
+
+/* Add handle indicator */
+.resize-handle::after {
+  content: '';
+  @apply w-16;
+  @apply h-1;
+  @apply bg-gray-400;
+  @apply rounded-full;
+}
