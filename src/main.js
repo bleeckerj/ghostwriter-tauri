@@ -87,11 +87,14 @@ window.addEventListener("DOMContentLoaded", async () => {
   let unlistenRichLogMessageFn;
   let unlistenProgressIndicatorUpdateFn;
   let unlistenProgressIndicatoLoadrFn;
+  let unlistenProgressIndicatorUpdateFn;
+  let unlistenProgressIndicatoLoadrFn;
   try {
     unlistenSimpleLogMessageFn = await listen('simple-log-message', (event) => {
       console.log('Received event:', event);
       if (event.payload) {
         addSimpleLogEntry({
+          id: event.payload.id,
           id: event.payload.id,
           timestamp: event.payload.timestamp,
           message: event.payload.message,
@@ -202,6 +205,7 @@ const diagnostics = new Editor({
     SimpleLogEntryNode,
     RichLogEntryNode,
     DynamicTextMark,
+    ProgressExtension,
     ProgressExtension,
   ],
 })

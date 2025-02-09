@@ -81,11 +81,14 @@ async fn test_log_emissions(
     let simple_log_data = SimpleLog {
         message: format!("Processing completion request. Input: `{}`", message),
         id: None,
+        id: None,
         timestamp: chrono::Local::now().to_rfc3339(),
         level: "error".to_string(),
     };
     logger.simple_log_message(
         format!("{}", message),
+        "".to_string(),
+        "info".to_string());    // app_handle.emit("simple-log-message", simple_log_data).unwrap();
         "".to_string(),
         "info".to_string());    // app_handle.emit("simple-log-message", simple_log_data).unwrap();
     // app_handle.emit("rich-log-message", rich_log_data).unwrap();
@@ -127,8 +130,10 @@ async fn simple_log_message(
     logger: tauri::State<'_, NewLogger>,
     message: String,
     id: String,
+    id: String,
     level: String,
 ) -> Result<String, String> {
+    logger.simple_log_message(message, id, level);
     logger.simple_log_message(message, id, level);
     Ok("Simple Logged".to_string())
 }
@@ -306,6 +311,8 @@ pub fn run() {
         let new_logger = NewLogger::new(app_handle.clone());
         new_logger.simple_log_message(
             "Ghostwriter Up.".to_string(),
+            "start".to_string(),
+            "info".to_string());
             "start".to_string(),
             "info".to_string());
         new_logger.rich_log_message(
