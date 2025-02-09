@@ -72,17 +72,6 @@ async function greet() {
     //   level: 'info'
     // }).run()
     // Set selection to after the inserted content
-
-      //Then insert our dynamic node as a separate block
-      editor.chain().focus()
-      .insertContent({
-        type: 'dynamicTextMark',
-        attrs: { 
-          id: 'node1',
-          textColor: 'white'
-        },
-        content: [{ type: 'text', text: 'First node' }]
-      }).run()
    
 
   });
@@ -131,15 +120,21 @@ window.addEventListener("DOMContentLoaded", async () => {
     console.error('Failed to setup event listener:', error);
   }
 
-  // invoke("simple_log_message", { message: 'Ghostwriter Up.', level: "info" }).then((res) => {
-  //   console.log('simple_log_emissions', res);
-  // });
+  invoke("simple_log_message", { message: 'Ghostwriter Up.', level: "info" }).then((res) => {
+    console.log('simple_log_emissions', res);
+  });
   // Cleanup when window unloads
   window.addEventListener('unload', () => {
     if (unlistenFn) {
       unlistenFn();
     }
   });
+//   addSimpleLogEntry({
+//     id: '1',
+//     timestamp: new Date().toISOString(),
+//     message: 'Ghostwriter Up.',
+//     level: 'info'
+//   }).run()
 
 });
 
@@ -160,8 +155,8 @@ const diagnostics = new Editor({
   extensions: [
     StarterKit,
     //DiagnosticLogEntryNode,
-    // SimpleLogEntryNode,
-     //RichLogEntryNode,
+    SimpleLogEntryNode,
+    RichLogEntryNode,
     DynamicTextMark,
   ],
 })
