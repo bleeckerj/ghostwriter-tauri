@@ -30,22 +30,22 @@ async function greet() {
       },
       {
       type: 'text',
-      text: "Foo!",
+      text: res,
       marks: [{
         type: 'dynamicTextMark',
         attrs: { 
           textColor: 'blue',
           backgroundColor: '#f3f4f6',
-          twMisc: 'animated-highlight',
+          twMisc: 'font-semibold rounded animated-highlight',
           id: 'backend-id-123',
           timestamp: Date.now(),
-          raw: res,
+          raw: res
         }  
       }]
     },
     {
       type: 'text',
-      text: ''
+      text: ' '
     }
     ])
     .run()
@@ -74,14 +74,15 @@ async function greet() {
     // Set selection to after the inserted content
 
       //Then insert our dynamic node as a separate block
-      // .insertContent({
-      //   type: 'dynamicText',
-      //   attrs: { 
-      //     id: 'node1',
-      //     textColor: 'white'
-      //   },
-      //   content: [{ type: 'text', text: 'First node' }]
-      // })
+      editor.chain().focus()
+      .insertContent({
+        type: 'dynamicTextMark',
+        attrs: { 
+          id: 'node1',
+          textColor: 'white'
+        },
+        content: [{ type: 'text', text: 'First node' }]
+      }).run()
    
 
   });
