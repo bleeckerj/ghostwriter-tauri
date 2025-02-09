@@ -7,7 +7,7 @@ import DynamicTextMark from './extensions/DynamicTextMark'
 import SimpleLogEntryNode from './extensions/SimpleLogEntryNode'
 import { listen } from '@tauri-apps/api/event';
 import RichLogEntryNode from './extensions/RichLogEntryNode'
-
+import { ProgressExtension } from './extensions/ProgressNode';
 // import { Editor } from 'https://esm.sh/@tiptap/core'
 // import StarterKit from 'https://esm.sh/@tiptap/starter-kit'
 const { invoke } = window.__TAURI__.core;
@@ -87,12 +87,14 @@ window.addEventListener("DOMContentLoaded", async () => {
   // Add Tauri event listener here
   let unlistenSimpleLogMessageFn;
   let unlistenRichLogMessageFn;
+  let unlistenProgressIndicatorUpdateFn;
+  let unlistenProgressIndicatoLoadrFn;
   try {
     unlistenSimpleLogMessageFn = await listen('simple-log-message', (event) => {
       console.log('Received event:', event);
       if (event.payload) {
         addSimpleLogEntry({
-          id: Date.now(),
+          id: event.payload.id,
           timestamp: event.payload.timestamp,
           message: event.payload.message,
           level: event.payload.level
@@ -120,7 +122,37 @@ window.addEventListener("DOMContentLoaded", async () => {
     console.error('Failed to setup event listener:', error);
   }
 
-  invoke("simple_log_message", { message: 'Ghostwriter Up.', level: "info" }).then((res) => {
+  try {
+    unlistenProgressIndicatoLoadrFn = await listen('load-progress-indicator', (event) => {
+      console.log('Progress Indicator Received event:', event);
+      if (event.payload) {
+        addProgressIndicatorNode({
+          progressId: event.payload.progressId,
+          currentStep: event.currentStep,
+          totalSteps: event.totalSteps,
+          currentFile: event.payload.currentFile
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Failed to setup event listener:', error);
+  }
+
+  try {
+    unlistenProgressIndicatorUpdateFn = await listen('progress-indicator-update', (event) => {
+      console.log('Received event:', event);
+      if (event.payload) {
+        window.updateProgressNode(editor, event.payload.progressId, {
+          currentStep: event.payload.currentStep,
+          currentFile: event.payload.currentFile
+        })
+      }
+    });
+  } catch (error) {
+    console.error('Failed to setup event listener:', error);
+  }
+
+  invoke("simple_log_message", { message: 'Ghostwriter Up.', id: "tracker", level: "info" }).then((res) => {
     console.log('simple_log_emissions', res);
   });
   invoke("rich_log_message", { message: 'Ghostwriter Up.', data: "no data", level: "info" }).then((res) => {
@@ -161,6 +193,7 @@ const diagnostics = new Editor({
     SimpleLogEntryNode,
     RichLogEntryNode,
     DynamicTextMark,
+    ProgressExtension,
   ],
 })
 
@@ -174,6 +207,25 @@ function addSimpleLogEntry(entry) {
       timestamp: entry.timestamp,
       message: entry.message,
       level: entry.level,
+    }
+  })
+  pos = diagnostics.state.selection.from + 2
+  diagnostics.commands.setTextSelection(pos)
+  setTimeout(() => {
+    diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, 0);
+}
+
+function addProgressIndicatorNode(entry) {
+  let pos = diagnostics.state.selection.from + 2
+  diagnostics.commands.setTextSelection(pos)
+  diagnostics.commands.insertContent({
+    type: 'progressIndicator',
+    attrs: {
+      progressId: entry.progressId,
+      currentStep: 0,
+      totalSteps: 300,
+      currentFile: 'document.pdf'
     }
   })
   pos = diagnostics.state.selection.from + 2
