@@ -1,6 +1,7 @@
 // SimpleLogEntryNode.js
 import { Node } from '@tiptap/core'
 import { mergeAttributes } from '@tiptap/core'
+import DOMPurify from 'dompurify';
 
 const SimpleLogEntryNode = Node.create({
   name: 'simpleLogEntry',
@@ -63,7 +64,7 @@ const SimpleLogEntryNode = Node.create({
       // Message
       const message = document.createElement('span')
       message.classList.add('simple-log-message')
-      message.textContent = ' '+node.attrs.message
+      message.innerHTML = ' ' + DOMPurify.sanitize(node.attrs.message)
       
       // Append elements
       dom.appendChild(timestamp)

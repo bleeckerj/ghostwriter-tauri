@@ -20,7 +20,7 @@ mod document_store;
 mod embeddings;
 
 use chrono::Utc;
-use document_store::DocumentStore;
+use document_store::{DocumentStore, Document};
 use embeddings::EmbeddingGenerator;
 
 mod conversations; // Add this line
@@ -36,7 +36,7 @@ use async_openai::{
         ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
         ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs,
     },
-    Client,
+    Client, config::OpenAIConfig,
 };
 mod logger;
 use logger::{CompletionLogEntry, Logger, VectorSearchResult};
@@ -77,25 +77,24 @@ async fn completion_from_context(
     // Prepare the context for the LLM
     // This has all the document metadata..is that okay?
     let mut context = String::new();
-    for (i, (doc, similarity)) in similar_docs.iter().enumerate() {
-        context.push_str(&format!(
-            "--- Document {} (Path: {}) ---\nSimilarity: {:.4}\nContent:\n{}\n\n",
-            i + 1,
-            doc.path,
-            similarity,
-            doc.content
-        ));
-    }
+    // for (i, (doc, similarity)) in similar_docs.iter().enumerate() {
+    //     context.push_str(&format!(
+    //         "--- Document {} (Path: {}) ---\nSimilarity: {:.4}\nContent:\n{}\n\n",
+    //         i + 1,
+    //         doc.file_path,
+    //         similarity,
+    //     ));
+    // }
 
     let mut vector_search_results: Vec<VectorSearchResult> = Vec::new();
 
-    for (doc, similarity) in similar_docs.iter() {
-        vector_search_results.push(VectorSearchResult {
-            path: doc.path.clone(),
-            similarity: *similarity,
-            content: doc.content.clone(),
-        });
-    }
+    // for (doc, similarity) in similar_docs.iter() {
+    //     vector_search_results.push(VectorSearchResult {
+    //         similarity: *similarity,
+    //         name: doc.name.clone(),
+    //         content: doc.content.clone()
+    //     });
+    // }
 
     let conversation_context = state.conversation.lock().unwrap().get_context();
     let prose_style = "A style that is consistent with the input text".to_string();
@@ -187,6 +186,49 @@ async fn completion_from_context(
     Err("No completion returned.".to_string())
 }
 
+// Add this near your other struct definitions
+#[derive(Serialize)]
+struct SearchResult {
+    document_name: String,
+    chunk_id: usize,
+    chunk_text: String,
+    similarity_score: f32,
+}
+
+#[tauri::command]
+async fn search_similarity(
+    state: tauri::State<'_, AppState>,
+    query: String,
+    limit: Option<usize>,  
+) -> Result<Vec<SearchResult>, String> {  // Changed return type
+    let limit = limit.unwrap_or(3);
+
+    let embedding = state
+        .embedding_generator
+        .generate_embedding(&query)
+        .await
+        .map_err(|e| format!("Embedding generation failed: {}", e))?;
+
+    let doc_store = state
+        .doc_store
+        .lock()
+        .map_err(|e| format!("Failed to acquire doc store lock: {}", e))?;
+
+    let results = doc_store
+        .search(&embedding, limit)
+        .map_err(|e| format!("Search failed: {}", e))?;
+
+    // Transform results into SearchResult structs
+    Ok(results
+        .into_iter()
+        .map(|(doc, index, chunk, similarity)| SearchResult {
+            document_name: doc,
+            chunk_id: index,
+            chunk_text: chunk,
+            similarity_score: similarity,
+        })
+        .collect())
+}
 
 #[tauri::command]
 async fn test_log_emissions(
@@ -403,9 +445,15 @@ pub fn run() {
         Ok(_) => println!("Successfully loaded .env file"),
         Err(e) => eprintln!("Error loading .env file: {}", e),
     }
-    let some_variable = std::env::var("OPENAI_API_KEY").expect("SOME_VARIABLE not set");
+    let api_key = std::env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY not set");
     
-    let embedding_generator = EmbeddingGenerator::new();
+    // Create the client with config
+    let client = Client::with_config(
+        OpenAIConfig::new()
+            .with_api_key(api_key.clone())
+    );
+
+    let embedding_generator = EmbeddingGenerator::new(client);
     let path = PathBuf::from("./resources/ghostwriter-selectric/vector_store/");
     
     println!("Initializing DocumentStore with path: {:?}", path);
@@ -415,7 +463,6 @@ pub fn run() {
         path
     ));
     println!("DocumentStore successfully initialized.");
-    let embedding_generator = EmbeddingGenerator::new();
     let app_state = AppState::new(
         doc_store,
         embedding_generator,
@@ -449,6 +496,7 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
         greet,
         completion_from_context,
+        search_similarity,
         test_log_emissions,
         simple_log_message,
         rich_log_message,

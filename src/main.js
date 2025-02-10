@@ -28,31 +28,46 @@ async function greet() {
         text: ' '
       },
       {
-      type: 'text',
-      text: res,
-      marks: [{
-        type: 'dynamicTextMark',
-        attrs: { 
-          textColor: 'blue',
-          backgroundColor: '#f3f4f6',
-          twMisc: 'font-semibold rounded animated-highlight',
-          id: 'backend-id-123',
-          timestamp: Date.now(),
-          raw: res
-        }  
-      }]
-    },
-    {
-      type: 'text',
-      text: ' '
-    }
+        type: 'text',
+        text: res,
+        marks: [{
+          type: 'dynamicTextMark',
+          attrs: { 
+            textColor: 'blue',
+            backgroundColor: '#f3f4f6',
+            twMisc: 'font-semibold rounded animated-highlight',
+            id: 'backend-id-123',
+            timestamp: Date.now(),
+            raw: res
+          }  
+        }]
+      },
+      {
+        type: 'text',
+        text: ' '
+      }
     ]).run()
     
     const pos = editor.state.selection.from + 3
     console.log(pos)
     editor.commands.setTextSelection(pos)   
-
+    
   });
+}
+
+async function searchSimilarity() {
+  invoke("search_similarity", { query: editor.getText(), limit: 4 })
+  .then((res) => {
+    console.log(res);
+    res.forEach((result, index) => {
+      addSimpleLogEntry({ 
+        id: Date.now() + "_" + index, // Ensure unique IDs
+        timestamp: Date.now(),
+        message: "<div><p class='border-l-[4px] border-pink-100 pl-2 pr-8 text-pretty'>"+result.chunk_text+"</p><p class='mt-1 px-2 py-1 rounded-sm bg-gray-800 w-fit'>"+result.similarity_score+"</p><span class='font-bold'>"+result.document_name+"</span></div>",
+        level: 'info'
+      });
+    });
+  })
 }
 
 async function completionFromContext() {
@@ -61,55 +76,57 @@ async function completionFromContext() {
     dots = (dots + 1) % 4;
     greetMsgEl.textContent = `Emanating${'.'.repeat(dots)}`;
   }, 500);
+  
 
+  
   invoke("completion_from_context", { input: editor.getText() })
-    .then((res) => {
-      clearInterval(loadingInterval);
-      greetMsgEl.textContent = 'Complete';
-      
-      editor.chain()
-        .focus()
-        .insertContent([
-          {
-            type: 'text',
-            text: ' '
-          },
-          {
-          type: 'text',
-          text: res,
-          marks: [{
-            type: 'dynamicTextMark',
-            attrs: { 
-              textColor: 'blue',
-              backgroundColor: '#f3f4f6',
-              twMisc: 'font-semibold rounded animated-highlight',
-              id: 'backend-id-123',
-              timestamp: Date.now(),
-              raw: res
-            }  
-          }]
-        },
-        {
-          type: 'text',
-          text: ' '
-        }
-        ]).run();
-    })
-    .catch((err) => {
-      clearInterval(loadingInterval);
-      greetMsgEl.textContent = 'Error occurred';
-      console.error(err);
-    });
+  .then((res) => {
+    clearInterval(loadingInterval);
+    greetMsgEl.textContent = 'Complete';
+    
+    editor.chain()
+    .focus()
+    .insertContent([
+      {
+        type: 'text',
+        text: ' '
+      },
+      {
+        type: 'text',
+        text: res,
+        marks: [{
+          type: 'dynamicTextMark',
+          attrs: { 
+            textColor: 'blue',
+            backgroundColor: '#f3f4f6',
+            twMisc: 'font-semibold rounded animated-highlight',
+            id: 'backend-id-123',
+            timestamp: Date.now(),
+            raw: res
+          }  
+        }]
+      },
+      {
+        type: 'text',
+        text: ' '
+      }
+    ]).run();
+  })
+  .catch((err) => {
+    clearInterval(loadingInterval);
+    greetMsgEl.textContent = 'Error occurred';
+    console.error(err);
+  });
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
   greetInputEl = document.querySelector("#greet-input");
   greetMsgEl = document.querySelector("#greet-msg");
   greetBtnEl = document.querySelector("#greet-btn");
-  greetBtnEl.addEventListener("click", greet);
-
+  greetBtnEl.addEventListener("click", searchSimilarity);
+  
   // document.querySelector("#greet-form").addEventListener("submit", (e) => {
-  //   e.preventDefault();
+    //   e.preventDefault();
   //   greet();
   // });
   // Add Tauri event listener here
@@ -133,7 +150,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   } catch (error) {
     console.error('Failed to setup event listener:', error);
   }
-
+  
   try {
     unlistenRichLogMessageFn = await listen('rich-log-message', (event) => {
       console.log('Received event:', event);
@@ -150,7 +167,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   } catch (error) {
     console.error('Failed to setup event listener:', error);
   }
-
+  
   try {
     unlistenProgressIndicatoLoadrFn = await listen('load-progress-indicator', (event) => {
       console.log('Progress Indicator Received event:', event);
@@ -167,7 +184,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   } catch (error) {
     console.error('Failed to setup event listener:', error);
   }
-
+  
   try {
     unlistenProgressIndicatorUpdateFn = await listen('progress-indicator-update', (event) => {
       console.log('Received event:', event);
@@ -191,7 +208,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   } catch (error) {
     console.error('Failed to setup event listener:', error);
   }
-
+  
   invoke("simple_log_message", { message: 'Ghostwriter Up.', id: "tracker", level: "info" }).then((res) => {
     console.log('simple_log_emissions', res);
   });
@@ -204,13 +221,13 @@ window.addEventListener("DOMContentLoaded", async () => {
       unlistenFn();
     }
   });
-//   addSimpleLogEntry({
-//     id: '1',
-//     timestamp: new Date().toISOString(),
-//     message: 'Ghostwriter Up.',
-//     level: 'info'
-//   }).run()
-
+  //   addSimpleLogEntry({
+  //     id: '1',
+  //     timestamp: new Date().toISOString(),
+  //     message: 'Ghostwriter Up.',
+  //     level: 'info'
+  //   }).run()
+  
   // Initialize the resize handle
   initializeResizeHandle();
 });
@@ -305,7 +322,7 @@ function updateNodeColor(id, newColor) {
   const { state, view } = editor
   const { tr } = state
   let hasUpdated = false
-
+  
   state.doc.descendants((node, pos) => {
     if (node.type.name === 'dynamicTextMark' && node.attrs.id === id) {
       tr.setNodeMarkup(pos, null, {
@@ -315,86 +332,86 @@ function updateNodeColor(id, newColor) {
       hasUpdated = true
     }
   })
-
+  
   if (hasUpdated) {
     view.dispatch(tr)
   }
 }
 
 function initializeResizeHandle() {
-    const handle = document.querySelector('.resize-handle');
-    const topArea = document.querySelector('.scroll-area');
-    const bottomArea = document.querySelector('.diagnostics-scroll-area');
-    let startY;
-    let startHeights;
-    const MIN_HEIGHT_BOTTOM = 16; // 1rem = 16px typically
-    const MIN_HEIGHT_TOP = 48; // 3rem = 48px typically
-
-    function startResize(e) {
-        startY = e.clientY;
-        startHeights = {
-            top: topArea.offsetHeight,
-            bottom: bottomArea.offsetHeight
-        };
-        
-        document.addEventListener('mousemove', resize);
-        document.addEventListener('mouseup', stopResize);
-        document.body.style.cursor = 'row-resize';
+  const handle = document.querySelector('.resize-handle');
+  const topArea = document.querySelector('.scroll-area');
+  const bottomArea = document.querySelector('.diagnostics-scroll-area');
+  let startY;
+  let startHeights;
+  const MIN_HEIGHT_BOTTOM = 16; // 1rem = 16px typically
+  const MIN_HEIGHT_TOP = 48; // 3rem = 48px typically
+  
+  function startResize(e) {
+    startY = e.clientY;
+    startHeights = {
+      top: topArea.offsetHeight,
+      bottom: bottomArea.offsetHeight
+    };
+    
+    document.addEventListener('mousemove', resize);
+    document.addEventListener('mouseup', stopResize);
+    document.body.style.cursor = 'row-resize';
+  }
+  
+  function resize(e) {
+    const delta = e.clientY - startY;
+    const containerHeight = topArea.parentElement.offsetHeight;
+    const newTopHeight = startHeights.top + delta;
+    const newBottomHeight = startHeights.bottom - delta;
+    
+    // Check if bottom area should collapse (dragging down)
+    if (newBottomHeight < MIN_HEIGHT_BOTTOM) {
+      bottomArea.classList.add('collapsed');
+      topArea.style.flex = '1';
+      bottomArea.style.flex = '0';
+      return;
     }
-
-    function resize(e) {
-        const delta = e.clientY - startY;
-        const containerHeight = topArea.parentElement.offsetHeight;
-        const newTopHeight = startHeights.top + delta;
-        const newBottomHeight = startHeights.bottom - delta;
-        
-        // Check if bottom area should collapse (dragging down)
-        if (newBottomHeight < MIN_HEIGHT_BOTTOM) {
-            bottomArea.classList.add('collapsed');
-            topArea.style.flex = '1';
-            bottomArea.style.flex = '0';
-            return;
-        }
-
-        // Check if top area would become too small (dragging up)
-        if (newTopHeight < MIN_HEIGHT_TOP) {
-            return;
-        }
-
-        // Only remove collapsed class if explicitly uncollapsing
-        if (bottomArea.classList.contains('collapsed') && delta < 0) {  // Only when dragging up
-            bottomArea.classList.remove('collapsed');
-            bottomArea.style.flex = '1';
-        }
-
-        // Only update flex values if not collapsed
-        if (!bottomArea.classList.contains('collapsed')) {
-            // Use containerHeight directly since we don't need to subtract MIN_HEIGHT anymore
-            const topPercent = (newTopHeight / containerHeight) * 100;
-            const bottomPercent = (newBottomHeight / containerHeight) * 100;
-            
-            topArea.style.flex = `${topPercent} 1 0`;
-            bottomArea.style.flex = `${bottomPercent} 1 0`;
-        }
+    
+    // Check if top area would become too small (dragging up)
+    if (newTopHeight < MIN_HEIGHT_TOP) {
+      return;
     }
-
-    function stopResize() {
-        document.removeEventListener('mousemove', resize);
-        document.removeEventListener('mouseup', stopResize);
-        document.body.style.cursor = '';
+    
+    // Only remove collapsed class if explicitly uncollapsing
+    if (bottomArea.classList.contains('collapsed') && delta < 0) {  // Only when dragging up
+      bottomArea.classList.remove('collapsed');
+      bottomArea.style.flex = '1';
     }
-
-    // Double-click handler to toggle collapse
-    handle.addEventListener('dblclick', () => {
-        if (bottomArea.classList.contains('collapsed')) {
-            bottomArea.classList.remove('collapsed');
-            topArea.style.flex = '2';
-            bottomArea.style.flex = '1';
-        } else {
-            bottomArea.classList.add('collapsed');
-            topArea.style.flex = '1';
-        }
-    });
-
-    handle.addEventListener('mousedown', startResize);
+    
+    // Only update flex values if not collapsed
+    if (!bottomArea.classList.contains('collapsed')) {
+      // Use containerHeight directly since we don't need to subtract MIN_HEIGHT anymore
+      const topPercent = (newTopHeight / containerHeight) * 100;
+      const bottomPercent = (newBottomHeight / containerHeight) * 100;
+      
+      topArea.style.flex = `${topPercent} 1 0`;
+      bottomArea.style.flex = `${bottomPercent} 1 0`;
+    }
+  }
+  
+  function stopResize() {
+    document.removeEventListener('mousemove', resize);
+    document.removeEventListener('mouseup', stopResize);
+    document.body.style.cursor = '';
+  }
+  
+  // Double-click handler to toggle collapse
+  handle.addEventListener('dblclick', () => {
+    if (bottomArea.classList.contains('collapsed')) {
+      bottomArea.classList.remove('collapsed');
+      topArea.style.flex = '2';
+      bottomArea.style.flex = '1';
+    } else {
+      bottomArea.classList.add('collapsed');
+      topArea.style.flex = '1';
+    }
+  });
+  
+  handle.addEventListener('mousedown', startResize);
 }

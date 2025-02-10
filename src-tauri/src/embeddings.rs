@@ -9,17 +9,56 @@ pub struct EmbeddingGenerator {
 }
 
 impl EmbeddingGenerator {
-    pub fn new() -> Self {
-        ///////client: Client::new(),
-   
-        // // OR use API key from different source and a non default organization
-        let api_key = "sk-..."; // This secret could be from a file, or environment variable.
+    // New constructor that takes a client
+    pub fn new(client: Client<OpenAIConfig>) -> Self {
+        EmbeddingGenerator { client }
+    }
+
+    // Optional: Add a constructor that creates a client from an API key
+    pub fn from_api_key(api_key: &str) -> Self {
         let config = OpenAIConfig::new()
-            .with_api_key(api_key)
-            .with_org_id("the-continental");
+            .with_api_key(api_key.to_string());
         let client = Client::with_config(config);
         EmbeddingGenerator { client }
-    
+    }
+
+    pub fn chunk_text(&self, text: &str, chunk_size: usize, overlap: usize) -> Vec<String> {
+        let mut chunks = Vec::new();
+        let chars: Vec<char> = text.chars().collect();
+        let mut i = 0;
+
+        while i < chars.len() {
+            let end = (i + chunk_size).min(chars.len());
+            let chunk: String = chars[i..end].iter().collect();
+            chunks.push(chunk);
+            
+            // Move forward by chunk_size - overlap for next iteration
+            i += chunk_size - overlap;
+            
+            // Break if we've processed all text
+            if i >= chars.len() {
+                break;
+            }
+        }
+
+        chunks
+    }
+
+    pub async fn generate_embeddings(
+        &self,
+        text: &str,
+        chunk_size: usize,
+        overlap: usize,
+    ) -> Result<Vec<Vec<f32>>, Box<dyn std::error::Error>> {
+        let chunks = self.chunk_text(text, chunk_size, overlap);
+        let mut embeddings = Vec::new();
+
+        for chunk in chunks {
+            let embedding = self.generate_embedding(&chunk).await?;
+            embeddings.push(embedding);
+        }
+
+        Ok(embeddings)
     }
 
     pub async fn generate_embedding(
@@ -37,6 +76,27 @@ impl EmbeddingGenerator {
             Ok(embedding.embedding.clone())
         } else {
             Err("No embedding generated".into())
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_chunk_text() {
+        let generator = EmbeddingGenerator::from_api_key("dummy-key");
+        let text = "This is a test text that needs to be chunked into smaller pieces.";
+        let chunks = generator.chunk_text(text, 10, 2);
+        
+        assert!(chunks.len() > 1);
+        assert!(chunks[0].len() <= 10);
+        
+        // Check overlap
+        if chunks.len() > 1 {
+            let overlap_text = &chunks[0][chunks[0].len()-2..];
+            assert!(chunks[1].starts_with(overlap_text));
         }
     }
 }

@@ -5,6 +5,9 @@ const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig({
   plugins: [tailwindcss()],
+  optimizeDeps: {
+    exclude: ['DOMpurify']
+  },
   // prevent vite from obscuring rust errors
   clearScreen: false,
   server: {

@@ -5,12 +5,27 @@
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use chrono::Local;  // Add this to your imports at the top
+use serde_json;
+
+use crate::embeddings;  // First, add serde_json to your imports
+
 #[derive(Clone, Serialize, Deserialize)]
+
 pub struct Document {
     pub id: usize,
+    //pub content: String,
+    pub name: String,
+    pub file_path: String,
+    pub created_at: String,
+    pub embedding: Vec<f32>
+}
+
+pub struct SimilarDocument {
+    pub id: usize,
+    pub name: String,
     pub content: String,
-    pub path: String,
-    pub embedding: Vec<f32>,
+    pub similarity: f32
 }
 
 pub struct DocumentStore {
@@ -28,19 +43,24 @@ impl DocumentStore {
 
         // Create tables if they don't exist
         conn.execute(
-            "CREATE TABLE IF NOT EXISTS documents (
-                id INTEGER PRIMARY KEY,
-                content TEXT NOT NULL,
-                path TEXT NOT NULL
+            "CREATE TABLE IF NOT EXISTS documents 
+            (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            file_path TEXT NOT NULL UNIQUE
             )",
             [],
         )?;
 
         conn.execute(
-            "CREATE TABLE IF NOT EXISTS embeddings (
-                doc_id INTEGER PRIMARY KEY,
-                vector BLOB NOT NULL,
-                FOREIGN KEY(doc_id) REFERENCES documents(id)
+            "CREATE TABLE IF NOT EXISTS embeddings 
+            (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            doc_id INTEGER NOT NULL,
+            chunk TEXT NOT NULL, 
+            embedding JSON NOT NULL,
+            FOREIGN KEY(doc_id) REFERENCES documents(id)
             )",
             [],
         )?;
@@ -62,21 +82,22 @@ impl DocumentStore {
         mut document: Document,
     ) -> Result<(), Box<dyn std::error::Error>> {
         document.id = self.next_id;
+        let current_time = Local::now().to_rfc3339();  // ISO 8601/RFC 3339 format
 
         let tx = self.conn.transaction()?;
 
         // Insert document
         tx.execute(
-            "INSERT INTO documents (id, content, path) VALUES (?1, ?2, ?3)",
-            params![document.id, document.content, document.path],
+            "INSERT INTO documents (id, name, created_at, file_path) VALUES (?1, ?2, ?3, ?4)",
+            params![document.id, document.name, current_time, document.file_path],
         )?;
 
-        // Insert embedding
-        let embedding_bytes = bincode::serialize(&document.embedding)?;
-        tx.execute(
-            "INSERT INTO embeddings (doc_id, vector) VALUES (?1, ?2)",
-            params![document.id, embedding_bytes],
-        )?;
+        // // Insert embedding
+        // let embedding_bytes = bincode::serialize(&document.embedding)?;
+        // tx.execute(
+        //     "INSERT INTO embeddings (doc_id, chunk, embedding) VALUES (?, ?, ?)",
+        //     params![document.id, chunk, embedding_bytes],
+        // )?;
 
         tx.commit()?;
 
@@ -86,52 +107,48 @@ impl DocumentStore {
 
     pub fn search(
         &self,
-        query: &[f32],
+        query_embedding: &[f32],
         limit: usize,
-    ) -> Result<Vec<(Document, f32)>, Box<dyn std::error::Error>> {
-        let mut documents = Vec::new();
-
+    ) -> Result<Vec<(String, usize, String, f32)>, Box<dyn std::error::Error>> {
         let mut stmt = self.conn.prepare(
-            "SELECT d.id, d.content, d.path, e.vector 
+            "SELECT d.id, d.name, d.file_path, d.created_at, e.id, e.chunk, e.embedding 
              FROM documents d 
-             JOIN embeddings e ON d.id = e.doc_id",
+             JOIN embeddings e ON d.id = e.doc_id"
         )?;
 
+        let mut similarities = Vec::new();
+        
         let rows = stmt.query_map([], |row| {
-            let id: usize = row.get(0)?;
-            let content: String = row.get(1)?;
-            let path: String = row.get(2)?;
-            let vector_bytes: Vec<u8> = row.get(3)?;
-
-            let embedding: Vec<f32> = bincode::deserialize(&vector_bytes).map_err(|e| {
+            let name: String = row.get(1)?;        // Get just the name
+            let chunk_id: usize = row.get(4)?;
+            let chunk: String = row.get(5)?;
+            let embedding_json: String = row.get(6)?;
+            
+            let chunk_embedding: Vec<f32> = serde_json::from_str(&embedding_json).map_err(|e| {
                 rusqlite::Error::FromSqlConversionFailure(
-                    0,
-                    rusqlite::types::Type::Blob,
-                    Box::new(e),
+                    6,
+                    rusqlite::types::Type::Text,
+                    Box::new(e)
                 )
             })?;
+            
+            let similarity = cosine_similarity(query_embedding, &chunk_embedding);
 
-            Ok(Document {
-                id,
-                content,
-                path,
-                embedding,
-            })
+            Ok((name, chunk_id, chunk, similarity))  // Return tuple with just name
         })?;
 
-        // Collect documents and compute similarities
-        let mut similarities: Vec<(Document, f32)> = Vec::new();
         for row in rows {
-            let doc = row?;
-            let similarity = cosine_similarity(query, &doc.embedding);
-            similarities.push((doc, similarity));
+            similarities.push(row?);
         }
 
-        // Sort by similarity and take top k
-        similarities.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-        documents.extend(similarities.into_iter().take(limit));
+        // Sort by similarity score in descending order
+        similarities.sort_by(|a, b| {
+            b.3.partial_cmp(&a.3)  // Changed from .2 to .3 to access similarity
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
-        Ok(documents)
+        // Take top k results
+        Ok(similarities.into_iter().take(limit).collect())
     }
 }
 

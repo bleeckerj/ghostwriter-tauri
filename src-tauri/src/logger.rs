@@ -8,7 +8,7 @@ use std::io::Write;
 
 #[derive(Serialize, Deserialize)]
 pub struct VectorSearchResult {
-    pub path: String,
+    pub name: String,
     pub similarity: f32,
     pub content: String,
 }
