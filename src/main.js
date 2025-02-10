@@ -12,6 +12,7 @@ const { invoke } = window.__TAURI__.core;
 
 let greetInputEl;
 let greetMsgEl;
+let greetBtnEl;
 
 async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -54,13 +55,63 @@ async function greet() {
   });
 }
 
+async function completionFromContext() {
+  let dots = 0;
+  const loadingInterval = setInterval(() => {
+    dots = (dots + 1) % 4;
+    greetMsgEl.textContent = `Emanating${'.'.repeat(dots)}`;
+  }, 500);
+
+  invoke("completion_from_context", { input: editor.getText() })
+    .then((res) => {
+      clearInterval(loadingInterval);
+      greetMsgEl.textContent = 'Complete';
+      
+      editor.chain()
+        .focus()
+        .insertContent([
+          {
+            type: 'text',
+            text: ' '
+          },
+          {
+          type: 'text',
+          text: res,
+          marks: [{
+            type: 'dynamicTextMark',
+            attrs: { 
+              textColor: 'blue',
+              backgroundColor: '#f3f4f6',
+              twMisc: 'font-semibold rounded animated-highlight',
+              id: 'backend-id-123',
+              timestamp: Date.now(),
+              raw: res
+            }  
+          }]
+        },
+        {
+          type: 'text',
+          text: ' '
+        }
+        ]).run();
+    })
+    .catch((err) => {
+      clearInterval(loadingInterval);
+      greetMsgEl.textContent = 'Error occurred';
+      console.error(err);
+    });
+}
+
 window.addEventListener("DOMContentLoaded", async () => {
   greetInputEl = document.querySelector("#greet-input");
   greetMsgEl = document.querySelector("#greet-msg");
-  document.querySelector("#greet-form").addEventListener("submit", (e) => {
-    e.preventDefault();
-    greet();
-  });
+  greetBtnEl = document.querySelector("#greet-btn");
+  greetBtnEl.addEventListener("click", greet);
+
+  // document.querySelector("#greet-form").addEventListener("submit", (e) => {
+  //   e.preventDefault();
+  //   greet();
+  // });
   // Add Tauri event listener here
   let unlistenSimpleLogMessageFn;
   let unlistenRichLogMessageFn;
