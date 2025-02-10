@@ -301,7 +301,7 @@ function initializeResizeHandle() {
         if (newBottomHeight < MIN_HEIGHT_BOTTOM) {
             bottomArea.classList.add('collapsed');
             topArea.style.flex = '1';
-            bottomArea.style.flex = '0';  // Add this line
+            bottomArea.style.flex = '0';
             return;
         }
 
@@ -318,9 +318,9 @@ function initializeResizeHandle() {
 
         // Only update flex values if not collapsed
         if (!bottomArea.classList.contains('collapsed')) {
-            const availableHeight = containerHeight - MIN_HEIGHT;
-            const topPercent = (newTopHeight / availableHeight) * 100;
-            const bottomPercent = (newBottomHeight / availableHeight) * 100;
+            // Use containerHeight directly since we don't need to subtract MIN_HEIGHT anymore
+            const topPercent = (newTopHeight / containerHeight) * 100;
+            const bottomPercent = (newBottomHeight / containerHeight) * 100;
             
             topArea.style.flex = `${topPercent} 1 0`;
             bottomArea.style.flex = `${bottomPercent} 1 0`;
