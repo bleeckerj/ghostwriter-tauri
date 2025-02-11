@@ -415,6 +415,8 @@ button {
   align-items: center;
   justify-content: center;
   z-index: 100;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
 
   @apply border border-black;
   @apply shadow-[4px_0px_0px_0px];
