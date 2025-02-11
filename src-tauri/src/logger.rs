@@ -11,6 +11,7 @@ pub struct VectorSearchResult {
     pub name: String,
     pub similarity: f32,
     pub content: String,
+    pub chunk_id: usize,
 }
 
 #[derive(Serialize, Deserialize)]

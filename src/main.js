@@ -13,13 +13,15 @@ const { invoke } = window.__TAURI__.core;
 let greetInputEl;
 let greetMsgEl;
 let greetBtnEl;
+let incantBtnEl;
 
 async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
   //greetMsgEl.textContent = await invoke("greet", { name: greetInputEl.value });
-  invoke("greet", { name: greetInputEl.value }).then((res) => {
+  invoke("greet", { name: greetInputEl.value }).then(([a, b]) => {
     greetMsgEl.textContent =  'And this is JS Frontend saying hello!';
-    console.log(res);
+    console.log(a);
+    console.log(b);
     editor.chain()
     .focus()
     .insertContent([
@@ -29,7 +31,7 @@ async function greet() {
       },
       {
         type: 'text',
-        text: res,
+        text: a+" "+b,
         marks: [{
           type: 'dynamicTextMark',
           attrs: { 
@@ -38,7 +40,7 @@ async function greet() {
             twMisc: 'font-semibold rounded animated-highlight',
             id: 'backend-id-123',
             timestamp: Date.now(),
-            raw: res
+            raw: a+" "+b
           }  
         }]
       },
@@ -56,18 +58,27 @@ async function greet() {
 }
 
 async function searchSimilarity() {
-  invoke("search_similarity", { query: editor.getText(), limit: 4 })
-  .then((res) => {
-    console.log(res);
-    res.forEach((result, index) => {
-      addSimpleLogEntry({ 
-        id: Date.now() + "_" + index, // Ensure unique IDs
-        timestamp: Date.now(),
-        message: "<div><p class='border-l-[4px] border-pink-100 pl-2 pr-8 text-pretty'>"+result.chunk_text+"</p><p class='mt-1 px-2 py-1 rounded-sm bg-gray-800 w-fit'>"+result.similarity_score+"</p><span class='font-bold'>"+result.document_name+"</span></div>",
-        level: 'info'
-      });
+  const results = await invoke("search_similarity", { 
+    query: editor.getText(), 
+    limit: 4 
+  });
+  
+  // Add log entries for the results
+  results.forEach((result, index) => {
+    addSimpleLogEntry({ 
+      id: Date.now() + "_" + index,
+      timestamp: Date.now(),
+      message: `<div>
+        <p class='border-l-[4px] border-pink-100 pl-2 pr-8 text-pretty'>${result.chunk_text}</p>
+        <p class='mt-1 px-2 py-1 rounded-sm bg-gray-800 w-fit'>${result.similarity_score}</p>
+        <span class='font-bold'>${result.document_name}</span>
+      </div>`,
+      level: 'info'
     });
-  })
+  });
+
+  // Return the results for further use
+  return results;
 }
 
 async function completionFromContext() {
@@ -75,15 +86,16 @@ async function completionFromContext() {
   const loadingInterval = setInterval(() => {
     dots = (dots + 1) % 4;
     greetMsgEl.textContent = `Emanating${'.'.repeat(dots)}`;
-  }, 500);
+  }, 250);
   
 
   
   invoke("completion_from_context", { input: editor.getText() })
-  .then((res) => {
+  .then(([content, timing]) => {
     clearInterval(loadingInterval);
     greetMsgEl.textContent = 'Complete';
-    
+    console.log(content);
+    console.log(timing);
     editor.chain()
     .focus()
     .insertContent([
@@ -93,7 +105,7 @@ async function completionFromContext() {
       },
       {
         type: 'text',
-        text: res,
+        text: content,
         marks: [{
           type: 'dynamicTextMark',
           attrs: { 
@@ -102,7 +114,7 @@ async function completionFromContext() {
             twMisc: 'font-semibold rounded animated-highlight',
             id: 'backend-id-123',
             timestamp: Date.now(),
-            raw: res
+            raw: content
           }  
         }]
       },
@@ -117,14 +129,39 @@ async function completionFromContext() {
     greetMsgEl.textContent = 'Error occurred';
     console.error(err);
   });
+
+  invoke("completion_from_context", { input: "your text" })
+  .then(([content, timing]) => {
+    console.log("Content:", content);
+    console.log("Timing (ms):", {
+      "Embedding Generation": timing.embedding_generation_ms,
+      "Similarity Search": timing.similarity_search_ms,
+      "OpenAI Request": timing.openai_request_ms,
+      "Total Time": timing.total_ms
+    });
+    
+    // You could also log this info using your existing logging system
+    addSimpleLogEntry({
+      id: Date.now(),
+      timestamp: Date.now(),
+      message: `Completion timing: 
+        Embedding: ${timing.embedding_generation_ms}ms, 
+        Search: ${timing.similarity_search_ms}ms, 
+        OpenAI: ${timing.openai_request_ms}ms, 
+        Total: ${timing.total_ms}ms`,
+      level: 'info'
+    });
+  });
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
   greetInputEl = document.querySelector("#greet-input");
   greetMsgEl = document.querySelector("#greet-msg");
   greetBtnEl = document.querySelector("#greet-btn");
-  greetBtnEl.addEventListener("click", searchSimilarity);
-  
+  //greetBtnEl.addEventListener("click", searchSimilarity);
+  greetBtnEl.addEventListener("click", greet);
+  incantBtnEl = document.querySelector("#incant-btn");
+  incantBtnEl.addEventListener("click", completionFromContext);
   // document.querySelector("#greet-form").addEventListener("submit", (e) => {
     //   e.preventDefault();
   //   greet();

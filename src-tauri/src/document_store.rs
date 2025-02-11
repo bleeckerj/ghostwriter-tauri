@@ -113,29 +113,29 @@ impl DocumentStore {
         let mut stmt = self.conn.prepare(
             "SELECT d.id, d.name, d.file_path, d.created_at, e.id, e.chunk, e.embedding 
              FROM documents d 
-             JOIN embeddings e ON d.id = e.doc_id"
-        )?;
+             JOIN embeddings e ON d.id = e.doc_id 
+             LIMIT ?"
+        )?;  // Use ? directly for rusqlite::Error
 
         let mut similarities = Vec::new();
         
-        let rows = stmt.query_map([], |row| {
-            let name: String = row.get(1)?;        // Get just the name
+        let rows = stmt.query_map([limit as i64], |row| {
+            let name: String = row.get(1)?;  // Use ? directly for rusqlite errors
             let chunk_id: usize = row.get(4)?;
             let chunk: String = row.get(5)?;
             let embedding_json: String = row.get(6)?;
             
-            let chunk_embedding: Vec<f32> = serde_json::from_str(&embedding_json).map_err(|e| {
-                rusqlite::Error::FromSqlConversionFailure(
+            let chunk_embedding: Vec<f32> = serde_json::from_str(&embedding_json)
+                .map_err(|e| rusqlite::Error::FromSqlConversionFailure(
                     6,
                     rusqlite::types::Type::Text,
                     Box::new(e)
-                )
-            })?;
+                ))?;
             
             let similarity = cosine_similarity(query_embedding, &chunk_embedding);
 
-            Ok((name, chunk_id, chunk, similarity))  // Return tuple with just name
-        })?;
+            Ok((name, chunk_id, chunk, similarity))
+        })?;  // Use ? directly for rusqlite::Error
 
         for row in rows {
             similarities.push(row?);

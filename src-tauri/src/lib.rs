@@ -42,6 +42,7 @@ mod logger;
 use logger::{CompletionLogEntry, Logger, VectorSearchResult};
 use std::env;
 use lazy_static::lazy_static;
+use std::time::Instant;
 
 lazy_static! {
     static ref OPENAI_API_KEY: String = {
@@ -50,58 +51,73 @@ lazy_static! {
     };
 }
 
+#[derive(Serialize)]
+struct CompletionTiming {
+    embedding_generation_ms: u128,
+    similarity_search_ms: u128,
+    openai_request_ms: u128,
+    total_ms: u128,
+}
 
-
+// Modify the function return type to include timing
 #[tauri::command]
 async fn completion_from_context(
     state: tauri::State<'_, AppState>,
     app_handle: tauri::AppHandle,
     input: String,
-) -> Result<String, String> {
+) -> Result<(String, CompletionTiming), String> {
+    let start_total = Instant::now();
     
-    // Generate embedding for the input
+    // Time embedding generation
+    let start_embedding = Instant::now();
     let embedding = state
         .embedding_generator
         .generate_embedding(&input)
         .await
         .map_err(|e| e.to_string())?;
+    let embedding_duration = start_embedding.elapsed();
 
-    // Search for similar documents
+    // Time similarity search
+    let start_search = Instant::now();
     let similar_docs = state
         .doc_store
         .lock()
         .unwrap()
         .search(&embedding, 3)
         .map_err(|e| e.to_string())?;
+    let search_duration = start_search.elapsed();
 
     // Prepare the context for the LLM
     // This has all the document metadata..is that okay?
     let mut context = String::new();
-    // for (i, (doc, similarity)) in similar_docs.iter().enumerate() {
-    //     context.push_str(&format!(
-    //         "--- Document {} (Path: {}) ---\nSimilarity: {:.4}\nContent:\n{}\n\n",
-    //         i + 1,
-    //         doc.file_path,
-    //         similarity,
-    //     ));
-    // }
+    for (i, (doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
+        context.push_str(&format!(
+            "--- Result {} (Chunk Id: {} Doc: {}) ---\nSimilarity: {:.4}\nContent:\n{}\n\n",
+            (i + 1),
+            chunk_id,
+            doc_name,
+            similarity,
+            chunk_text,
+        ));
+    }
 
     let mut vector_search_results: Vec<VectorSearchResult> = Vec::new();
 
-    // for (doc, similarity) in similar_docs.iter() {
-    //     vector_search_results.push(VectorSearchResult {
-    //         similarity: *similarity,
-    //         name: doc.name.clone(),
-    //         content: doc.content.clone()
-    //     });
-    // }
+    for (i, (doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
+        vector_search_results.push(VectorSearchResult {
+            similarity: *similarity,
+            name: doc_name.clone(),
+            content: chunk_text.clone(),
+            chunk_id: *chunk_id,
+        });
+    }
 
     let conversation_context = state.conversation.lock().unwrap().get_context();
     let prose_style = "A style that is consistent with the input text".to_string();
     //const prose_style = "In the style of a medieval scribe using Old or Middle English";
     // const response_limit = "Respond with no more than two sentences along with the completion of any partial sentence or thought fragment. In addition, add one sentence fragment that does not conclude with a period or full-stop. This sentence fragment is meant to be a provocation in the direction of thought being developed so that the user can continue to write in the same vein.";
 
-    let response_limit = "Respond with no more than one sentence or the completion of a thought fragment. Write until you complete one thought with a full-stop or period. You may complete a partially complete sentence or if the input text is already a complete sentence, you may add a sentence that follows it.".to_string();
+    let response_limit = "Respond with no more than one sentence or the completion of one sentence. Write until you complete one thought to a full-stop or period. You may complete a partially complete sentence or if the input text is already a complete sentence, you may add only one sentence that would reasonably and semantically follow that one sentence.".to_string();
     
     let system_content = format!(
         "Here is your brief: You are a text completion engine. You do not answer questions or respond to questions in any way. \
@@ -142,19 +158,33 @@ async fn completion_from_context(
         .model("chatgpt-4o-latest")
         .messages(vec![system_message, user_message])
         .temperature(0.7)
-        .max_tokens(100_u16)
+        .max_completion_tokens(100_u16)
+        .n(1)
         .build()
         .map_err(|e| e.to_string())?;
 
+    // Time OpenAI request
+    let start_openai = Instant::now();
     let response = Client::new()
         .chat()
         .create(request)
         .await
         .map_err(|e| e.to_string())?;
+    let openai_duration = start_openai.elapsed();
+
+    let total_duration = start_total.elapsed();
 
     // Process the response
     if let Some(choice) = response.choices.first() {
         if let Some(content) = &choice.message.content {
+            // Create timing info
+            let timing = CompletionTiming {
+                embedding_generation_ms: embedding_duration.as_millis(),
+                similarity_search_ms: search_duration.as_millis(),
+                openai_request_ms: openai_duration.as_millis(),
+                total_ms: total_duration.as_millis(),
+            };
+
             // Log the completion and update the conversation history
             let log_entry = CompletionLogEntry {
                 timestamp: Utc::now(),
@@ -179,7 +209,7 @@ async fn completion_from_context(
                 .unwrap()
                 .add_exchange(input.clone(), content.clone());
             //println!("Completion: {}", content);
-            return Ok(content.clone());
+            return Ok((content.clone(), timing));
         }
     }
 
