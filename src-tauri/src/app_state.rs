@@ -1,11 +1,16 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
 #![allow(unused)]
+use chrono::format;
+use tauri::AppHandle;
 use crate::conversations::Conversation;
 use crate::document_store::DocumentStore;
 use crate::embeddings::EmbeddingGenerator;
 use crate::logger::Logger;
 use std::sync::{Arc, Mutex};
+use std::path::PathBuf;
+use tauri::Manager;
+use std::fs;
 
 pub struct AppState {
     pub doc_store: Arc<Mutex<DocumentStore>>,
@@ -19,10 +24,10 @@ impl AppState {
     pub fn new(
         doc_store: DocumentStore,
         embedding_generator: EmbeddingGenerator,
-        log_path: &str,
+        initial_log_path: &str,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         // Initialize logger
-        let logger = Logger::new(log_path)?;
+        let logger = Logger::new(initial_log_path)?;
 
         Ok(Self {
             logger: Mutex::new(logger),
@@ -31,5 +36,30 @@ impl AppState {
             conversation: Mutex::new(Conversation::new(16000)),
             buffer: Mutex::new(String::new()),
         })
+    }
+
+    // Add method to update logger path
+    pub fn update_logger_path(&self, app_handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+        let log_path = app_handle
+            .path()
+            .app_local_data_dir()
+            .unwrap_or(std::path::PathBuf::new())
+            .join("log.json")  // This properly handles path separators
+            .to_string_lossy()
+            .to_string();  // Convert to owned String
+
+        fs::create_dir(app_handle
+            .path()
+            .app_local_data_dir()
+            .unwrap_or(std::path::PathBuf::new()))?;
+
+        print!("Trying to update logger path to: {}", log_path);
+        let new_logger = Logger::new(&log_path)?;
+        
+        let mut logger = self.logger.lock()
+            .map_err(|e| format!("Failed to acquire logger lock: {}", e))?;
+        *logger = new_logger;
+        
+        Ok(())
     }
 }

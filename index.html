@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="stylesheet" href="/src/styles.css" />
+  <link rel="stylesheet" href="/src/fonts.css" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tauri App</title>
   <script type="module" src="./src/main.js" defer></script>
@@ -10,14 +11,31 @@
 
 <body>
   <main class="container">
-  <p class="bg-amber-300 rounded-2xl p-4 mx-auto w-11/12 text-center font-extrabold">Welcome to Ghostwriter</p>
+  <!-- <p class="bg-amber-300 rounded-2xl p-4 mx-auto w-11/12 text-center font-['Haffer'] font-extrabold text-[1.5em]">Welcome to Ghostwriter</p> -->
   
-  <div class="row my-4" id="greet-form">
-    <input id="greet-input" placeholder="WTF..." />
-    <div id="greet-btn" class="p-2 rounded-sm border-[0.5px] border-black hover:translate-x-1  cursor-pointer" type="submit">Greet</div>
-    <div id="incant-btn" class="p-2 rounded-sm border-[0.5px] border-black hover:translate-x-1  cursor-pointer" type="submit">Incant</div>
+  <!-- <div class="row pb-2 m-8" id="buttons"> -->
+    <!-- <input id="greet-input" class="bg-blue-700 mr-[5em] p-2 rounded-sm border-[0.5px] border-black" placeholder="Write Something..." /> -->
+     <div class="mb-4 mx-auto">
+    <!-- <div id="greet-btn" class="
+    relative w-fit mr-8 p-2 rounded-sm 
+    border border-black 
+    shadow-[8px_0px_0px_0px]
+    hover:shadow-none  
+    hover:translate-x-[8px]
+    before:content-[''] before:absolute before:left-0 before:top-0
+    before:w-full before:h-full before:border-[0.5px] before:border-transparent
+    hover:before:border-l-0 hover:before:border-t-0 hover:before:border-black cursor-pointer" type="submit">Greet</div> -->
 
-  </div>
+  <div id="incant-btn" class="
+  relative w-fit mr-8 p-2 rounded-sm 
+  border border-black 
+  shadow-[8px_0px_0px_0px]
+  hover:shadow-none  
+  hover:translate-x-[8px]
+  before:content-[''] before:absolute before:left-0 before:top-0
+  before:w-full before:h-full before:border-[0.5px] before:border-transparent
+  hover:before:border-l-0 hover:before:border-t-0 hover:before:border-black cursor-pointer" type="submit">Incant</div>
+</div>
 
   <div class="scroll-area">
     <div class="editor-content h-full">

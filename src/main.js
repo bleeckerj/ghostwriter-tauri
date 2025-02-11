@@ -12,16 +12,14 @@ const { invoke } = window.__TAURI__.core;
 
 let greetInputEl;
 let greetMsgEl;
-let greetBtnEl;
+//let greetBtnEl;
 let incantBtnEl;
 
 async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
   //greetMsgEl.textContent = await invoke("greet", { name: greetInputEl.value });
-  invoke("greet", { name: greetInputEl.value }).then(([a, b]) => {
+  invoke("greet", { name: greetInputEl.value }).then(res => {
     greetMsgEl.textContent =  'And this is JS Frontend saying hello!';
-    console.log(a);
-    console.log(b);
     editor.chain()
     .focus()
     .insertContent([
@@ -31,16 +29,16 @@ async function greet() {
       },
       {
         type: 'text',
-        text: a+" "+b,
+        text: res,
         marks: [{
           type: 'dynamicTextMark',
           attrs: { 
-            textColor: 'blue',
+            textColor: 'black',
             backgroundColor: '#f3f4f6',
-            twMisc: 'font-semibold rounded animated-highlight',
+            twMisc: 'font-regular font-[WarblerText] rounded animated-highlight',
             id: 'backend-id-123',
             timestamp: Date.now(),
-            raw: a+" "+b
+            raw: res
           }  
         }]
       },
@@ -94,15 +92,30 @@ async function completionFromContext() {
   .then(([content, timing]) => {
     clearInterval(loadingInterval);
     greetMsgEl.textContent = 'Complete';
-    console.log(content);
-    console.log(timing);
+    // // addSimpleLogEntry({
+    // //   id: Date.now(),
+    // //   timestamp: Date.now(),
+    // //   message: `Completion timing: 
+    // //     Embedding: ${timing.embedding_generation_ms}ms, 
+    // //     Similarity: ${timing.similarity_search_ms}ms, 
+    // //     Emanation: ${timing.openai_request_ms}ms, 
+    // //     Total: ${timing.total_ms}ms`,
+    // //   level: 'info'
+    // // });
+    // // console.log("Timing (ms):", {
+    //   "Embedding": timing.embedding_generation_ms,
+    //   "Similarity": timing.similarity_search_ms,
+    //   "Emanation": timing.openai_request_ms,
+    //   "Total": timing.total_ms
+    // });
+    console.log("Completion content:", content);
     editor.chain()
     .focus()
     .insertContent([
-      {
-        type: 'text',
-        text: ' '
-      },
+      // {
+      //   type: 'text',
+      //   text: ''
+      // },
       {
         type: 'text',
         text: content,
@@ -111,7 +124,7 @@ async function completionFromContext() {
           attrs: { 
             textColor: 'blue',
             backgroundColor: '#f3f4f6',
-            twMisc: 'font-semibold rounded animated-highlight',
+            twMisc: 'font-regular font-[WarblerText] text-[1em] rounded animated-highlight',
             id: 'backend-id-123',
             timestamp: Date.now(),
             raw: content
@@ -129,37 +142,14 @@ async function completionFromContext() {
     greetMsgEl.textContent = 'Error occurred';
     console.error(err);
   });
-
-  invoke("completion_from_context", { input: "your text" })
-  .then(([content, timing]) => {
-    console.log("Content:", content);
-    console.log("Timing (ms):", {
-      "Embedding Generation": timing.embedding_generation_ms,
-      "Similarity Search": timing.similarity_search_ms,
-      "OpenAI Request": timing.openai_request_ms,
-      "Total Time": timing.total_ms
-    });
-    
-    // You could also log this info using your existing logging system
-    addSimpleLogEntry({
-      id: Date.now(),
-      timestamp: Date.now(),
-      message: `Completion timing: 
-        Embedding: ${timing.embedding_generation_ms}ms, 
-        Search: ${timing.similarity_search_ms}ms, 
-        OpenAI: ${timing.openai_request_ms}ms, 
-        Total: ${timing.total_ms}ms`,
-      level: 'info'
-    });
-  });
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
   greetInputEl = document.querySelector("#greet-input");
   greetMsgEl = document.querySelector("#greet-msg");
-  greetBtnEl = document.querySelector("#greet-btn");
+  //greetBtnEl = document.querySelector("#greet-btn");
   //greetBtnEl.addEventListener("click", searchSimilarity);
-  greetBtnEl.addEventListener("click", greet);
+ // greetBtnEl.addEventListener("click", greet);
   incantBtnEl = document.querySelector("#incant-btn");
   incantBtnEl.addEventListener("click", completionFromContext);
   // document.querySelector("#greet-form").addEventListener("submit", (e) => {
@@ -249,9 +239,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   invoke("simple_log_message", { message: 'Ghostwriter Up.', id: "tracker", level: "info" }).then((res) => {
     console.log('simple_log_emissions', res);
   });
-  invoke("rich_log_message", { message: 'Ghostwriter Up.', data: "no data", level: "info" }).then((res) => {
-    console.log('rich_log_emissions', res);
-  });
+  // invoke("rich_log_message", { message: 'Ghostwriter Up.', data: "no data", level: "info" }).then((res) => {
+  //   console.log('rich_log_emissions', res);
+  // });
   // Cleanup when window unloads
   window.addEventListener('unload', () => {
     if (unlistenFn) {

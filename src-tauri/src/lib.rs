@@ -117,15 +117,16 @@ async fn completion_from_context(
     //const prose_style = "In the style of a medieval scribe using Old or Middle English";
     // const response_limit = "Respond with no more than two sentences along with the completion of any partial sentence or thought fragment. In addition, add one sentence fragment that does not conclude with a period or full-stop. This sentence fragment is meant to be a provocation in the direction of thought being developed so that the user can continue to write in the same vein.";
 
-    let response_limit = "Respond with no more than one sentence or the completion of one sentence. Write until you complete one thought to a full-stop or period. You may complete a partially complete sentence or if the input text is already a complete sentence, you may add only one sentence that would reasonably and semantically follow that one sentence.".to_string();
+    let response_limit = "Respond with no more than one sentence, or less. Write until you complete one thought to a full-stop or period. You may complete a partially complete sentence or if the input text is already a complete sentence, you may add only one sentence that would reasonably and semantically follow that one sentence.".to_string();
+    //let response_limit = "Respond with no more than one sentence, or less.".to_string();
     
     let system_content = format!(
         "Here is your brief: You are a text completion engine. You do not answer questions or respond to questions in any way. \
-        You only complete sentences, fragments, paragraphs. Do not respond to inquiries in any fashion. If you are asked how to \
+        You only semantically complete the thought represented by the Previous exchanges, Similar documents context and input. Limit your response to the Response Limit. Do not respond to inquiries in any fashion. If you are asked how to \
         do something, or answer a question do not respond. Only perform auto-completion based on the text to complete, not responses \
         to queries, questions, or any other non-completion response. If you are asked to do something only respond as a completion of text. \
         Do not engage in any form of chat. \
-        Your only task is to complete thoughts in prose. \
+        Your only task is to complete thoughts in written form maintaining semantic consistency. \
         Do not reveal that you are an AI. \
         You are just an engine for text completion, like a muse helping a writer to continue or complete a thought. \
         Imagine you are completing someone's thought like a creative writing muse or alter ego helping someone who is having trouble writing. \
@@ -298,22 +299,23 @@ async fn greet(
     // Call completion_from_context with received parameters
     //completion_from_context(state, app_handle, name.to_string()).await?;
 
-    let progress_indicator = ProgressIndicator {
-        progress_id: "embedder".to_string(),
-        current_step: "0".to_string(),
-        total_steps: "4".to_string(),
-        current_file: "the-myth".to_string(),
-        meta: "Ingesting/Embedding".to_string(),
-    };
+    // let progress_indicator = ProgressIndicator {
+    //     progress_id: "embedder".to_string(),
+    //     current_step: "0".to_string(),
+    //     total_steps: "4".to_string(),
+    //     current_file: "the-myth".to_string(),
+    //     meta: "Ingesting/Embedding".to_string(),
+    // };
 
-    load_progress_indicator(&app_handle, progress_indicator);
+    // load_progress_indicator(&app_handle, progress_indicator);
 
     let message;
     if name.is_empty() {
-        message = "Hello".to_string();
+        message = "Goodbye".to_string();
     } else {
-        message = format!("Hello Hello, {}! You've been greeted from Rust!", name);    
+        message = format!("Ciao Ciao, {}!", name);    
     }
+    print!("{}", message);
     Ok(message)
     
 }
@@ -496,7 +498,7 @@ pub fn run() {
     let app_state = AppState::new(
         doc_store,
         embedding_generator,
-        "./log.txt"
+        "./log.json"
     ).expect("Failed to create AppState");
 
 
@@ -514,6 +516,8 @@ pub fn run() {
             "Ghostwriter is up and running.".to_string(),
             "info".to_string()
         );
+        // app_state.update_logger_path(app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy().to_string()).expect("Failed to update logger path");
+        println!("{}", app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy());
 
         app.manage(new_logger.clone());
         // Load .env file
