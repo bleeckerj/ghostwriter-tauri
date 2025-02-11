@@ -6,8 +6,9 @@ export const InlineActionItem = Node.create({
   
   group: 'inline',
   inline: true,
-  selectable: true,
-  draggable: true,
+  selectable: false,
+  draggable: false,
+  atom: true,
 
   parseHTML() {
     return [
@@ -22,78 +23,99 @@ export const InlineActionItem = Node.create({
       ...HTMLAttributes,
       'data-type': 'inline-action',
       class: 'inline-action-item'
-    }, 'INCANT']
+    }, 'NFL']
   },
 
   addProseMirrorPlugins() {
     let timeout
-    let nflTag = null
-    const showTag = (view, coords) => {
-        // Remove any existing tag first
-        if (nflTag) {
-          nflTag.remove()
-        }
-  
-        nflTag = document.createElement('span')
-        nflTag.textContent = 'INCANT'
-        nflTag.className = 'inline-action-item'
-        nflTag.style.position = 'absolute'
-        nflTag.style.left = `${coords.right + 5}px`
-        nflTag.style.top = `${coords.top}px`
-        nflTag.style.opacity = '0'  // Start invisible
-        
-        // Add click handler
-        nflTag.addEventListener('click', () => {
-          const tr = view.state.tr
-          const { selection } = view.state
-          tr.insertText(' Sample text ', selection.from)
-          view.dispatch(tr)
-        })
-        
-        document.body.appendChild(nflTag)
-        
-        // Trigger fade in
-        requestAnimationFrame(() => {
-          nflTag.style.opacity = '1'
-        })
-      }
-  
-      const hideTag = () => {
-        if (nflTag) {
-          nflTag.style.opacity = '0'
-          // Remove after fade out animation completes
-          setTimeout(() => nflTag?.remove(), 200)
-          nflTag = null
-        }
-      }
+    let waitingForTyping = false
+
     return [
       new Plugin({
         key: new PluginKey('inlineActionItem'),
         
+        props: {
+          handleClick(view, pos, event) {
+            const node = view.state.doc.nodeAt(pos)
+            if (node && node.type.name === 'inlineActionItem') {
+              const tr = view.state.tr
+              tr.insertText(' Sample text ', pos + node.nodeSize)
+              tr.delete(pos, pos + node.nodeSize)
+              view.dispatch(tr)
+              waitingForTyping = true
+              return true
+            }
+            return false
+          },
+
+          handleKeyDown(view, event) {
+            if (waitingForTyping && (event.key.length === 1 || event.key === 'Enter' || event.key === 'Backspace')) {
+              waitingForTyping = false
+            }
+            return false
+          }
+        },
+
         view(editorView) {
           return {
             update: (view, prevState) => {
-              const { selection } = view.state
-            
-            // Clear existing timeout
-            if (timeout) {
-                clearTimeout(timeout)
-            }
-
-            // Hide existing tag when selection changes
-            hideTag()
-
-            timeout = setTimeout(() => {
-                const coords = view.coordsAtPos(selection.from)
-                showTag(view, coords)
-              }, 5000)  // Adjust delay as needed (currently 1 second)
-            },
-            destroy: () => {
-              // Cleanup on editor destroy
               if (timeout) {
                 clearTimeout(timeout)
               }
-              hideTag()
+
+              // Check if we just deleted an NFL tag by comparing the old and new state
+              if (prevState) {
+                let hadTag = false
+                let hasTag = false
+                
+                // Check old state
+                prevState.doc.descendants((node, pos) => {
+                  if (node.type.name === 'inlineActionItem') {
+                    hadTag = true
+                    return false
+                  }
+                })
+                
+                // Check new state
+                view.state.doc.descendants((node, pos) => {
+                  if (node.type.name === 'inlineActionItem') {
+                    hasTag = true
+                    return false
+                  }
+                })
+
+                // If we had a tag but don't anymore, reset waiting state
+                if (hadTag && !hasTag) {
+                  waitingForTyping = false
+                }
+              }
+
+              if (waitingForTyping) {
+                return
+              }
+
+              // Only proceed if no tag exists
+              let tagExists = false
+              view.state.doc.descendants((node, pos) => {
+                if (node.type.name === 'inlineActionItem') {
+                  tagExists = true
+                  return false
+                }
+              })
+
+              if (!tagExists) {
+                timeout = setTimeout(() => {
+                  const { selection } = view.state
+                  const node = view.state.schema.nodes.inlineActionItem.create()
+                  const tr = view.state.tr.insert(selection.from, node)
+                  view.dispatch(tr)
+                }, 1000)
+              }
+            },
+            destroy: () => {
+              if (timeout) {
+                clearTimeout(timeout)
+              }
             }
           }
         }
