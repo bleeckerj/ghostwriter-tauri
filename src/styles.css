@@ -110,9 +110,10 @@ button {
   min-height: 100%;
   padding: 1rem;
   border-radius: 0.5rem;
-  color: rgb(55 65 81); /* Tailwind gray-700 equivalent */
+  color: rgb(55 65 81);
   overflow-y: auto;
   line-height: 1.75rem;
+  position: relative; 
 }
 
 .container {
@@ -398,4 +399,18 @@ button {
   @apply h-1;
   @apply bg-gray-400;
   @apply rounded-full;
+}
+
+.inline-action-item {
+  background-color: orange;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
 }

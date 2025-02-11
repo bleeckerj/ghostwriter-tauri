@@ -4,6 +4,8 @@ import StarterKit from '@tiptap/starter-kit'
 import DynamicTextMark from './extensions/DynamicTextMark'
 //import DiagnosticLogEntryNode from './extensions/DiagnosticLogEntryNode'
 import SimpleLogEntryNode from './extensions/SimpleLogEntryNode'
+import InlineActionItem from './extensions/InlineActionItem'
+
 import { listen } from '@tauri-apps/api/event';
 import RichLogEntryNode from './extensions/RichLogEntryNode'
 import { ProgressExtension } from './extensions/ProgressNode';
@@ -265,6 +267,7 @@ const editor = new Editor({
     StarterKit,
     //DynamicTextNode,
     DynamicTextMark,
+    InlineActionItem,
     //SimpleLogEntryNode,
     //DiagnosticLogEntryNode
   ],
@@ -279,8 +282,7 @@ const diagnostics = new Editor({
     SimpleLogEntryNode,
     RichLogEntryNode,
     DynamicTextMark,
-    ProgressExtension,
-    ProgressExtension,
+    ProgressExtension  
   ],
 })
 
