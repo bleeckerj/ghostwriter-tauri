@@ -22,7 +22,7 @@ export const InlineActionItem = Node.create({
       ...HTMLAttributes,
       'data-type': 'inline-action',
       class: 'inline-action-item'
-    }, 'NFL']
+    }, 'INCANT']
   },
 
   addProseMirrorPlugins() {
@@ -47,7 +47,7 @@ export const InlineActionItem = Node.create({
               // Create new NFL tag at cursor
               const coords = view.coordsAtPos(selection.from)
               const nflTag = document.createElement('span')
-              nflTag.textContent = 'NFL'
+              nflTag.textContent = 'INCANT'
               nflTag.className = 'inline-action-item'
               nflTag.style.position = 'absolute'
               nflTag.style.left = `${coords.right + 5}px`  // Small offset from cursor

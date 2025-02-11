@@ -402,15 +402,25 @@ button {
 }
 
 .inline-action-item {
-  background-color: orange;
-  color: white;
+  @apply bg-white;
+  @apply -translate-y-[4px];  /* Moves it up slightly */
+  @apply align-middle;        /* Aligns with the middle of the text */
+  color: black;
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 8px;
   cursor: pointer;
   user-select: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
+
+  @apply border border-black;
+  @apply shadow-[4px_0px_0px_0px];
+  @apply hover:shadow-none;  
+  @apply hover:translate-x-[4px];
+  @apply before:content-[''] before:absolute before:left-0 before:top-0;
+  @apply before:w-full before:h-full before:border-[0.5px] before:border-transparent;
+  @apply hover:before:border-l-0 hover:before:border-t-0 hover:before:border-black cursor-pointer;
 }
