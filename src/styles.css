@@ -82,7 +82,7 @@ button {
 }
 
 #greet-input {
-  margin-right: 5px;
+  margin-right: 36px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -197,6 +197,8 @@ button {
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
+  font-family: 'Warbler Text';
+  font-size: 1.2rem;
 }
 
 .diagnostics-content {
@@ -221,7 +223,7 @@ button {
   0% { background-color: rgb(148 163 184); 
     filter: blur(2px);
   }
-  100% { background: rgb(148 163 184 / 0.25); color: inherit; padding: 2px 6px; border-radius:0.2rem; filter: blur(0px);
+  100% { background: rgba(139, 118, 232, 0.37); color: inherit; padding: 2px 6px; border-radius:0.2rem; filter: blur(0px);
   }
 }
 

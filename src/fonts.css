@@ -1,0 +1,333 @@
+/* 1. Extra Light */
+@font-face {
+  font-family: 'ESKlarheitKurrentMono';
+  src: url('/src.fonts/es-klarheit-kurrent-mono/ESKlarheitKurrentMono-Xlt.woff2') format('woff2');
+  font-weight: 200; /* ExtraLight */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'ESKlarheitKurrentMono';
+  src: url('/src.fonts/es-klarheit-kurrent-mono/ESKlarheitKurrentMono-XltIt.woff2') format('woff2');
+  font-weight: 200; /* ExtraLight Italic */
+  font-style: italic;
+}
+
+/* 2. Light */
+@font-face {
+  font-family: 'ESKlarheitKurrentMono';
+  src: url('/src.fonts/es-klarheit-kurrent-mono/ESKlarheitKurrentMono-Lt.woff2') format('woff2');
+  font-weight: 300; /* Light */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'ESKlarheitKurrentMono';
+  src: url('/src.fonts/es-klarheit-kurrent-mono/ESKlarheitKurrentMono-LtIt.woff2') format('woff2');
+  font-weight: 300; /* Light Italic */
+  font-style: italic;
+}
+
+/* 3. Book */
+@font-face {
+  font-family: 'ESKlarheitKurrentMono';
+  src: url('/src.fonts/es-klarheit-kurrent-mono/ESKlarheitKurrentMono-Bk.woff2') format('woff2');
+  font-weight: 400; /* Book (treated as 400) */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'ESKlarheitKurrentMono';
+  src: url('/src.fonts/es-klarheit-kurrent-mono/ESKlarheitKurrentMono-BkIt.woff2') format('woff2');
+  font-weight: 400; /* Book Italic (treated as 400 italic) */
+  font-style: italic;
+}
+
+/* 4. Regular */
+@font-face {
+  font-family: 'ESKlarheitKurrentMono';
+  src: url('/src.fonts/es-klarheit-kurrent-mono/ESKlarheitKurrentMono-Rg.woff2') format('woff2');
+  font-weight: 400; /* Regular */
+  font-style: normal;
+}
+
+/* 5. Regular Italic (named just "It") */
+@font-face {
+  font-family: 'ESKlarheitKurrentMono';
+  src: url('/src.fonts/es-klarheit-kurrent-mono/ESKlarheitKurrentMono-It.woff2') format('woff2');
+  font-weight: 400; /* Regular Italic */
+  font-style: italic;
+}
+
+/* 6. Medium */
+@font-face {
+  font-family: 'ESKlarheitKurrentMono';
+  src: url('/src.fonts/es-klarheit-kurrent-mono/ESKlarheitKurrentMono-Md.woff2') format('woff2');
+  font-weight: 500; /* Medium */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'ESKlarheitKurrentMono';
+  src: url('/src.fonts/es-klarheit-kurrent-mono/ESKlarheitKurrentMono-MdIt.woff2') format('woff2');
+  font-weight: 500; /* Medium Italic */
+  font-style: italic;
+}
+
+/* 7. SemiBold */
+@font-face {
+  font-family: 'ESKlarheitKurrentMono';
+  src: url('/src.fonts/es-klarheit-kurrent-mono/ESKlarheitKurrentMono-Smbd.woff2') format('woff2');
+  font-weight: 600; /* SemiBold */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'ESKlarheitKurrentMono';
+  src: url('/src.fonts/es-klarheit-kurrent-mono/ESKlarheitKurrentMono-SmbdIt.woff2') format('woff2');
+  font-weight: 600; /* SemiBold Italic */
+  font-style: italic;
+}
+
+/* 8. Bold */
+@font-face {
+  font-family: 'ESKlarheitKurrentMono';
+  src: url('/src.fonts/es-klarheit-kurrent-mono/ESKlarheitKurrentMono-Bd.woff2') format('woff2');
+  font-weight: 700; /* Bold */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'ESKlarheitKurrentMono';
+  src: url('/src.fonts/es-klarheit-kurrent-mono/ESKlarheitKurrentMono-BdIt.woff2') format('woff2');
+  font-weight: 700; /* Bold Italic */
+  font-style: italic;
+}
+
+/* 9. ExtraBold */
+@font-face {
+  font-family: 'ESKlarheitKurrentMono';
+  src: url('/src/fonts/es-klarheit-kurrent-mono/ESKlarheitKurrentMono-Xbd.woff2') format('woff2');
+  font-weight: 800; /* ExtraBold */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'ESKlarheitKurrentMono';
+  src: url('/src.fonts/es-klarheit-kurrent-mono/ESKlarheitKurrentMono-XbdIt.woff2') format('woff2');
+  font-weight: 800; /* ExtraBold Italic */
+  font-style: italic;
+}
+
+/* Thin */
+@font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-Thin.woff2') format('woff2');
+    font-weight: 100; /* Thin */
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-ThinItalic.woff2') format('woff2');
+    font-weight: 100; /* Thin Italic */
+    font-style: italic;
+  }
+  
+  /* Light */
+  @font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-Light.woff2') format('woff2');
+    font-weight: 300; /* Light */
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-LightItalic.woff2') format('woff2');
+    font-weight: 300; /* Light Italic */
+    font-style: italic;
+  }
+  
+  /* Regular */
+  @font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-Regular.woff2') format('woff2');
+    font-weight: 400; /* Regular */
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-RegularItalic.woff2') format('woff2');
+    font-weight: 400; /* Regular Italic */
+    font-style: italic;
+  }
+  
+  /* Medium */
+  @font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-Medium.woff2') format('woff2');
+    font-weight: 500; /* Medium */
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-MediumItalic.woff2') format('woff2');
+    font-weight: 500; /* Medium Italic */
+    font-style: italic;
+  }
+  
+  /* SemiBold */
+  @font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-SemiBold.woff2') format('woff2');
+    font-weight: 600; /* SemiBold */
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-SemiBoldItalic.woff2') format('woff2');
+    font-weight: 600; /* SemiBold Italic */
+    font-style: italic;
+  }
+  
+  /* Bold */
+  @font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-Bold.woff2') format('woff2');
+    font-weight: 700; /* Bold */
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-BoldItalic.woff2') format('woff2');
+    font-weight: 700; /* Bold Italic */
+    font-style: italic;
+  }
+  
+  /* Heavy */
+  @font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-Heavy.woff2') format('woff2');
+    font-weight: 800; /* Heavy */
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-HeavyItalic.woff2') format('woff2');
+    font-weight: 800; /* Heavy Italic */
+    font-style: italic;
+  }
+  
+  /* Black */
+  @font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-Black.woff2') format('woff2');
+    font-weight: 900; /* Black */
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-BlackItalic.woff2') format('woff2');
+    font-weight: 900; /* Black Italic */
+    font-style: italic;
+  }
+  
+  /* Variable Font */
+  @font-face {
+    font-family: 'Haffer';
+    src: url('/src/fonts/haffer/Haffer-VF.woff2') format('woff2-variations');
+    /* The range below assumes the variable font supports 100–900. 
+       Adjust if your VF has a narrower or different weight range. */
+    font-weight: 100 900;
+    font-style: normal;
+  }
+  
+  /* -------------------------------------- */
+/* WarblerBanner                         */
+/* -------------------------------------- */
+@font-face {
+    font-family: 'WarblerBanner';
+    src: url('/fonts/warbler/WarblerBannerV1.2-Regular.woff2') format('woff2');
+    font-weight: 400; /* Regular */
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'WarblerBanner';
+    src: url('/fonts/warbler/WarblerBannerV1.2-Italic.woff2') format('woff2');
+    font-weight: 400; /* Italic */
+    font-style: italic;
+  }
+  
+  /* -------------------------------------- */
+  /* WarblerDeck                           */
+  /* -------------------------------------- */
+  @font-face {
+    font-family: 'WarblerDeck';
+    src: url('/fonts/warbler/WarblerDeckV1.2-Regular.woff2') format('woff2');
+    font-weight: 400; /* Regular */
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'WarblerDeck';
+    src: url('/fonts/warbler/WarblerDeckV1.2-Italic.woff2') format('woff2');
+    font-weight: 400; /* Italic */
+    font-style: italic;
+  }
+  
+  /* -------------------------------------- */
+  /* WarblerDisplay                        */
+  /* -------------------------------------- */
+  @font-face {
+    font-family: 'WarblerDisplay';
+    src: url('/fonts/warbler/WarblerDisplayV1.2-Regular.woff2') format('woff2');
+    font-weight: 400; /* Regular */
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'WarblerDisplay';
+    src: url('/fonts/warbler/WarblerDisplayV1.2-Italic.woff2') format('woff2');
+    font-weight: 400; /* Italic */
+    font-style: italic;
+  }
+  
+  /* -------------------------------------- */
+  /* WarblerText                           */
+  /* -------------------------------------- */
+  @font-face {
+    font-family: 'WarblerText';
+    src: url('/fonts/warbler/WarblerTextV1.2-Regular.woff2') format('woff2');
+    font-weight: 400; /* Regular */
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'WarblerText';
+    src: url('/fonts/warbler/WarblerTextV1.2-Italic.woff2') format('woff2');
+    font-weight: 400; /* Italic */
+    font-style: italic;
+  }
+  
+  @font-face {
+    font-family: 'WarblerText';
+    src: url('/fonts/warbler/WarblerTextV1.2-Bold.woff2') format('woff2');
+    font-weight: 700; /* Bold */
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'WarblerText';
+    src: url('/fonts/warbler/WarblerTextV1.2-BoldItalic.woff2') format('woff2');
+    font-weight: 700; /* Bold Italic */
+    font-style: italic;
+  }
+  
