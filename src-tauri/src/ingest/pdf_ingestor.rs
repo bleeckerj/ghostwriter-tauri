@@ -3,8 +3,15 @@
 #![allow(unused)]
 use async_trait::async_trait;
 use pdf_extract::extract_text;
-use super::{DocumentIngestor, IngestedDocument, DocumentMetadata, IngestError};
 use std::path::Path;
+
+// Change the imports to use the document_ingestor module directly
+use super::document_ingestor::{
+    DocumentIngestor,
+    IngestedDocument,
+    DocumentMetadata,
+    IngestError
+};
 
 pub struct PdfIngestor;
 

@@ -14,6 +14,8 @@ mod ingest;
 
 use document_store::DocumentStore;
 use ingest::pdf_ingestor::PdfIngestor;
+use ingest::mdx_ingestor::MdxIngestor;
+
 use embeddings::EmbeddingGenerator;
 
 #[tokio::test]
