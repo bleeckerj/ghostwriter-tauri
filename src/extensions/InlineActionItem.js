@@ -3,6 +3,14 @@ import { Plugin, PluginKey } from 'prosemirror-state'
 
 export const InlineActionItem = Node.create({
   name: 'inlineActionItem',
+
+  addOptions() {
+    return {
+      disabled: false,
+      timeout: 10000,
+      onClick: () => null,
+    }
+  },
   
   group: 'inline',
   inline: true,
@@ -27,7 +35,7 @@ export const InlineActionItem = Node.create({
   },
 
   addProseMirrorPlugins() {
-    let timeout
+    const options = this.options
     let waitingForTyping = false
 
     return [
@@ -38,11 +46,18 @@ export const InlineActionItem = Node.create({
           handleClick(view, pos, event) {
             const node = view.state.doc.nodeAt(pos)
             if (node && node.type.name === 'inlineActionItem') {
-              const tr = view.state.tr
-              tr.insertText(' Sample text ', pos + node.nodeSize)
-              tr.delete(pos, pos + node.nodeSize)
-              view.dispatch(tr)
-              waitingForTyping = true
+              if (typeof options.onClick === 'function') {
+                // Use the plugin key to store disabled state
+                const pluginKey = new PluginKey('inlineActionItem')
+                const tr = view.state.tr
+                  .setMeta(pluginKey, { disabled: true })
+                  .delete(pos, pos + node.nodeSize)
+                
+                view.dispatch(tr)
+                waitingForTyping = true
+                
+                options.onClick(view, pos, event)
+              }
               return true
             }
             return false
@@ -57,65 +72,40 @@ export const InlineActionItem = Node.create({
         },
 
         view(editorView) {
+          let timeout
           return {
             update: (view, prevState) => {
-              if (timeout) {
-                clearTimeout(timeout)
-              }
+              if (timeout) clearTimeout(timeout)
+              
+              // Check plugin state for disabled flag
+              const pluginState = this.key.getState(view.state)
+              if (pluginState?.disabled || waitingForTyping) return
+              
+              const { selection } = view.state
+              if (!view.state.doc.textContent.trim().length) return
 
-              // Check if we just deleted an NFL tag by comparing the old and new state
-              if (prevState) {
-                let hadTag = false
-                let hasTag = false
-                
-                // Check old state
-                prevState.doc.descendants((node, pos) => {
-                  if (node.type.name === 'inlineActionItem') {
-                    hadTag = true
-                    return false
-                  }
-                })
-                
-                // Check new state
-                view.state.doc.descendants((node, pos) => {
-                  if (node.type.name === 'inlineActionItem') {
-                    hasTag = true
-                    return false
-                  }
-                })
+              if (prevState && selection.eq(prevState.selection)) return
 
-                // If we had a tag but don't anymore, reset waiting state
-                if (hadTag && !hasTag) {
-                  waitingForTyping = false
-                }
-              }
-
-              if (waitingForTyping) {
-                return
-              }
-
-              // Only proceed if no tag exists
-              let tagExists = false
-              view.state.doc.descendants((node, pos) => {
+              // Check if a button already exists anywhere in the document
+              let buttonExists = false
+              view.state.doc.descendants((node) => {
                 if (node.type.name === 'inlineActionItem') {
-                  tagExists = true
-                  return false
+                  buttonExists = true
+                  return false // stop traversing
                 }
               })
-
-              if (!tagExists) {
+              
+              // Only create new button if none exists
+              if (!buttonExists) {
                 timeout = setTimeout(() => {
-                  const { selection } = view.state
                   const node = view.state.schema.nodes.inlineActionItem.create()
                   const tr = view.state.tr.insert(selection.from, node)
                   view.dispatch(tr)
-                }, 1000)
+                }, options.timeout)
               }
             },
             destroy: () => {
-              if (timeout) {
-                clearTimeout(timeout)
-              }
+              if (timeout) clearTimeout(timeout)
             }
           }
         }

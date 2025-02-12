@@ -1,5 +1,6 @@
 import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
+import { PluginKey } from 'prosemirror-state'  // Add this import
 //import DynamicTextNode from './extensions/DynamicTextNode'
 import DynamicTextMark from './extensions/DynamicTextMark'
 //import DiagnosticLogEntryNode from './extensions/DiagnosticLogEntryNode'
@@ -94,22 +95,22 @@ async function completionFromContext() {
   .then(([content, timing]) => {
     clearInterval(loadingInterval);
     greetMsgEl.textContent = 'Complete';
-    // // addSimpleLogEntry({
-    // //   id: Date.now(),
-    // //   timestamp: Date.now(),
-    // //   message: `Completion timing: 
-    // //     Embedding: ${timing.embedding_generation_ms}ms, 
-    // //     Similarity: ${timing.similarity_search_ms}ms, 
-    // //     Emanation: ${timing.openai_request_ms}ms, 
-    // //     Total: ${timing.total_ms}ms`,
-    // //   level: 'info'
-    // // });
-    // // console.log("Timing (ms):", {
-    //   "Embedding": timing.embedding_generation_ms,
-    //   "Similarity": timing.similarity_search_ms,
-    //   "Emanation": timing.openai_request_ms,
-    //   "Total": timing.total_ms
-    // });
+    addSimpleLogEntry({
+      id: Date.now(),
+      timestamp: Date.now(),
+      message: `Completion timing: 
+        Embedding: ${timing.embedding_generation_ms}ms, 
+        Similarity: ${timing.similarity_search_ms}ms, 
+        Emanation: ${timing.openai_request_ms}ms, 
+        Total: ${timing.total_ms}ms`,
+      level: 'info'
+    });
+    console.log("Timing (ms):", {
+      "Embedding": timing.embedding_generation_ms,
+      "Similarity": timing.similarity_search_ms,
+      "Emanation": timing.openai_request_ms,
+      "Total": timing.total_ms
+    });
     console.log("Completion content:", content);
     editor.chain()
     .focus()
@@ -265,13 +266,26 @@ const editor = new Editor({
   element: document.querySelector('.element'),
   extensions: [
     StarterKit,
-    //DynamicTextNode,
-    DynamicTextMark,
-    InlineActionItem,
-    //SimpleLogEntryNode,
-    //DiagnosticLogEntryNode
+    InlineActionItem.configure({
+      disabled: false,
+      timeout: 3000,
+      onClick: async (view, pos, event) => {
+        try {
+          await completionFromContext()
+          // Re-enable by dispatching a transaction
+          const pluginKey = new PluginKey('inlineActionItem')
+          const tr = view.state.tr.setMeta(pluginKey, { disabled: false })
+          view.dispatch(tr)
+        } catch (error) {
+          console.error('Completion failed:', error)
+          // Re-enable even on error
+          const pluginKey = new PluginKey('inlineActionItem')
+          const tr = view.state.tr.setMeta(pluginKey, { disabled: false })
+          view.dispatch(tr)
+        }
+      },
+    }),
   ],
-  // content: '<p>Hello World! This is the Editor</p>',
 })
 
 const diagnostics = new Editor({
