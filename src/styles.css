@@ -46,11 +46,6 @@ a:hover {
   color: #535bf2;
 }
 
-p {
-  @apply text-[1em];
-  @apply font-[WarblerText];
-}
-
 h1 {
   text-align: left;
 }
@@ -115,10 +110,9 @@ button {
   min-height: 100%;
   padding: 1rem;
   border-radius: 0.5rem;
-  color: rgb(55 65 81);
+  color: rgb(55 65 81); /* Tailwind gray-700 equivalent */
   overflow-y: auto;
   line-height: 1.75rem;
-  position: relative; 
 }
 
 .container {
@@ -404,59 +398,4 @@ button {
   @apply h-1;
   @apply bg-gray-400;
   @apply rounded-full;
-}
-
-/* .inline-action-item {
-  @apply bg-white;
-  @apply -translate-y-[4px];  
-  @apply align-middle;        
-  color: black;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 8px;
-  cursor: pointer;
-  user-select: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  opacity: 0;
-  transition: opacity 0.2s ease-in-out;
-
-  @apply border border-black;
-  @apply shadow-[4px_0px_0px_0px];
-  @apply hover:shadow-none;  
-  @apply hover:translate-x-[4px];
-  @apply before:content-[''] before:absolute before:left-0 before:top-0;
-  @apply before:w-full before:h-full before:border-[0.5px] before:border-transparent;
-  @apply hover:before:border-l-0 hover:before:border-t-0 hover:before:border-black cursor-pointer;
-} */
-
-.inline-action-item {
-  /* --- Baseline from Snippet #1 --- */
-  position: relative; /* Needed if using absolutely positioned pseudo-elements */
- /* background-color: orange; */
- /* color: white; */
-  @apply -translate-y-[3px];
-  padding: 0px 6px;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  user-select: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 2px;
-  transition: opacity 0.2s ease-in-out;
-
-  /* --- Additions from Snippet #2 (selective) --- */
-  @apply border border-black;             /* Adds a black border */
-  @apply shadow-[4px_0px_0px_0px];        /* Fancy left-side shadow */
-  @apply hover:shadow-none;               /* Remove shadow on hover */
-  @apply hover:translate-x-[4px];         /* Slide slightly to the right on hover */
-
-  /* Pseudo-element trick for a border effect on hover */
-  @apply before:content-[''] before:absolute before:left-0 before:top-0;
-  @apply before:w-full before:h-full before:border-[0.5px] before:border-transparent;
-  @apply hover:before:border-l-0 hover:before:border-t-0 hover:before:border-black;
 }
