@@ -28,6 +28,21 @@ pub struct SimilarDocument {
     pub similarity: f32
 }
 
+#[derive(Serialize)]
+pub struct DocumentListing {
+    pub documents: Vec<DocumentInfo>,
+    pub canon_file: String,
+    pub canon_name: String,
+}
+
+#[derive(Serialize)]
+pub struct DocumentInfo {
+    pub id: i64,
+    pub name: String,
+    pub file_path: String,
+    pub created_at: String,
+}
+
 pub struct DocumentStore {
     conn: Connection,
     // Keep track of next ID since we're not using autoincrement
@@ -61,6 +76,19 @@ impl DocumentStore {
             chunk TEXT NOT NULL, 
             embedding JSON NOT NULL,
             FOREIGN KEY(doc_id) REFERENCES documents(id)
+            )",
+            [],
+        )?;
+
+        // Add the new canon table
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS canon 
+            (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            owner TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            modified_at TEXT NOT NULL
             )",
             [],
         )?;
@@ -149,6 +177,40 @@ impl DocumentStore {
 
         // Take top k results
         Ok(similarities.into_iter().take(limit).collect())
+    }
+
+    pub fn fetch_documents(&self) -> Result<DocumentListing, Box<dyn std::error::Error>> {
+        let mut stmt = self.conn.prepare("SELECT id, name, file_path, created_at FROM documents")?;
+        
+        let rows = stmt.query_map([], |row| {
+            Ok(DocumentInfo {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                file_path: row.get(2)?,
+                created_at: row.get(3)?,
+            })
+        })?;
+
+        let documents: Vec<DocumentInfo> = rows.collect::<Result<_, _>>()?;
+        
+        // Get the database file path from the connection
+        let db_path = self.conn.path().unwrap_or_default();
+        let canon_file = std::path::Path::new(db_path)
+        .file_name()  // Get just the filename
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+        let canon_name = std::path::Path::new(&canon_file)
+            .file_stem()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+
+        Ok(DocumentListing {
+            documents,
+            canon_file,
+            canon_name,
+        })
     }
 }
 

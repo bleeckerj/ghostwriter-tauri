@@ -266,7 +266,7 @@ const editor = new Editor({
     StarterKit,
     DynamicTextMark,
     InlineActionItem.configure({
-      disabled: false,                // Enable the feature
+      disabled: true,                // Disables the feature
       timeout: 3000,                 // Show button after 3 seconds
       onClick: async (view, pos, event) => {
         try {

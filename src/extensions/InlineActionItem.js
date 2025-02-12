@@ -47,12 +47,7 @@ export const InlineActionItem = Node.create({
             const node = view.state.doc.nodeAt(pos)
             if (node && node.type.name === 'inlineActionItem') {
               if (typeof options.onClick === 'function') {
-                // Use the plugin key to store disabled state
-                const pluginKey = new PluginKey('inlineActionItem')
-                const tr = view.state.tr
-                  .setMeta(pluginKey, { disabled: true })
-                  .delete(pos, pos + node.nodeSize)
-                
+                const tr = view.state.tr.delete(pos, pos + node.nodeSize)
                 view.dispatch(tr)
                 waitingForTyping = true
                 
@@ -62,13 +57,6 @@ export const InlineActionItem = Node.create({
             }
             return false
           },
-
-          handleKeyDown(view, event) {
-            if (waitingForTyping && (event.key.length === 1 || event.key === 'Enter' || event.key === 'Backspace')) {
-              waitingForTyping = false
-            }
-            return false
-          }
         },
 
         view(editorView) {
@@ -77,25 +65,23 @@ export const InlineActionItem = Node.create({
             update: (view, prevState) => {
               if (timeout) clearTimeout(timeout)
               
-              // Check plugin state for disabled flag
-              const pluginState = this.key.getState(view.state)
-              if (pluginState?.disabled || waitingForTyping) return
+              // Check the options.disabled flag directly
+              if (options.disabled || waitingForTyping) return
               
               const { selection } = view.state
               if (!view.state.doc.textContent.trim().length) return
 
               if (prevState && selection.eq(prevState.selection)) return
 
-              // Check if a button already exists anywhere in the document
+              // Check for existing button
               let buttonExists = false
               view.state.doc.descendants((node) => {
                 if (node.type.name === 'inlineActionItem') {
                   buttonExists = true
-                  return false // stop traversing
+                  return false
                 }
               })
               
-              // Only create new button if none exists
               if (!buttonExists) {
                 timeout = setTimeout(() => {
                   const node = view.state.schema.nodes.inlineActionItem.create()
