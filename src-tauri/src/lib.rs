@@ -9,16 +9,16 @@ use serde::Serialize;
 use serde_json::Value;
 use tokio::time::{sleep, Duration};
 use tauri::{generate_handler, Builder, Emitter, AppHandle, Manager};
+use chrono::{Local, Utc};  // Add Utc here
 
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
-
-mod document_store;
-mod embeddings;
-mod menu;
-
-use chrono::Utc;
-use document_store::{DocumentStore, Document};
 use embeddings::EmbeddingGenerator;
+use document_store::DocumentStore;
+
+pub mod ingest;
+pub mod document_store;
+pub mod menu;
+pub mod embeddings;
 
 mod conversations; // Add this line
 use conversations::Conversation;

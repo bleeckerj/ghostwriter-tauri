@@ -1,12 +1,16 @@
 #![allow(unused_imports)]
 #![allow(unused)]
-
 // src/document_store.rs
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use chrono::Local;  // Add this to your imports at the top
 use serde_json;
+use crate::ingest::DocumentIngestor;
+use std::path::Path;
+use async_trait::async_trait;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use crate::embeddings;  // First, add serde_json to your imports
 
@@ -44,14 +48,14 @@ pub struct DocumentInfo {
 }
 
 pub struct DocumentStore {
-    conn: Connection,
-    // Keep track of next ID since we're not using autoincrement
-    next_id: usize,
+    conn: Arc<Mutex<Connection>>,  // Wrap SQLite connection in Arc<Mutex>
+    ingestors: Vec<Arc<Box<dyn DocumentIngestor>>>,
+    next_id: usize,  // Add this field
 }
 
 impl DocumentStore {
     pub fn new(store_path: PathBuf) -> Result<Self, Box<dyn std::error::Error>> {
-        std::fs::create_dir_all(&store_path)?;
+        std::fs::create_dir_all(& store_path)?;
         let db_path = store_path.join("documents.db");
 
         let conn = Connection::open(&db_path)?;
@@ -102,7 +106,11 @@ impl DocumentStore {
             )
             .unwrap_or(0);
 
-        Ok(DocumentStore { conn, next_id })
+        Ok(DocumentStore { 
+            conn: Arc::new(Mutex::new(conn)),
+            ingestors: Vec::new(),
+            next_id,  // Initialize the field
+        })
     }
 
     pub fn add_document(
@@ -110,22 +118,17 @@ impl DocumentStore {
         mut document: Document,
     ) -> Result<(), Box<dyn std::error::Error>> {
         document.id = self.next_id;
-        let current_time = Local::now().to_rfc3339();  // ISO 8601/RFC 3339 format
+        let current_time = Local::now().to_rfc3339();
 
-        let tx = self.conn.transaction()?;
+        // Hold the lock for the duration of the transaction
+        let mut conn_guard = self.conn.lock().unwrap();
+        let tx = conn_guard.transaction()?;
 
         // Insert document
         tx.execute(
             "INSERT INTO documents (id, name, created_at, file_path) VALUES (?1, ?2, ?3, ?4)",
             params![document.id, document.name, current_time, document.file_path],
         )?;
-
-        // // Insert embedding
-        // let embedding_bytes = bincode::serialize(&document.embedding)?;
-        // tx.execute(
-        //     "INSERT INTO embeddings (doc_id, chunk, embedding) VALUES (?, ?, ?)",
-        //     params![document.id, chunk, embedding_bytes],
-        // )?;
 
         tx.commit()?;
 
@@ -138,7 +141,8 @@ impl DocumentStore {
         query_embedding: &[f32],
         limit: usize,
     ) -> Result<Vec<(String, usize, String, f32)>, Box<dyn std::error::Error>> {
-        let mut stmt = self.conn.prepare(
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
             "SELECT d.id, d.name, d.file_path, d.created_at, e.id, e.chunk, e.embedding 
              FROM documents d 
              JOIN embeddings e ON d.id = e.doc_id 
@@ -180,7 +184,8 @@ impl DocumentStore {
     }
 
     pub fn fetch_documents(&self) -> Result<DocumentListing, Box<dyn std::error::Error>> {
-        let mut stmt = self.conn.prepare("SELECT id, name, file_path, created_at FROM documents")?;
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT id, name, file_path, created_at FROM documents")?;
         
         let rows = stmt.query_map([], |row| {
             Ok(DocumentInfo {
@@ -194,7 +199,7 @@ impl DocumentStore {
         let documents: Vec<DocumentInfo> = rows.collect::<Result<_, _>>()?;
         
         // Get the database file path from the connection
-        let db_path = self.conn.path().unwrap_or_default();
+        let db_path = conn.path().unwrap_or_default();
         let canon_file = std::path::Path::new(db_path)
         .file_name()  // Get just the filename
         .unwrap_or_default()
@@ -211,6 +216,59 @@ impl DocumentStore {
             canon_file,
             canon_name,
         })
+    }
+
+    pub fn register_ingestor(&mut self, ingestor: Box<dyn DocumentIngestor>) {
+        self.ingestors.push(Arc::new(ingestor));
+    }
+
+    pub async fn process_document(&mut self, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+        // First find a suitable ingestor
+        let ingestor = self.ingestors.iter()
+            .find(|i| i.can_handle(path))
+            .ok_or_else(|| "No suitable ingestor found".to_string())?;
+
+        // Process the document
+        let ingested = ingestor.ingest_file(path).await?;
+
+        // Create document
+        let document = Document {
+            id: 0,
+            name: ingested.title,
+            created_at: Local::now().to_rfc3339(),
+            file_path: ingested.metadata.source_path,
+            embedding: vec![],
+        };
+
+        // Lock the connection only for the database operation
+        {
+            let conn = self.conn.lock().unwrap();
+            // Perform database operations
+            self.add_document_internal(&conn, document)?;
+        }
+
+        Ok(())
+    }
+
+    // Private helper function for database operations
+    fn add_document_internal(&self, conn: &Connection, document: Document) -> Result<(), Box<dyn std::error::Error>> {
+        conn.execute(
+            "INSERT INTO documents (name, created_at, file_path) VALUES (?1, ?2, ?3)",
+            params![
+                document.name,
+                document.created_at,
+                document.file_path,
+            ],
+        )?;
+        Ok(())
+    }
+
+    // Add this method
+    pub fn find_ingestor(&self, path: &Path) -> Option<Arc<Box<dyn DocumentIngestor>>> {
+        self.ingestors
+            .iter()
+            .find(|i| i.can_handle(path))
+            .cloned()
     }
 }
 

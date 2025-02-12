@@ -36,7 +36,7 @@ tauri-plugin-dialog = "2"
 log = "0.4"
 env_logger = "0.10"
 lazy_static = "1.4.0"
-tokio = { version = "1.43", features = ["full"] }
+tokio = { version = "1.43", features = ["full", "test-util"] }
 sqlite-vec = "0.1.6"
 pdf-extract = "0.8.2"
 pulldown-cmark = "0.12.2"
