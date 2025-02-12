@@ -47,7 +47,7 @@ a:hover {
 }
 
 p {
-  @apply text-[1em];
+  @apply text-[1.5em];
   @apply font-[WarblerText];
 }
 
