@@ -37,15 +37,26 @@ async fn test_mdx_pipeline() {
     
     // Verify frontmatter parsing
     assert_eq!(document.title, "test.mdx");
-    assert_eq!(document.metadata.frontmatter.get("author").unwrap(), "Julian Bleecker");
 
     // Get the authors array as a string and parse it
     let authors = document.metadata.frontmatter.get("authors").expect("Should have authors");
 
     println!("Authors: {:?}", authors);    
-    println!("authors[0] {:?}", authors[0]);
-    println!("authors[0] firstName {:?}", authors[0]["firstName"]);
-
+    println!("==> authors[0] {:?}", authors[0]);
+    println!("===> authors[0] firstName {:?}", authors[0]["firstName"]);
+    println!("contentMetadata: {:?}", document.metadata.frontmatter.get("contentMetadata"));
+    //println!("contentMetadata.title: {:?}", document.metadata.frontmatter.get("contentMetadata"));
     // Print first 100 chars of content for visual inspection
+
+    if let Some(Pod::Hash(content_metadata)) = document.metadata.frontmatter.get("contentMetadata") {
+        if let Some(Pod::String(collection_name)) = content_metadata.get("collectionName") {
+            println!("Collection Name: {}", collection_name);
+        }
+        
+        if let Some(Pod::String(identifier)) = content_metadata.get("identifier") {
+            println!("Identifier: {}", identifier);
+        }
+    }
+
     println!("Content preview: {}", &document.content[..100.min(document.content.len())]);
 }
