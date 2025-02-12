@@ -118,7 +118,7 @@ async fn completion_from_context(
     //const prose_style = "In the style of a medieval scribe using Old or Middle English";
     // const response_limit = "Respond with no more than two sentences along with the completion of any partial sentence or thought fragment. In addition, add one sentence fragment that does not conclude with a period or full-stop. This sentence fragment is meant to be a provocation in the direction of thought being developed so that the user can continue to write in the same vein.";
     
-    let response_limit = "Respond with no more than one sentence, or less. Write until you complete one thought to a full-stop or period. You may complete a partially complete sentence or if the input text is already a complete sentence, you may add only one sentence that would reasonably and semantically follow that one sentence.".to_string();
+    let response_limit = "Respond with no more than one sentence. If the input text ends with a period, only add one sentence and no more. You may complete a partially complete sentence or if the input text is already a complete sentence, you may add only one sentence that would reasonably and semantically follow that one sentence. Adhere to these constraints such that you are adding no more than one sentence".to_string();
     //let response_limit = "Respond with no more than one sentence, or less.".to_string();
     
     let system_content = format!(
