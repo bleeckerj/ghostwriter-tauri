@@ -4,7 +4,10 @@
 use super::*;
 use std::path::Path;
 use std::fs;
+use std::collections::HashMap;
+
 use async_trait::async_trait;
+use tokio::fs::metadata;
 
 pub struct MarkdownIngestor;
 
@@ -19,7 +22,8 @@ impl DocumentIngestor for MarkdownIngestor {
     async fn ingest_file(&self, path: &Path) -> Result<IngestedDocument, IngestError> {
         let content = fs::read_to_string(path)
             .map_err(IngestError::Io)?;
-
+        println!("Content: {}", content);
+        
         Ok(IngestedDocument {
             title: path.file_name()
                 .unwrap_or_default()
@@ -32,6 +36,7 @@ impl DocumentIngestor for MarkdownIngestor {
                 author: None,
                 created_date: None,
                 modified_date: None,
+                frontmatter: HashMap::new(),
             }
         })
     }

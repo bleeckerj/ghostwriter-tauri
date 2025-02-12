@@ -4,6 +4,8 @@
 use async_trait::async_trait;
 use pdf_extract::extract_text;
 use std::path::Path;
+use std::collections::HashMap;
+
 
 // Change the imports to use the document_ingestor module directly
 use super::document_ingestor::{
@@ -39,6 +41,8 @@ impl DocumentIngestor for PdfIngestor {
                 author: None,
                 created_date: None,
                 modified_date: None,
+                frontmatter: HashMap::new(),
+
             }
         })
     }

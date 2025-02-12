@@ -1,10 +1,13 @@
+#![allow(unused_imports)]
+#![allow(dead_code)]
+#![allow(unused)]
 use std::path::Path;
 use std::fs;
 use std::collections::HashMap;
 use async_trait::async_trait;
 use gray_matter::{Matter, engine::YAML, Pod};
 
-use super::*;  // This gives us access to DocumentIngestor trait and other types
+use super::document_ingestor::{DocumentIngestor, IngestedDocument, DocumentMetadata, IngestError};
 
 pub struct MdxIngestor;
 
@@ -23,14 +26,30 @@ impl DocumentIngestor for MdxIngestor {
         let matter = Matter::<YAML>::new();
         let result = matter.parse(&content);
         
-        let (content, metadata, frontmatter) = if let Some(data) = result.data {
+        let (content, metadata) = if let Some(data) = result.data {
             let mut frontmatter = HashMap::new();
             
             if let Pod::Hash(map) = data {
                 // Convert all frontmatter fields to strings
                 for (key, value) in map {
-                    if let Pod::String(val) = value {
-                        frontmatter.insert(key, val);
+                    match value {
+                        Pod::String(val) => {
+                            frontmatter.insert(key.clone(), Pod::String(val));
+                        },
+                        Pod::Integer(i) => {
+                            frontmatter.insert(key.clone(), Pod::String(i.to_string()));
+                        },
+                        Pod::Float(f) => {
+                            frontmatter.insert(key.clone(), Pod::String(f.to_string()));
+                        },
+                        Pod::Boolean(b) => {
+                            frontmatter.insert(key.clone(), Pod::String(b.to_string()));
+                        },
+                        Pod::Array(arr) => {
+                            // Convert array to JSON string
+                            frontmatter.insert(key.clone(), Pod::String(format!("{:?}", arr)));
+                        },
+                        _ => {}
                     }
                 }
             }
@@ -40,11 +59,11 @@ impl DocumentIngestor for MdxIngestor {
                 DocumentMetadata {
                     source_type: "mdx".to_string(),
                     source_path: path.to_string_lossy().to_string(),
-                    author: frontmatter.get("author").cloned(),
-                    created_date: frontmatter.get("date").cloned(),
+                    author: frontmatter.get("author").and_then(|p| match p { Pod::String(s) => Some(s.clone()), _ => None }),
+                    created_date: frontmatter.get("date").and_then(|p| match p { Pod::String(s) => Some(s.clone()), _ => None }),
                     modified_date: None,
-                },
-                Some(frontmatter)
+                    frontmatter,
+                }
             )
         } else {
             (
@@ -55,14 +74,21 @@ impl DocumentIngestor for MdxIngestor {
                     author: None,
                     created_date: None,
                     modified_date: None,
-                },
-                None
+                    frontmatter: HashMap::new(),
+                }
             )
         };
 
         Ok(IngestedDocument {
-            title: frontmatter
-                .and_then(|f| f.get("title").cloned())
+            title: metadata.frontmatter.get("contentMetadata")
+                .and_then(|cm| match cm {
+                    Pod::Hash(map) => map.get("title")
+                        .and_then(|t| match t {
+                            Pod::String(s) => Some(s.clone()),
+                            _ => None
+                        }),
+                    _ => None
+                })
                 .unwrap_or_else(|| path.file_name()
                     .unwrap_or_default()
                     .to_string_lossy()
