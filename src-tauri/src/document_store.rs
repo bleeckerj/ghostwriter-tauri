@@ -222,8 +222,12 @@ impl DocumentStore {
         self.ingestors.push(Arc::new(ingestor));
     }
 
-    pub async fn process_document(&mut self, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
-        // First find a suitable ingestor
+    pub async fn process_document(
+        &mut self, 
+        path: &Path,
+        embedding_generator: &embeddings::EmbeddingGenerator
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        // Find suitable ingestor
         let ingestor = self.ingestors.iter()
             .find(|i| i.can_handle(path))
             .ok_or_else(|| "No suitable ingestor found".to_string())?;
@@ -233,25 +237,55 @@ impl DocumentStore {
 
         // Create document
         let document = Document {
-            id: 0,
+            id: 0,  // This will be set by the database
             name: ingested.title,
             created_at: Local::now().to_rfc3339(),
             file_path: ingested.metadata.source_path,
             embedding: vec![],
         };
 
-        // Lock the connection only for the database operation
-        {
+        // Insert document and get ID
+        let doc_id = {
             let conn = self.conn.lock().unwrap();
-            // Perform database operations
-            self.add_document_internal(&conn, document)?;
-        }
+            self.add_document_internal(&conn, document)?
+        };
 
+        // Process and store embeddings
+        self.process_embeddings(doc_id, ingested.content, embedding_generator).await?;
+
+        println!("Document processed with ID: {}", doc_id);
+        Ok(())
+    }
+
+    async fn process_embeddings(
+        &self, 
+        doc_id: i64, 
+        content: String,
+        embedding_generator: &embeddings::EmbeddingGenerator
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        // Chunk the content
+        let chunks = embedding_generator.chunk_text(&content, 1000, 100); // adjust size/overlap as needed
+        
+        // Get embeddings for each chunk
+        for chunk in chunks {
+            let embedding = embedding_generator.generate_embedding(&chunk).await?;
+            
+            // Convert embedding to JSON string
+            let embedding_json = serde_json::to_string(&embedding)?;
+            
+            // Store in database
+            let conn = self.conn.lock().unwrap();
+            conn.execute(
+                "INSERT INTO embeddings (doc_id, chunk, embedding) VALUES (?1, ?2, ?3)",
+                params![doc_id, chunk, embedding_json],
+            )?;
+        }
+        
         Ok(())
     }
 
     // Private helper function for database operations
-    fn add_document_internal(&self, conn: &Connection, document: Document) -> Result<(), Box<dyn std::error::Error>> {
+    fn add_document_internal(&self, conn: &Connection, document: Document) -> Result<i64, Box<dyn std::error::Error>> {
         conn.execute(
             "INSERT INTO documents (name, created_at, file_path) VALUES (?1, ?2, ?3)",
             params![
@@ -260,7 +294,10 @@ impl DocumentStore {
                 document.file_path,
             ],
         )?;
-        Ok(())
+        
+        // Get the ID of the last inserted row
+        let id = conn.last_insert_rowid();
+        Ok(id)
     }
 
     // Add this method
@@ -269,6 +306,11 @@ impl DocumentStore {
             .iter()
             .find(|i| i.can_handle(path))
             .cloned()
+    }
+
+    #[cfg(test)]
+    pub fn get_connection(&self) -> std::sync::MutexGuard<'_, Connection> {
+        self.conn.lock().unwrap()
     }
 }
 
@@ -284,3 +326,4 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
         dot_product / (norm_a * norm_b)
     }
 }
+

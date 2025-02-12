@@ -1,13 +1,7 @@
-#![allow(unused_imports)]
-#![allow(dead_code)]
-#![allow(unused)]
 use async_trait::async_trait;
-use pdf_extract::extract_text;
+use pdfium_render::prelude::*;
 use std::path::Path;
 use std::collections::HashMap;
-
-
-// Change the imports to use the document_ingestor module directly
 use super::document_ingestor::{
     DocumentIngestor,
     IngestedDocument,
@@ -26,15 +20,30 @@ impl DocumentIngestor for PdfIngestor {
     }
 
     async fn ingest_file(&self, path: &Path) -> Result<IngestedDocument, IngestError> {
-        let content = pdf_extract::extract_text(path)
+        let pdfium = Pdfium::new(
+            Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path("./resources/"))
+                .or_else(|_| Pdfium::bind_to_system_library())
+                .unwrap() // Or use the ? unwrapping operator to pass any error up to the caller
+        );
+
+        let document = pdfium.load_pdf_from_file(path, None)
             .map_err(|e| IngestError::Parse(e.to_string()))?;
+
+        let mut extracted_text = String::new();
+
+        for (index, page) in document.pages().iter().enumerate() {
+            if let Ok(text) = page.text() {
+                extracted_text.push_str(&format!("\n=============== Page {} ===============\n", index + 1));
+                extracted_text.push_str(&text.all());
+            }
+        }
 
         Ok(IngestedDocument {
             title: path.file_name()
                 .unwrap_or_default()
                 .to_string_lossy()
                 .to_string(),
-            content,
+            content: extracted_text,
             metadata: DocumentMetadata {
                 source_type: "pdf".to_string(),
                 source_path: path.to_string_lossy().to_string(),
@@ -42,7 +51,6 @@ impl DocumentIngestor for PdfIngestor {
                 created_date: None,
                 modified_date: None,
                 frontmatter: HashMap::new(),
-
             }
         })
     }
