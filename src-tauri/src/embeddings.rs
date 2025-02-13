@@ -22,23 +22,38 @@ impl EmbeddingGenerator {
         EmbeddingGenerator { client }
     }
 
+    /// Chunks text into segments with optional overlap
+    /// 
+    /// * `text` - The text to chunk
+    /// * `chunk_size` - Maximum size of each chunk in characters
+    /// * `overlap` - Number of characters to overlap between chunks
     pub fn chunk_text(&self, text: &str, chunk_size: usize, overlap: usize) -> Vec<String> {
         let mut chunks = Vec::new();
-        let chars: Vec<char> = text.chars().collect();
+        let words: Vec<&str> = text.split_whitespace().collect();
         let mut i = 0;
 
-        while i < chars.len() {
-            let end = (i + chunk_size).min(chars.len());
-            let chunk: String = chars[i..end].iter().collect();
-            chunks.push(chunk);
-            
-            // Move forward by chunk_size - overlap for next iteration
-            i += chunk_size - overlap;
-            
-            // Break if we've processed all text
-            if i >= chars.len() {
-                break;
+        while i < words.len() {
+            let mut chunk = String::new();
+            let mut j = i;
+
+            // Build chunk up to chunk_size
+            while j < words.len() && (chunk.len() + words[j].len() + 1) <= chunk_size {
+                if !chunk.is_empty() {
+                    chunk.push(' ');
+                }
+                chunk.push_str(words[j]);
+                j += 1;
             }
+
+            chunks.push(chunk);
+
+            // Move forward by chunk_size - overlap words for next iteration
+            let advance = if j > i {
+                ((j - i) as f32 * (1.0 - (overlap as f32 / chunk_size as f32))) as usize
+            } else {
+                1
+            };
+            i += advance.max(1);
         }
 
         chunks
