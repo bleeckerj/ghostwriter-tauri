@@ -36,7 +36,7 @@ async function greet() {
           attrs: { 
             textColor: 'black',
             backgroundColor: '#f3f4f6',
-            twMisc: 'font-regular font-[WarblerText] rounded animated-highlight',
+            twMisc: 'font-regular text-[0.9em] font-[WarblerText] rounded animated-highlight',
             id: 'backend-id-123',
             timestamp: Date.now(),
             raw: res
@@ -125,7 +125,7 @@ async function completionFromContext() {
           attrs: { 
             textColor: 'blue',
             backgroundColor: '#f3f4f6',
-            twMisc: 'font-regular font-[WarblerText] text-[1em] rounded animated-highlight',
+            twMisc: 'rounded animated-highlight',
             id: 'backend-id-123',
             timestamp: Date.now(),
             raw: content

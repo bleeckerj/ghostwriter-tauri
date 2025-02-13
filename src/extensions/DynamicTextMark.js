@@ -27,7 +27,7 @@ const DynamicTextMark = Mark.create({
         parseHTML: element => element.getAttribute('data-tw-misc'),
         renderHTML: attributes => ({
           'data-tw-misc': attributes.twMisc,
-          class: attributes.twMisc,  // This will apply the Tailwind classes
+          class: "dynamic-text-mark "+attributes.twMisc,  // This will apply the Tailwind classes
         })
       },
       id: {

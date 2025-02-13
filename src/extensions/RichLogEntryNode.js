@@ -52,16 +52,21 @@ const RichLogEntryNode = Node.create({
   addNodeView() {
     return ({ node, getPos }) => {
       const dom = document.createElement('div')
-      dom.classList.add('rich-log-entry', `log-level-${node.attrs.level}`)
+      dom.classList.add('rich-log-entry', `rich-log-level-${node.attrs.level}`)
       
       // Timestamp
       const timestamp = document.createElement('span')
       timestamp.classList.add('rich-log-timestamp')
       timestamp.textContent = new Date(node.attrs.timestamp)
-      .toISOString()
-      .replace('T', ' ')
-      .replace('Z', '')
-      + new Date().toString().match(/GMT([+-]\d{4})/)[1]     
+      .toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      })
       // Message
       const message = document.createElement('span')
       message.classList.add('rich-log-message')
