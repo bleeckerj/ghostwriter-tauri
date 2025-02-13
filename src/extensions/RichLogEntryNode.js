@@ -52,7 +52,7 @@ const RichLogEntryNode = Node.create({
   addNodeView() {
     return ({ node, getPos }) => {
       const dom = document.createElement('div')
-      dom.classList.add('rich-log-entry', `rich-log-level-${node.attrs.level}`)
+      dom.classList.add('rich-log-entry', `log-level-${node.attrs.level}`)
       
       // Timestamp
       const timestamp = document.createElement('span')
