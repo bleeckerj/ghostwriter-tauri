@@ -10,10 +10,13 @@ use tauri::{
         MenuEvent,
         Menu,
     }
- };
+};
+use serde_json::json;  // Add this import
 
 use crate::SimpleLog;
 use crate::AppState;
+use crate::document_store::DocumentListing;  // Add this import
+use tauri::Emitter;
 
  // Constants for menu IDs
  pub const MENU_FILE_NEW: &str = "file-new";
@@ -102,7 +105,42 @@ use crate::AppState;
             app.exit(0);
         }
         MENU_CANON_LIST => {
-            // Handle canon list
+            if let Ok(doc_store) = app_state.doc_store.lock() {
+                match doc_store.fetch_documents() {
+                    Ok(listing) => {
+                        // Emit overview message
+                        let _ = app.emit("rich-log-message", json!({
+                            "message": format!(
+                                "Canon: {} File: {})",
+                                listing.canon_name,
+                                listing.canon_file
+                            ),
+                            "data": "",
+                            "timestamp": chrono::Local::now().to_rfc3339(),
+                            "level": "info"
+                        }));
+
+                        // Emit each document as a separate rich log entry
+                        for doc in listing.documents {
+                            let _ = app.emit("rich-log-message", json!({
+                                "message": format!(
+                                    "{}",
+                                    doc.name),
+                                "timestamp": chrono::Local::now().to_rfc3339(),
+                                "level": "info"
+                            }));
+                        }
+                    },
+                    Err(e) => {
+                        let _ = app.emit("rich-log-message", json!({
+                            "message": "Error Listing Documents",
+                            "data": e.to_string(),
+                            "timestamp": chrono::Local::now().to_rfc3339(),
+                            "level": "error"
+                        }));
+                    }
+                }
+            }
         }
         MENU_CANON_NEW => {
             // Handle new canon

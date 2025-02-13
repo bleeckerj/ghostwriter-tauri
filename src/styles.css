@@ -281,23 +281,32 @@ button {
 .rich-log-entry {
   @apply rounded-md;
   @apply bg-black;
-  @apply text-amber-500;
+  @apply text-white;
+  @apply font-bold;
   @apply px-2 py-1;
-  @apply font-mono;
+  /* @apply font-[ESKlarheitKurrentMono]; */
   @apply text-[0.7em];
   display: flex;
   align-items: center;
   gap: 1rem;
   @apply shadow-[2px_2px_2px_2px__rgba(0,0,0,0.5)];
   user-select: none;
+  @apply mb-2;
+  @apply text-pretty;
+  @apply items-start;
+  @apply py-4;
 }
 
 .rich-log-level-info {
   background-color: #f8f9fa;
+  @apply !text-black;
+  @apply !text-[0.9em];
 }
 
 .rich-log-level-warn {
-  background-color: #fff3cd;
+  background-color: #f8f9fa;
+  @apply !text-black;
+
 }
 
 .rich-log-level-error {
@@ -314,9 +323,14 @@ button {
 
 .rich-log-message {
   flex: 1;
-  @apply leading-5;
+  @apply leading-normal;
+  @apply text-balance;
   @apply pt-1;
   @apply self-start;
+  @apply font-[WarblerText];
+  @apply font-light;
+  @apply text-[1.25em];
+  @apply break-all;
 }
 
 .rich-log-delete-btn {
