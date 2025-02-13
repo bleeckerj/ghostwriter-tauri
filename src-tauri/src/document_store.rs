@@ -228,6 +228,7 @@ impl DocumentStore {
         embedding_generator: &embeddings::EmbeddingGenerator
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Find suitable ingestor
+        println!("Processing document: {:?}", path);
         let ingestor = self.ingestors.iter()
             .find(|i| i.can_handle(path))
             .ok_or_else(|| "No suitable ingestor found".to_string())?;
