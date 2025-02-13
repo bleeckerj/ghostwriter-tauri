@@ -14,6 +14,7 @@ use tauri::{
 
 use crate::SimpleLog;
 use crate::AppState;
+use tauri_plugin_dialog::{DialogExt, Dialog, FileDialogBuilder};
 
  // Constants for menu IDs
  pub const MENU_FILE_NEW: &str = "file-new";
@@ -113,6 +114,9 @@ use crate::AppState;
         }
         MENU_CANON_INGEST => {
             // Handle ingest canon
+            let app_handle = app.clone();
+            let dialog: &Dialog<R> = app.dialog();
+            let state = app_state.clone();
         }
         _ => {}
     }
