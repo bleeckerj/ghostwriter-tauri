@@ -434,9 +434,10 @@ button {
 .inline-action-item {
   /* --- Baseline from Snippet #1 --- */
   position: relative; /* Needed if using absolutely positioned pseudo-elements */
- /* background-color: orange; */
+ background-color: rgb(11, 239, 75);
+ @apply h-[1.5em] w-[2em];
  /* color: white; */
-  @apply -translate-y-[3px];
+  @apply -translate-y-[-3px];
   padding: 0px 6px;
   border-radius: 4px;
   font-size: 12px;

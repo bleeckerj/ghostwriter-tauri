@@ -31,7 +31,7 @@ export const InlineActionItem = Node.create({
       ...HTMLAttributes,
       'data-type': 'inline-action',
       class: 'inline-action-item'
-    }, 'NFL']
+    }, ' ']
   },
 
   addProseMirrorPlugins() {
@@ -64,6 +64,11 @@ export const InlineActionItem = Node.create({
           return {
             update: (view, prevState) => {
               if (timeout) clearTimeout(timeout)
+              
+              // Reset waitingForTyping if content has changed
+              if (prevState && !view.state.doc.eq(prevState.doc)) {
+                waitingForTyping = false
+              }
               
               // Check the options.disabled flag directly
               if (options.disabled || waitingForTyping) return
