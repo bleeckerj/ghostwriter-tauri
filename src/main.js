@@ -9,6 +9,8 @@ import RichLogEntryNode from './extensions/RichLogEntryNode'
 import { ProgressExtension } from './extensions/ProgressNode';
 //import { Placeholder } from '@tiptap/extension-placeholder'
 import { InlineActionItem } from './extensions/InlineActionItem';
+import { PluginKey } from 'prosemirror-state';
+
 const { invoke } = window.__TAURI__.core;
 
 let greetInputEl;
@@ -36,7 +38,7 @@ async function greet() {
           attrs: { 
             textColor: 'black',
             backgroundColor: '#f3f4f6',
-            twMisc: 'font-regular font-[WarblerText] rounded animated-highlight',
+            twMisc: 'font-regular text-[0.9em] font-[WarblerText] rounded animated-highlight',
             id: 'backend-id-123',
             timestamp: Date.now(),
             raw: res
@@ -125,7 +127,7 @@ async function completionFromContext() {
           attrs: { 
             textColor: 'blue',
             backgroundColor: '#f3f4f6',
-            twMisc: 'font-regular font-[WarblerText] text-[1em] rounded animated-highlight',
+            twMisc: 'rounded animated-highlight',
             id: 'backend-id-123',
             timestamp: Date.now(),
             raw: content
@@ -277,9 +279,9 @@ const editor = new Editor({
           await completionFromContext();
           
           // Re-enable the plugin after completion
-          const pluginKey = new PluginKey('inlineActionItem');
-          const tr = view.state.tr.setMeta(pluginKey, { disabled: false });
-          view.dispatch(tr);
+          // const pluginKey = new PluginKey('inlineActionItem');
+          // const tr = view.state.tr.setMeta(pluginKey, { disabled: false });
+          // view.dispatch(tr);
           
           // Update message
           greetMsgEl.textContent = 'Completed';
