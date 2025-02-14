@@ -227,6 +227,7 @@ struct SearchResult {
     similarity_score: f32,
 }
 
+
 #[tauri::command]
 async fn search_similarity(
     state: tauri::State<'_, AppState>,
@@ -486,27 +487,28 @@ async fn search_similarity(
                 .with_api_key(api_key.clone())
             );
             
-            let embedding_generator = EmbeddingGenerator::new(client);
+            let a_embedding_generator = EmbeddingGenerator::new(client.clone());
+            let b_embedding_generator = EmbeddingGenerator::new(client);
             let path = PathBuf::from("./resources/ghostwriter-selectric/vector_store/");
             
             println!("Initializing DocumentStore with path: {:?}", path);
             
-            let doc_store = DocumentStore::new(path.clone()).expect(&format!(
+            let doc_store = DocumentStore::new(path.clone(), std::sync::Arc::new(a_embedding_generator)).expect(&format!(
                 "Failed to initialize document store at path: {:?}",
                 path
             ));
             println!("DocumentStore successfully initialized.");
             let app_state = AppState::new(
                 doc_store,
-                embedding_generator,
+                b_embedding_generator,
                 "./log.json"
             ).expect("Failed to create AppState");
             
             
             tauri::Builder::default()
             .manage(app_state)
-            .menu(|window| menu::build_menu(&window.app_handle()))
-            .on_menu_event(|app, event| menu::handle_menu_event(app, event))
+            //.menu(|window| menu::build_menu(&window.app_handle()))
+            //.on_menu_event(|app, event| menu::handle_menu_event(app, event))
             .setup(|app| {
                 let app_handle = app.handle();
                 let new_logger = NewLogger::new(app_handle.clone());

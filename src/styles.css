@@ -52,7 +52,8 @@ p {
 }
 
 .dynamic-text-mark {
-  @apply !text-[0.9em];
+  @apply text-[0.9em];
+  @apply font-[WarblerText];
 }
 
 h1 {

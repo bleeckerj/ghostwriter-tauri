@@ -65,6 +65,11 @@ export const InlineActionItem = Node.create({
             update: (view, prevState) => {
               if (timeout) clearTimeout(timeout)
               
+              // Reset waitingForTyping if content has changed
+              if (prevState && !view.state.doc.eq(prevState.doc)) {
+                waitingForTyping = false
+              }
+              
               // Check the options.disabled flag directly
               if (options.disabled || waitingForTyping) return
               

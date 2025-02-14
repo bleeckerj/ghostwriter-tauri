@@ -23,7 +23,7 @@ const DynamicTextMark = Mark.create({
         })
       },
       twMisc: {
-        default: 'animated-highlight bg-blue-500',
+        default: 'animated-highlight bg-amber-500',
         parseHTML: element => element.getAttribute('data-tw-misc'),
         renderHTML: attributes => ({
           'data-tw-misc': attributes.twMisc,

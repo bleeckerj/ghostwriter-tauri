@@ -9,6 +9,8 @@ import RichLogEntryNode from './extensions/RichLogEntryNode'
 import { ProgressExtension } from './extensions/ProgressNode';
 //import { Placeholder } from '@tiptap/extension-placeholder'
 import { InlineActionItem } from './extensions/InlineActionItem';
+import { open } from '@tauri-apps/plugin-dialog';
+
 const { invoke } = window.__TAURI__.core;
 
 let greetInputEl;
@@ -21,6 +23,7 @@ async function greet() {
   //greetMsgEl.textContent = await invoke("greet", { name: greetInputEl.value });
   invoke("greet", { name: greetInputEl.value }).then(res => {
     greetMsgEl.textContent =  'And this is JS Frontend saying hello!';
+    openDialogTest();
     editor.chain()
     .focus()
     .insertContent([
@@ -36,7 +39,7 @@ async function greet() {
           attrs: { 
             textColor: 'black',
             backgroundColor: '#f3f4f6',
-            twMisc: 'font-regular text-[0.9em] font-[WarblerText] rounded animated-highlight',
+            twMisc: 'rounded animated-highlight',
             id: 'backend-id-123',
             timestamp: Date.now(),
             raw: res
@@ -54,6 +57,21 @@ async function greet() {
     editor.commands.setTextSelection(pos)   
     
   });
+}
+
+async function openDialogTest() {
+  // Open a dialog
+  const file = await open({
+    multiple: false,
+    directory: false,
+  });
+  console.log(file);
+  const results = await invoke("search_similarity", {
+    query: file,
+    limit: 4
+  });
+  console.log(results);
+  // Prints file path or URI
 }
 
 async function searchSimilarity() {
@@ -75,7 +93,7 @@ async function searchSimilarity() {
       level: 'info'
     });
   });
-
+  
   // Return the results for further use
   return results;
 }
@@ -87,7 +105,7 @@ async function completionFromContext() {
     greetMsgEl.textContent = `Emanating${'.'.repeat(dots)}`;
   }, 250);
   
-
+  
   
   invoke("completion_from_context", { input: editor.getText() })
   .then(([content, timing]) => {
@@ -150,9 +168,10 @@ window.addEventListener("DOMContentLoaded", async () => {
   greetMsgEl = document.querySelector("#greet-msg");
   //greetBtnEl = document.querySelector("#greet-btn");
   //greetBtnEl.addEventListener("click", searchSimilarity);
- // greetBtnEl.addEventListener("click", greet);
+  // greetBtnEl.addEventListener("click", greet);
   incantBtnEl = document.querySelector("#incant-btn");
-  incantBtnEl.addEventListener("click", completionFromContext);
+  incantBtnEl.textContent = "INGEST";
+  incantBtnEl.addEventListener("click", openDialogTest);
   // document.querySelector("#greet-form").addEventListener("submit", (e) => {
     //   e.preventDefault();
   //   greet();
@@ -241,7 +260,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     console.log('simple_log_emissions', res);
   });
   // invoke("rich_log_message", { message: 'Ghostwriter Up.', data: "no data", level: "info" }).then((res) => {
-  //   console.log('rich_log_emissions', res);
+    //   console.log('rich_log_emissions', res);
   // });
   // Cleanup when window unloads
   window.addEventListener('unload', () => {
