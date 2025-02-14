@@ -79,11 +79,6 @@ export const InlineActionItem = Node.create({
                 console.log("waitingForTyping reset to false on user typing", waitingForTyping)
               }
               
-              // Reset waitingForTyping if content has changed
-              if (prevState && !view.state.doc.eq(prevState.doc)) {
-                waitingForTyping = false
-              }
-              
               // Check the options.disabled flag directly
               if (options.disabled || waitingForTyping) return
               

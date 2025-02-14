@@ -227,7 +227,6 @@ struct SearchResult {
     similarity_score: f32,
 }
 
-
 #[tauri::command]
 async fn search_similarity(
     state: tauri::State<'_, AppState>,
@@ -507,8 +506,8 @@ async fn search_similarity(
             
             tauri::Builder::default()
             .manage(app_state)
-            //.menu(|window| menu::build_menu(&window.app_handle()))
-            //.on_menu_event(|app, event| menu::handle_menu_event(app, event))
+            .menu(|window| menu::build_menu(&window.app_handle()))
+            .on_menu_event(|app, event| menu::handle_menu_event(app, event))
             .setup(|app| {
                 let app_handle = app.handle();
                 let new_logger = NewLogger::new(app_handle.clone());
