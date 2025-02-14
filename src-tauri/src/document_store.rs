@@ -3,6 +3,7 @@
 // src/document_store.rs
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
+use std::path;
 use std::path::PathBuf;
 use chrono::Local;  // Add this to your imports at the top
 use serde_json;
@@ -10,14 +11,16 @@ use crate::ingest::DocumentIngestor;
 use std::path::Path;
 use async_trait::async_trait;
 use std::sync::Arc;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 use std::fmt::Debug;
 use crate::embeddings::EmbeddingGenerator;  // Change this line
 use crate::ingest::{
     pdf_ingestor::PdfIngestor,
     mdx_ingestor::MdxIngestor
 };
-
+use tauri::Manager; // Add this import
+use tauri::Emitter;
+use serde_json::json;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 
@@ -53,12 +56,12 @@ pub struct DocumentInfo {
 }
 
 pub struct DocumentStore {
-    conn: Arc<Mutex<Connection>>,  // Wrap SQLite connection in Arc<Mutex>
+    conn: Arc<Mutex<Connection>>, // Change to tokio Mutex
     ingestors: Vec<Arc<Box<dyn DocumentIngestor>>>,
-    next_id: usize,  // Add this field
-    embedding_generator: Arc<EmbeddingGenerator>,  // Add this field
-
+    next_id: usize,
+    embedding_generator: Arc<EmbeddingGenerator>,
 }
+
 
 impl DocumentStore {
     pub fn new(
@@ -122,14 +125,14 @@ impl DocumentStore {
             next_id,
             embedding_generator,
         };
-
+        
         doc_store.register_ingestor(Box::new(MdxIngestor));
         doc_store.register_ingestor(Box::new(PdfIngestor));
-
+        
         Ok(doc_store)
     }
     
-    pub fn add_document(
+    pub async fn add_document(
         &mut self,
         mut document: Document,
     ) -> Result<(), Box<dyn std::error::Error>> {
@@ -137,7 +140,7 @@ impl DocumentStore {
         let current_time = Local::now().to_rfc3339();
         
         // Hold the lock for the duration of the transaction
-        let mut conn_guard = self.conn.lock().unwrap();
+        let mut conn_guard = self.conn.lock().await;
         let tx = conn_guard.transaction()?;
         
         // Insert document
@@ -152,12 +155,12 @@ impl DocumentStore {
         Ok(())
     }
     
-    pub fn search(
+    pub async fn search(
         &self,
         query_embedding: &[f32],
         limit: usize,
     ) -> Result<Vec<(String, usize, String, f32)>, Box<dyn std::error::Error>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().await;
         let mut stmt = conn.prepare(
             "SELECT d.id, d.name, d.file_path, d.created_at, e.id, e.chunk, e.embedding 
              FROM documents d 
@@ -199,8 +202,8 @@ impl DocumentStore {
         Ok(similarities.into_iter().take(limit).collect())
     }
     
-    pub fn fetch_documents(&self) -> Result<DocumentListing, Box<dyn std::error::Error>> {
-        let conn = self.conn.lock().unwrap();
+    pub async fn fetch_documents(&self) -> Result<DocumentListing, Box<dyn std::error::Error>> {
+        let conn = self.conn.lock().await;
         let mut stmt = conn.prepare("SELECT id, name, file_path, created_at FROM documents")?;
         
         let rows = stmt.query_map([], |row| {
@@ -238,99 +241,158 @@ impl DocumentStore {
         self.ingestors.push(Arc::new(ingestor));
     }
     
-    pub fn process_document_sync(
-        &mut self, 
+    
+    pub async fn process_document_async(
+        self: Arc<Self>, 
         path: &Path,
+        app_handle: tauri::AppHandle, // Add app_handle parameter
     ) -> Result<(), Box<dyn std::error::Error>> {
+        let store = self.clone(); // Clone Arc to get a reference
         println!("Processing document: {:?}", path);
-        let ingestor = self.ingestors.iter()
-            .find(|i| i.can_handle(path))
-            .ok_or_else(|| "No suitable ingestor found".to_string())?;
 
-        let ingested = futures::executor::block_on(ingestor.ingest_file(path))?;
+        // Find suitable ingestor
+        let ingestor = match store.ingestors.iter().find(|i| i.can_handle(path)) {
+            Some(ingestor) => ingestor,
+            None => {
+                let error_message = "No suitable ingestor found".to_string();
+                println!("{}", error_message);
+                app_handle.emit("error", json!({
+                    "message": error_message,
+                    "timestamp": chrono::Local::now().to_rfc3339(),
+                    "level": "error"
+                }))?;
+                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, error_message)));
+            }
+        };
 
+
+        println!("Ingestor found");
+        let ingested = ingestor.ingest_file(path).await?;
+        println!("Ingested document: {:?}", ingested);
         let document = Document {
             id: 0,
             name: ingested.title,
-            created_at: Local::now().to_rfc3339(),
+            created_at: chrono::Local::now().to_rfc3339(),
             file_path: ingested.metadata.source_path,
             embedding: vec![],
         };
-
+        println!("Document created: {:?}", document);
         let doc_id = {
-            let conn = self.conn.lock().unwrap();
-            self.add_document_internal(&conn, document)?
+            let conn = store.conn.lock().await;  // ✅ Correctly locks the database connection
+            let id = store.add_document_internal(&conn, document)?;  
+            id
         };
-
-        // Use the stored embedding_generator
-        futures::executor::block_on(
-            self.process_embeddings(doc_id, ingested.content, &self.embedding_generator)
-        )?;
-
+        println!("Document ID: {}", doc_id);
+        let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+        
+        let app_handle_clone = app_handle.clone();
+        
+        match store.process_embeddings(doc_id, ingested.content, file_name, &store.embedding_generator, app_handle_clone).await {
+            Ok(_) => {
+                println!("Document processed with ID: {}", doc_id);
+            }
+            Err(e) => {
+                println!("Error processing embeddings: {:?}", e);
+            }
+        }
+        
         println!("Document processed with ID: {}", doc_id);
+        
+        
+        
         Ok(())
     }
     
-    pub async fn process_document(
-        &mut self, 
-        path: &Path,
-        embedding_generator: &EmbeddingGenerator
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        // Find suitable ingestor
-        println!("Processing document: {:?}", path);
-        let ingestor = self.ingestors.iter()
-        .find(|i| i.can_handle(path))
-        .ok_or_else(|| "No suitable ingestor found".to_string())?;
+    
+    
+    // pub async fn process_document(
+    //     &mut self, 
+    //     path: &Path,
+    //     embedding_generator: &EmbeddingGenerator
+    // ) -> Result<(), Box<dyn std::error::Error>> {
+    //     // Find suitable ingestor
+    //     println!("Processing document: {:?}", path);
+    //     let ingestor = self.ingestors.iter()
+    //     .find(|i| i.can_handle(path))
+    //     .ok_or_else(|| "No suitable ingestor found".to_string())?;
         
-        // Process the document
-        let ingested = ingestor.ingest_file(path).await?;
+    //     // Process the document
+    //     let ingested = ingestor.ingest_file(path).await?;
         
-        // Create document
-        let document = Document {
-            id: 0,  // This will be set by the database
-            name: ingested.title,
-            created_at: Local::now().to_rfc3339(),
-            file_path: ingested.metadata.source_path,
-            embedding: vec![],
-        };
+    //     // Create document
+    //     let document = Document {
+    //         id: 0,  // This will be set by the database
+    //         name: ingested.title,
+    //         created_at: Local::now().to_rfc3339(),
+    //         file_path: ingested.metadata.source_path,
+    //         embedding: vec![],
+    //     };
         
-        // Insert document and get ID
-        let doc_id = {
-            let conn = self.conn.lock().unwrap();
-            self.add_document_internal(&conn, document)?
-        };
+    //     // Insert document and get ID
+    //     let doc_id = {
+    //         let conn = self.conn.lock().await;
+    //         self.add_document_internal(&conn, document)?
+    //     };
         
-        // Process and store embeddings
-        self.process_embeddings(doc_id, ingested.content, embedding_generator).await?;
+    //     // Process and store embeddings
+    //     self.process_embeddings(doc_id, ingested.content, embedding_generator).await?;
         
-        println!("Document processed with ID: {}", doc_id);
-        Ok(())
-    }
+    //     println!("Document processed with ID: {}", doc_id);
+    //     Ok(())
+    // }
     
     async fn process_embeddings(
         &self, 
         doc_id: i64, 
         content: String,
-        embedding_generator: &EmbeddingGenerator
+        file_name: String,
+         embedding_generator: &EmbeddingGenerator,
+        app_handle: tauri::AppHandle,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        println!("app_handle: {:?}", app_handle);
         // Chunk the content
-        let chunks = embedding_generator.chunk_text(&content, 1000, 100); // adjust size/overlap as needed
-        
+        let chunks = self.embedding_generator.chunk_text(&content, 1000, 100); // adjust size/overlap as needed
+        // Emit progress update
+        println!("Processing {} chunks", chunks.len());
+        app_handle.emit("progress-indicator-load", json!({
+            "progress_id": format!("embedding_doc_id_{}",doc_id),
+            "current_step": 0,
+            "total_steps": chunks.len() + 1,
+            "current_file": file_name,
+            "meta": content.chars().take(50).collect::<String>(),
+        }))?;
         // Get embeddings for each chunk
-        for chunk in chunks {
+        for (count, chunk) in chunks.iter().enumerate() {
+            let count = count + 1;
+            app_handle.emit("progress-indicator-update", json!({
+                "progress_id": format!("embedding_doc_id_{}", doc_id),
+                "current_step": count+1,
+                "total_steps": chunks.len() + 1,
+                "current_file": file_name,
+                "meta": chunk,
+            }))?;
             let embedding = embedding_generator.generate_embedding(&chunk).await?;
             
             // Convert embedding to JSON string
             let embedding_json = serde_json::to_string(&embedding)?;
-            
+            //println!("Embedding: {}", embedding_json);
             // Store in database
-            let conn = self.conn.lock().unwrap();
+            let conn = self.conn.lock().await;
             conn.execute(
                 "INSERT INTO embeddings (doc_id, chunk, embedding) VALUES (?1, ?2, ?3)",
                 params![doc_id, chunk, embedding_json],
             )?;
+            
         }
-        
+        // Emit final progress update
+        app_handle.emit("progress-update", json!({
+            "progress_id": "document-processing",
+            "current_step": 3,
+            "total_steps": 3,
+            "current_file": file_name,
+            "meta": "Completed"
+        }))?;
+        println!("Embeddings processed");
         Ok(())
     }
     
@@ -359,25 +421,25 @@ impl DocumentStore {
     }
     
     
-        pub async fn test_async_process(&self) -> Result<(), Box<dyn std::error::Error>> {
-            for i in 1..=10 {
-                // First do anything that needs the lock
-                {
-                    // Quick operation with lock
-                    let _conn = self.conn.lock().unwrap();
-                    println!("Starting step {}", i);
-                } // Lock dropped here
-                
-                // Then do async work without the lock
-                println!("Processing step {}", i);
-                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-            }
-            Ok(())
+    pub async fn test_async_process(&self) -> Result<(), Box<dyn std::error::Error>> {
+        for i in 1..=10 {
+            // First do anything that needs the lock
+            {
+                // Quick operation with lock
+                let _conn = self.conn.lock().await;
+                println!("Starting step {}", i);
+            } // Lock dropped here
+            
+            // Then do async work without the lock
+            println!("Processing step {}", i);
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         }
+        Ok(())
+    }
     
     #[cfg(test)]
     pub fn get_connection(&self) -> std::sync::MutexGuard<'_, Connection> {
-        self.conn.lock().unwrap()
+        self.conn.lock().await
     }
 }
 

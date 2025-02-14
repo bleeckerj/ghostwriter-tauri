@@ -371,6 +371,7 @@ button {
   @apply rounded-sm;
   @apply font-mono;
   @apply text-[0.8em];
+  @apply justify-items-start;
 }
 
 .progress-count {
@@ -394,19 +395,21 @@ button {
   @apply justify-self-start;  /* Add this */
 }
 
-.progress-meta {
-  @apply font-mono;
-  @apply text-gray-600;
-  @apply text-sm;
-  @apply justify-self-end;
-}
-
 .progress-stats {
   @apply grid;
-  @apply grid-cols-[auto_auto_auto_1fr_auto];
+  @apply grid-cols-[auto_auto_auto_1fr];
   @apply gap-4;
   @apply w-full;
-  @apply items-center;
+  @apply items-start; /* Ensures all items stay aligned at the top */
+  @apply content-start; /* Ensures that additional rows stay close */
+}
+.progress-meta {
+  @apply text-gray-600;
+  @apply text-[0.7em];
+  @apply leading-tight;
+  @apply self-start; /* Ensures top alignment */
+  word-break: break-word; /* Allows breaking long words */
+  white-space: normal; /* Allows natural wrapping */
 }
 
 .resize-handle {

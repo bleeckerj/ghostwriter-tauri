@@ -68,6 +68,14 @@ async function openDialogTest() {
     directory: false,
   });
   console.log(file);
+  const foo = await invoke("ingestion_from_file_dialog", {
+    filePath: file
+  }).then((res) => {
+    console.log(res);
+    return res;
+  }
+  );
+  console.log(foo);
   const results = await invoke("search_similarity", {
     query: file,
     limit: 4
@@ -182,7 +190,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   let unlistenSimpleLogMessageFn;
   let unlistenRichLogMessageFn;
   let unlistenProgressIndicatorUpdateFn;
-  let unlistenProgressIndicatoLoadrFn;
+  let unlistenProgressIndicatorLoadFn;
   try {
     unlistenSimpleLogMessageFn = await listen('simple-log-message', (event) => {
       console.log('Received event:', event);
@@ -218,8 +226,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
   
   try {
-    unlistenProgressIndicatoLoadrFn = await listen('load-progress-indicator', (event) => {
-      console.log('Progress Indicator Received event:', event);
+    unlistenProgressIndicatorLoadFn = await listen('progress-indicator-load', (event) => {
+      console.log('Progress Indicator Received Load Event:', event);
       if (event.payload) {
         addProgressIndicatorNode({
           progress_id: event.payload.progress_id,
@@ -236,7 +244,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   
   try {
     unlistenProgressIndicatorUpdateFn = await listen('progress-indicator-update', (event) => {
-      console.log('Received event:', event);
+      console.log('Progress Indicator Received Update Event:', event);
       if (event.payload) {
         window.updateProgressNode(diagnostics, event.payload.progress_id, {
           current_step: event.payload.current_step,

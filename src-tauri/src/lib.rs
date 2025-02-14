@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 #![allow(unused)]
 use epub::doc;
+use pdf_extract::Path;
 use std::io::Stdout;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -17,7 +18,7 @@ use document_store::DocumentStore;
 
 pub mod ingest;
 pub mod document_store;
-pub mod menu;
+//pub mod menu;
 pub mod embeddings;
 
 mod conversations; // Add this line
@@ -60,6 +61,37 @@ struct CompletionTiming {
     total_ms: u128,
 }
 
+
+#[tauri::command]
+async fn ingestion_from_file_dialog(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    file_path: String,
+) -> Result<String, String> {
+    
+    println!("Ingesting file: {}", file_path);
+    let file_path_buf = PathBuf::from(file_path);
+    let file_name = file_path_buf.clone().as_path().file_name().unwrap().to_str().unwrap().to_string();
+
+    
+    //let doc_store = state.doc_store.clone();
+    //let embedding_generator = state.embedding_generator.clone();
+    
+    let store = state.doc_store.clone();
+    store.process_document_async(&file_path_buf.as_path(), app_handle).await;
+
+    // tokio::spawn(async move {
+    //     if let Err(err) = store.process_document_async(file_path_buf.as_path()).await {
+    //         eprintln!("Error processing document: {}", err);
+    //     }
+    // });
+
+    //doc_store.lock().unwrap().process_document_async(file_path_buf.as_path()).await;
+    
+    Ok("Ingested file".to_string())
+}
+
+
 // Modify the function return type to include timing
 #[tauri::command]
 async fn completion_from_context(
@@ -80,12 +112,13 @@ async fn completion_from_context(
     
     // Time similarity search
     let start_search = Instant::now();
-    let similar_docs = state
-    .doc_store
-    .lock()
-    .unwrap()
-    .search(&embedding, 3)
-    .map_err(|e| e.to_string())?;
+    // let similar_docs = state
+    // .doc_store
+    // .lock()
+    // .unwrap()
+    // .search(&embedding, 3)
+    // .map_err(|e| e.to_string())?;
+    let similar_docs = state.doc_store.search(&embedding, 3).await.map_err(|e| e.to_string())?;
     let search_duration = start_search.elapsed();
     
     // Prepare the context for the LLM
@@ -113,7 +146,7 @@ async fn completion_from_context(
         });
     }
     
-    let conversation_context = state.conversation.lock().unwrap().get_context();
+    let conversation_context = state.conversation.lock().await.get_context();
     let prose_style = "A style that is consistent with the input text".to_string();
     //const prose_style = "In the style of a medieval scribe using Old or Middle English";
     // const response_limit = "Respond with no more than two sentences along with the completion of any partial sentence or thought fragment. In addition, add one sentence fragment that does not conclude with a period or full-stop. This sentence fragment is meant to be a provocation in the direction of thought being developed so that the user can continue to write in the same vein.";
@@ -200,7 +233,7 @@ async fn completion_from_context(
             state
             .logger
             .lock()
-            .unwrap()
+            .await
             .log_completion(log_entry)
             .map_err(|e| e.to_string())?;
             
@@ -208,7 +241,7 @@ async fn completion_from_context(
             state
             .conversation
             .lock()
-            .unwrap()
+            .await
             .add_exchange(input.clone(), content.clone());
             //println!("Completion: {}", content);
             return Ok((content.clone(), timing));
@@ -241,14 +274,18 @@ async fn search_similarity(
     .await
     .map_err(|e| format!("Embedding generation failed: {}", e))?;
     
-    let doc_store = state
-    .doc_store
-    .lock()
-    .map_err(|e| format!("Failed to acquire doc store lock: {}", e))?;
+    let doc_store = state.doc_store.clone();
+
+    // let doc_store = state
+    // .doc_store
+    // .lock()
+    // .map_err(|e| format!("Failed to acquire doc store lock: {}", e))?;
     
-    let results = doc_store
+    let results = state.doc_store
     .search(&embedding, limit)
+    .await // ✅ Now correctly awaiting the async function
     .map_err(|e| format!("Search failed: {}", e))?;
+
     
     // Transform results into SearchResult structs
     Ok(results
@@ -506,8 +543,8 @@ async fn search_similarity(
             
             tauri::Builder::default()
             .manage(app_state)
-            .menu(|window| menu::build_menu(&window.app_handle()))
-            .on_menu_event(|app, event| menu::handle_menu_event(app, event))
+            //.menu(|window| menu::build_menu(&window.app_handle()))
+            //.on_menu_event(|app, event| menu::handle_menu_event(app, event))
             .setup(|app| {
                 let app_handle = app.handle();
                 let new_logger = NewLogger::new(app_handle.clone());
@@ -535,6 +572,7 @@ async fn search_similarity(
                     greet,
                     completion_from_context,
                     search_similarity,
+                    ingestion_from_file_dialog,
                     test_log_emissions,
                     simple_log_message,
                     rich_log_message,
