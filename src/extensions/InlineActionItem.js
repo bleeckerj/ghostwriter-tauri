@@ -36,7 +36,8 @@ export const InlineActionItem = Node.create({
 
   addProseMirrorPlugins() {
     const options = this.options
-    let waitingForTyping = false
+    let waitingForTyping = false // not so sure about this..
+    let userTyping = false
 
     return [
       new Plugin({
@@ -50,13 +51,19 @@ export const InlineActionItem = Node.create({
                 const tr = view.state.tr.delete(pos, pos + node.nodeSize)
                 view.dispatch(tr)
                 waitingForTyping = true
-                
+                console.log("waitingForTyping set to true on click", waitingForTyping)
                 options.onClick(view, pos, event)
               }
               return true
             }
             return false
           },
+          handleDOMEvents: {
+            keydown: (view, event) => {
+              userTyping = true
+              return false
+            }
+          }
         },
 
         view(editorView) {
@@ -64,6 +71,13 @@ export const InlineActionItem = Node.create({
           return {
             update: (view, prevState) => {
               if (timeout) clearTimeout(timeout)
+
+              // Reset waitingForTyping if content has changed and userTyping is true
+              if (prevState && !view.state.doc.eq(prevState.doc) && userTyping) {
+                waitingForTyping = false
+                userTyping = false
+                console.log("waitingForTyping reset to false on user typing", waitingForTyping)
+              }
               
               // Reset waitingForTyping if content has changed
               if (prevState && !view.state.doc.eq(prevState.doc)) {

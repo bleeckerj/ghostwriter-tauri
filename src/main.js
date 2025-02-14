@@ -9,6 +9,8 @@ import RichLogEntryNode from './extensions/RichLogEntryNode'
 import { ProgressExtension } from './extensions/ProgressNode';
 //import { Placeholder } from '@tiptap/extension-placeholder'
 import { InlineActionItem } from './extensions/InlineActionItem';
+import { PluginKey } from 'prosemirror-state';
+
 import { open } from '@tauri-apps/plugin-dialog';
 
 const { invoke } = window.__TAURI__.core;
@@ -296,9 +298,9 @@ const editor = new Editor({
           await completionFromContext();
           
           // Re-enable the plugin after completion
-          const pluginKey = new PluginKey('inlineActionItem');
-          const tr = view.state.tr.setMeta(pluginKey, { disabled: false });
-          view.dispatch(tr);
+          // const pluginKey = new PluginKey('inlineActionItem');
+          // const tr = view.state.tr.setMeta(pluginKey, { disabled: false });
+          // view.dispatch(tr);
           
           // Update message
           greetMsgEl.textContent = 'Completed';
