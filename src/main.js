@@ -10,6 +10,7 @@ import { ProgressExtension } from './extensions/ProgressNode';
 //import { Placeholder } from '@tiptap/extension-placeholder'
 import { InlineActionItem } from './extensions/InlineActionItem';
 import { PluginKey } from 'prosemirror-state';
+import {Menu, Submenu} from '@tauri-apps/api/menu'
 
 import { open } from '@tauri-apps/plugin-dialog';
 
@@ -19,6 +20,32 @@ let greetInputEl;
 let greetMsgEl;
 //let greetBtnEl;
 let incantBtnEl;
+
+const macOS = navigator.userAgent.includes('Macintosh')
+
+async function createMenuWithSubmenu() {
+  const submenu = await Submenu.new({
+    text: 'Options',
+    items: [
+      {
+        id: 'option1',
+        text: 'Option 1',
+        action: () => { console.log('Option 1 clicked'); }
+      },
+      {
+        id: "option2",
+        text: "Option 2",
+        action: () => { console.log("Option 2 clicked"); },
+      },
+    ],
+  });
+
+  const menu = await Menu.new({ items: [submenu] });
+
+  menu.setAsAppMenu();
+}
+
+createMenuWithSubmenu();
 
 async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -174,6 +201,7 @@ async function completionFromContext() {
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
+  create();
   greetInputEl = document.querySelector("#greet-input");
   greetMsgEl = document.querySelector("#greet-msg");
   //greetBtnEl = document.querySelector("#greet-btn");
@@ -191,6 +219,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   let unlistenRichLogMessageFn;
   let unlistenProgressIndicatorUpdateFn;
   let unlistenProgressIndicatorLoadFn;
+  let unlistenOpenFileDialogForIngestFn;
+
   try {
     unlistenSimpleLogMessageFn = await listen('simple-log-message', (event) => {
       console.log('Received event:', event);
@@ -204,6 +234,25 @@ window.addEventListener("DOMContentLoaded", async () => {
         });
       }
     });
+  } catch (error) {
+    console.error('Failed to setup event listener:', error);
+  }
+
+  try {
+    unlistenOpenFileDialogForIngestFn = await listen('open-file-dialog-for-ingest', (event) => {
+      console.log('Received event:', event);
+      openDialogTest();
+    }
+    );  
+  } catch (error) {
+    console.error('Failed to setup event listener:', error);
+  }
+
+  try {
+    unlistenOpenFileDialogForIngestFn = await listen('open-canon-list', (event) => {
+      console.log('Hey Received event:', event);
+    }
+    );  
   } catch (error) {
     console.error('Failed to setup event listener:', error);
   }
