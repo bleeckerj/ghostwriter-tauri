@@ -93,7 +93,7 @@ use serde_json::json;
         .build()
  }
  
- pub fn handle_menu_event<R: Runtime>(app_state: tauri::State<'_, AppState>, app: &AppHandle<R>,   event: MenuEvent) {
+ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
    
     match event.id.0.as_str() {
         MENU_FILE_NEW => {
