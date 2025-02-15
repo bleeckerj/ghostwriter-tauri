@@ -18,7 +18,7 @@ use document_store::DocumentStore;
 
 pub mod ingest;
 pub mod document_store;
-//pub mod menu;
+pub mod menu;
 pub mod embeddings;
 
 mod conversations; // Add this line
@@ -72,20 +72,20 @@ async fn ingestion_from_file_dialog(
     println!("Ingesting file: {}", file_path);
     let file_path_buf = PathBuf::from(file_path);
     let file_name = file_path_buf.clone().as_path().file_name().unwrap().to_str().unwrap().to_string();
-
+    
     
     //let doc_store = state.doc_store.clone();
     //let embedding_generator = state.embedding_generator.clone();
     
     let store = state.doc_store.clone();
     store.process_document_async(&file_path_buf.as_path(), app_handle).await;
-
+    
     // tokio::spawn(async move {
     //     if let Err(err) = store.process_document_async(file_path_buf.as_path()).await {
     //         eprintln!("Error processing document: {}", err);
     //     }
     // });
-
+    
     //doc_store.lock().unwrap().process_document_async(file_path_buf.as_path()).await;
     
     Ok("Ingested file".to_string())
@@ -275,7 +275,7 @@ async fn search_similarity(
     .map_err(|e| format!("Embedding generation failed: {}", e))?;
     
     let doc_store = state.doc_store.clone();
-
+    
     // let doc_store = state
     // .doc_store
     // .lock()
@@ -285,7 +285,7 @@ async fn search_similarity(
     .search(&embedding, limit)
     .await // ✅ Now correctly awaiting the async function
     .map_err(|e| format!("Search failed: {}", e))?;
-
+    
     
     // Transform results into SearchResult structs
     Ok(results
@@ -543,43 +543,46 @@ async fn search_similarity(
             
             tauri::Builder::default()
             .manage(app_state)
-            //.menu(|window| menu::build_menu(&window.app_handle()))
-            //.on_menu_event(|app, event| menu::handle_menu_event(app, event))
-            .setup(|app| {
-                let app_handle = app.handle();
-                let new_logger = NewLogger::new(app_handle.clone());
-                new_logger.simple_log_message(
+            .menu(|window| menu::build_menu(&window.app_handle()))
+            .on_menu_event(move |window, event | {
+                println!("Menu event: {:?}", event);
+            }
+        )
+        .setup(|app| {
+            let app_handle = app.handle();
+            let new_logger = NewLogger::new(app_handle.clone());
+            new_logger.simple_log_message(
+                "Ghostwriter Up.".to_string(),
+                "start".to_string(),
+                "info".to_string());
+                new_logger.rich_log_message(
                     "Ghostwriter Up.".to_string(),
-                    "start".to_string(),
-                    "info".to_string());
-                    new_logger.rich_log_message(
-                        "Ghostwriter Up.".to_string(),
-                        "Ghostwriter is up and running.".to_string(),
-                        "info".to_string()
-                    );
-                    // app_state.update_logger_path(app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy().to_string()).expect("Failed to update logger path");
-                    println!("{}", app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy());
-                    
-                    app.manage(new_logger.clone());
-                    // Load .env file
-                    dotenv::dotenv().ok();
-                    Ok(())
-                })
-                .plugin(tauri_plugin_clipboard_manager::init())
-                .plugin(tauri_plugin_dialog::init())
-                .plugin(tauri_plugin_opener::init())
-                .invoke_handler(tauri::generate_handler![
-                    greet,
-                    completion_from_context,
-                    search_similarity,
-                    ingestion_from_file_dialog,
-                    test_log_emissions,
-                    simple_log_message,
-                    rich_log_message,
-                    ])
-                    .run(tauri::generate_context!())
-                    .expect("error while running tauri application");
-                    
-                    
-                    
-                }
+                    "Ghostwriter is up and running.".to_string(),
+                    "info".to_string()
+                );
+                // app_state.update_logger_path(app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy().to_string()).expect("Failed to update logger path");
+                println!("{}", app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy());
+                
+                app.manage(new_logger.clone());
+                // Load .env file
+                dotenv::dotenv().ok();
+                Ok(())
+            })
+            .plugin(tauri_plugin_clipboard_manager::init())
+            .plugin(tauri_plugin_dialog::init())
+            .plugin(tauri_plugin_opener::init())
+            .invoke_handler(tauri::generate_handler![
+                greet,
+                completion_from_context,
+                search_similarity,
+                ingestion_from_file_dialog,
+                test_log_emissions,
+                simple_log_message,
+                rich_log_message,
+                ])
+                .run(tauri::generate_context!())
+                .expect("error while running tauri application");
+                
+                
+                
+            }

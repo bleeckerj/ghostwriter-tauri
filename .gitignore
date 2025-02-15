@@ -6,11 +6,15 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
+log.json
+log.txt
+.env
 node_modules
 dist
 dist-ssr
+resources/ghostwriter-selectric/
 *.local
+*.tgz
 
 # Editor directories and files
 .vscode/*
