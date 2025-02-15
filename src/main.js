@@ -52,7 +52,7 @@ async function greet() {
   //greetMsgEl.textContent = await invoke("greet", { name: greetInputEl.value });
   invoke("greet", { name: greetInputEl.value }).then(res => {
     greetMsgEl.textContent =  'And this is JS Frontend saying hello!';
-    openDialogTest();
+    //openDialogTest();
     editor.chain()
     .focus()
     .insertContent([
@@ -88,13 +88,17 @@ async function greet() {
   });
 }
 
-async function openDialogTest() {
+/** need to handle this asynchronously and the menu handler in Rust is synchronous
+ * so we have to have Rust tell the frontend to open the dialog
+ * and then we get the file path and send it back to Rust for ingestion
+ */
+async function openDialogForIngestion() {
   // Open a dialog
   const file = await open({
     multiple: false,
     directory: false,
   });
-  console.log(file);
+  //console.log(file);
   const foo = await invoke("ingestion_from_file_dialog", {
     filePath: file
   }).then((res) => {
@@ -102,13 +106,13 @@ async function openDialogTest() {
     return res;
   }
   );
-  console.log(foo);
-  const results = await invoke("search_similarity", {
-    query: file,
-    limit: 4
-  });
-  console.log(results);
-  // Prints file path or URI
+  console.log("ingestion result ", foo);
+  // const results = await invoke("search_similarity", {
+  //   query: file,
+  //   limit: 4
+  // });
+  // console.log(results);
+  // // Prints file path or URI
 }
 
 async function searchSimilarity() {
@@ -209,7 +213,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   // greetBtnEl.addEventListener("click", greet);
   incantBtnEl = document.querySelector("#incant-btn");
   incantBtnEl.textContent = "INGEST";
-  incantBtnEl.addEventListener("click", openDialogTest);
+  incantBtnEl.addEventListener("click", openDialogForIngestion);
   // document.querySelector("#greet-form").addEventListener("submit", (e) => {
     //   e.preventDefault();
   //   greet();
@@ -241,7 +245,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   try {
     unlistenOpenFileDialogForIngestFn = await listen('open-file-dialog-for-ingest', (event) => {
       console.log('Received event:', event);
-      openDialogTest();
+      openDialogForIngestion();
     }
     );  
   } catch (error) {

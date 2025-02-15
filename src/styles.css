@@ -461,13 +461,14 @@ button {
 .inline-action-item {
   /* --- Baseline from Snippet #1 --- */
   position: relative; /* Needed if using absolutely positioned pseudo-elements */
- background-color: rgb(11, 239, 75);
- @apply h-[1.5em] w-[2em];
+ background-color: rgb(255, 255, 255);
+ @apply h-[1em] w-[2em];
  /* color: white; */
-  @apply -translate-y-[-3px];
-  padding: 0px 6px;
-  border-radius: 4px;
-  font-size: 12px;
+  @apply -translate-y-[-0px];
+  /* padding: 0px 6px; */
+  /* border-radius: 4px; */
+  /* font-size: 12px; */
+  @apply rounded-r-full;
   cursor: pointer;
   user-select: none;
   display: inline-flex;
@@ -477,13 +478,13 @@ button {
   transition: opacity 0.2s ease-in-out;
 
   /* --- Additions from Snippet #2 (selective) --- */
-  @apply border border-black;             /* Adds a black border */
-  @apply shadow-[4px_0px_0px_0px];        /* Fancy left-side shadow */
-  @apply hover:shadow-none;               /* Remove shadow on hover */
-  @apply hover:translate-x-[4px];         /* Slide slightly to the right on hover */
+  /* @apply border border-black;              */
+  /* @apply shadow-[4px_0px_0px_0px];         */
+  /* @apply hover:shadow-none;                */
+  @apply hover:translate-x-[4px];         
 
   /* Pseudo-element trick for a border effect on hover */
   @apply before:content-[''] before:absolute before:left-0 before:top-0;
   @apply before:w-full before:h-full before:border-[0.5px] before:border-transparent;
-  @apply hover:before:border-l-0 hover:before:border-t-0 hover:before:border-black;
+  /* @apply hover:before:border-l-0 hover:before:border-t-0 hover:before:border-black; */
 }

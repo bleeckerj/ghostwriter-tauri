@@ -249,7 +249,7 @@ impl DocumentStore {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let store = self.clone(); // Clone Arc to get a reference
         println!("Processing document: {:?}", path);
-
+        
         // Find suitable ingestor
         let ingestor = match store.ingestors.iter().find(|i| i.can_handle(path)) {
             Some(ingestor) => ingestor,
@@ -261,14 +261,14 @@ impl DocumentStore {
                     "timestamp": chrono::Local::now().to_rfc3339(),
                     "level": "error"
                 }))?;
+                println!("Ingestor not found");
                 return Err(Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, error_message)));
             }
         };
-
-
+        
+        
         println!("Ingestor found");
         let ingested = ingestor.ingest_file(path).await?;
-        println!("Ingested document: {:?}", ingested.metadata.source_path);
         //println!("Ingested document: {:?}", ingested);
         let document = Document {
             id: 0,
@@ -277,20 +277,49 @@ impl DocumentStore {
             file_path: ingested.metadata.source_path,
             embedding: vec![],
         };
+        let doc_name = document.name.clone();
         println!("Document created: {:?}", document);
-        let doc_id = {
+        let doc_id_result = {
             let conn = store.conn.lock().await;  // ✅ Correctly locks the database connection
-            let id = store.add_document_internal(&conn, document)?;  
-            id
+            store.add_document_internal(&conn, document)
         };
-        println!("Document ID: {}", doc_id);
+        let doc_id = match doc_id_result {
+            Ok(id) => {
+                println!("Document ID: {}", id);
+                id
+            }
+            Err(e) => {
+                let error_message = format!("Error adding document to database: {}", e);
+                println!("Error adding document to database: {:?}", e);
+                app_handle.emit("simple-log-message", json!({
+                    "message": format!("Couldn't add {} to canon {}", doc_name, error_message),
+                    "timestamp": chrono::Local::now().to_rfc3339(),
+                    "level": "warn"
+                })).ok();
+                return Err(e); // Propagate the error
+            }
+        };
+        drop(doc_id_result); // Release the lock
+        app_handle.emit("simple-message", json!({
+            "message": format!("Document added with ID: {}", doc_id),
+            "timestamp": chrono::Local::now().to_rfc3339(),
+            "level": "info"
+        }))?;
         let file_name = path.file_name().unwrap().to_string_lossy().to_string();
-        
-        let app_handle_clone = app_handle.clone();
-        
-        match store.process_embeddings(doc_id, ingested.content, file_name, &store.embedding_generator, app_handle_clone).await {
+        let file_name_clone = file_name.clone();
+        // let app_handle_clone = app_handle.clone();
+        // let name = file_name.clone();
+        match store
+        .process_embeddings(doc_id, ingested.content, file_name, &store.embedding_generator, app_handle.clone())
+        .await
+        {
             Ok(_) => {
                 println!("Document processed with ID: {}", doc_id);
+                app_handle.emit("simple-message", json!({
+                    "message": format!("Ingestion & embedding complete: {}", file_name_clone),
+                    "timestamp": chrono::Local::now().to_rfc3339(),
+                    "level": "info"
+                })).ok();
             }
             Err(e) => {
                 println!("Error processing embeddings: {:?}", e);
@@ -316,10 +345,10 @@ impl DocumentStore {
     //     let ingestor = self.ingestors.iter()
     //     .find(|i| i.can_handle(path))
     //     .ok_or_else(|| "No suitable ingestor found".to_string())?;
-        
+    
     //     // Process the document
     //     let ingested = ingestor.ingest_file(path).await?;
-        
+    
     //     // Create document
     //     let document = Document {
     //         id: 0,  // This will be set by the database
@@ -328,16 +357,16 @@ impl DocumentStore {
     //         file_path: ingested.metadata.source_path,
     //         embedding: vec![],
     //     };
-        
+    
     //     // Insert document and get ID
     //     let doc_id = {
     //         let conn = self.conn.lock().await;
     //         self.add_document_internal(&conn, document)?
     //     };
-        
+    
     //     // Process and store embeddings
     //     self.process_embeddings(doc_id, ingested.content, embedding_generator).await?;
-        
+    
     //     println!("Document processed with ID: {}", doc_id);
     //     Ok(())
     // }
@@ -347,7 +376,7 @@ impl DocumentStore {
         doc_id: i64, 
         content: String,
         file_name: String,
-         embedding_generator: &EmbeddingGenerator,
+        embedding_generator: &EmbeddingGenerator,
         app_handle: tauri::AppHandle,
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!("app_handle: {:?}", app_handle);
@@ -399,18 +428,24 @@ impl DocumentStore {
     
     // Private helper function for database operations
     fn add_document_internal(&self, conn: &Connection, document: Document) -> Result<i64, Box<dyn std::error::Error>> {
-        conn.execute(
+        match conn.execute(
             "INSERT INTO documents (name, created_at, file_path) VALUES (?1, ?2, ?3)",
             params![
             document.name,
             document.created_at,
             document.file_path,
             ],
-        )?;
-        
-        // Get the ID of the last inserted row
-        let id = conn.last_insert_rowid();
-        Ok(id)
+        ) {
+            Ok(_) => {
+                // Get the ID of the last inserted row
+                let id = conn.last_insert_rowid();
+                Ok(id)
+            }
+            Err(e) => {
+                // Handle the error
+                Err(Box::new(e))
+            }
+        }
     }
     
     // Add this method

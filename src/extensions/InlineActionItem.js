@@ -31,8 +31,21 @@ export const InlineActionItem = Node.create({
       ...HTMLAttributes,
       'data-type': 'inline-action',
       class: 'inline-action-item'
-    }, 'NFL']
+    }, '⇰']
   },
+
+  // renderHTML({ HTMLAttributes }) {
+  //   return ['span', { 
+  //     ...HTMLAttributes,
+  //     'data-type': 'inline-action',
+  //     class: 'inline-action-item'
+  //   }, ['img', {
+  //     src: '/src/images/icons/LaboratoryCircle_Guy_01_CircleTeal.webp', // Use the correct path to your icon
+  //     alt: 'NFL Icon',
+  //     style: 'width: 25px; height: 25px; vertical-align: middle;', // Adjust size as needed
+  //   }]
+  // ]
+  // },
 
   addProseMirrorPlugins() {
     const options = this.options

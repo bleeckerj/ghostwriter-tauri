@@ -19,6 +19,7 @@ use tauri_plugin_dialog::{DialogExt, Dialog, FileDialogBuilder};
 use std::path::Path;
 use tauri::Emitter;
 use serde_json::json;
+use std::sync::Arc;
 
  // Constants for menu IDs
  pub const MENU_FILE_NEW: &str = "file-new";
@@ -94,7 +95,8 @@ use serde_json::json;
  }
  
  pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
-   
+    let app_state = app.state::<AppState>();
+
     match event.id.0.as_str() {
         MENU_FILE_NEW => {
             println!("New file");
@@ -104,8 +106,37 @@ use serde_json::json;
             app.exit(0);
         }
         MENU_CANON_LIST => {
+            let doc_store = Arc::clone(&app_state.doc_store);
             let app_handle = app.clone();
-            app_handle.emit("open-canon-list", ());
+            tauri::async_runtime::spawn(async move {
+                match doc_store.fetch_documents().await {  // ✅ Ensure `fetch_documents` is async
+                    Ok(listing) => {
+                        let _ = app_handle.emit("rich-log-message", json!({
+                            "message": format!("Canon: {} File: {}", listing.canon_name, listing.canon_file),
+                            "data": "",
+                            "timestamp": chrono::Local::now().to_rfc3339(),
+                            "level": "info"
+                        }));
+        
+                        for doc in listing.documents {
+                            let _ = app_handle.emit("rich-log-message", json!({
+                                "message": format!("{}", doc.name),
+                                "timestamp": chrono::Local::now().to_rfc3339(),
+                                "level": "info"
+                            }));
+                        }
+                    }
+                    Err(e) => {
+                        let _ = app_handle.emit("rich-log-message", json!({
+                            "message": "Error Listing Documents",
+                            "data": e.to_string(),
+                            "timestamp": chrono::Local::now().to_rfc3339(),
+                            "level": "error"
+                        }));
+                    }
+                }
+            });
+            
         }
         MENU_CANON_NEW => {
             // Handle new canon
