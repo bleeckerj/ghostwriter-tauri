@@ -4,7 +4,7 @@
   filter: drop-shadow(0 0 2em #ffe21c);
 }
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-family: Inter, ESKlarheitKurrentMono, Avenir, Helvetica, Arial, sans-serif;
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
@@ -116,6 +116,11 @@ button {
 }
 
 
+
+.greet-msg {
+  @apply font-['Haffer'];
+  @apply text-[0.9em]
+}
 
 .ProseMirror {
   flex: 1 1 auto;

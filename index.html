@@ -15,28 +15,24 @@
   
   <!-- <div class="row pb-2 m-8" id="buttons"> -->
     <!-- <input id="greet-input" class="bg-blue-700 mr-[5em] p-2 rounded-sm border-[0.5px] border-black" placeholder="Write Something..." /> -->
-     <div class="mb-4 mx-auto">
-    <!-- <div id="greet-btn" class="
-    relative w-fit mr-8 p-2 rounded-sm 
-    border border-black 
-    shadow-[8px_0px_0px_0px]
-    hover:shadow-none  
-    hover:translate-x-[8px]
-    before:content-[''] before:absolute before:left-0 before:top-0
-    before:w-full before:h-full before:border-[0.5px] before:border-transparent
-    hover:before:border-l-0 hover:before:border-t-0 hover:before:border-black cursor-pointer" type="submit">Greet</div> -->
-
-  <div id="incant-btn" class="
-  relative w-fit mr-8 p-2 rounded-sm 
-  border border-black 
-  shadow-[8px_0px_0px_0px]
-  hover:shadow-none  
-  hover:translate-x-[8px]
-  before:content-[''] before:absolute before:left-0 before:top-0
-  before:w-full before:h-full before:border-[0.5px] before:border-transparent
-  hover:before:border-l-0 hover:before:border-t-0 hover:before:border-black cursor-pointer" type="submit">Incant</div>
+     <div class="mb-4 relative">
+  <div class="flex justify-center">
+    <div id="incant-btn" class="
+      relative w-fit p-2 rounded-sm 
+      border border-black 
+      shadow-[8px_0px_0px_0px]
+      hover:shadow-none  
+      hover:translate-x-[8px]
+      before:content-[''] before:absolute before:left-0 before:top-0
+      before:w-full before:h-full before:border-[0.5px] before:border-transparent
+      hover:before:border-l-0 hover:before:border-t-0 hover:before:border-black cursor-pointer">
+      Incant
+    </div>
+  </div>
+  <div class="absolute right-0 top-0 flex items-center">
+    <img class="h-[2em]" src="/src/images/icons/LaboratoryCircle_Guy_01_CircleTeal.webp" />
+  </div>
 </div>
-
   <div class="scroll-area">
     <div class="editor-content h-full">
       <div class="element bg-gradient-animated"></div>
@@ -52,7 +48,7 @@
     </div>
   </div>
     
-    <p id="greet-msg" class="bg-amber-200 border-[0.5px] text-[0.8em] font-mono w-full mb-1 rounded-sm pl-4">
+    <p id="greet-msg" class="greet-msg bg-gray-200 border-[0.5px] text-[0.8em]  w-full mb-1 rounded-sm pl-4">
       <span>Hello.</span>
     </p>
 
