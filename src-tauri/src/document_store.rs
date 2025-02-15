@@ -268,7 +268,8 @@ impl DocumentStore {
 
         println!("Ingestor found");
         let ingested = ingestor.ingest_file(path).await?;
-        println!("Ingested document: {:?}", ingested);
+        println!("Ingested document: {:?}", ingested.metadata.source_path);
+        //println!("Ingested document: {:?}", ingested);
         let document = Document {
             id: 0,
             name: ingested.title,

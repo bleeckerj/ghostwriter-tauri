@@ -544,10 +544,7 @@ async fn search_similarity(
             tauri::Builder::default()
             .manage(app_state)
             .menu(|window| menu::build_menu(&window.app_handle()))
-            .on_menu_event(move |window, event | {
-                println!("Menu event: {:?}", event);
-            }
-        )
+            .on_menu_event(|app, event| menu::handle_menu_event(app, event))
         .setup(|app| {
             let app_handle = app.handle();
             let new_logger = NewLogger::new(app_handle.clone());

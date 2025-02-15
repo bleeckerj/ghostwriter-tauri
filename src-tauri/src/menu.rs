@@ -116,43 +116,8 @@ use serde_json::json;
         }
         MENU_CANON_INGEST => {
             // Handle ingest canon
-            let app_handle = app.clone();
-            app_handle.emit("open-file-dialog-for-ingest", ());
-            let dialog: Dialog<R> = app_handle.dialog().clone();
-            let state = app_state.clone();
-            let embedding_generator = state.embedding_generator.clone();
-            let doc_store = state.doc_store.clone(); // ✅ Clone Arc<Mutex<...>>
-
-            FileDialogBuilder::new(dialog)
-        .add_filter("Text Files", &["txt", "md", "rs"])
-        .pick_file(move |file_path| {
-            println!("File path: {:?}", file_path);
-            if let Some(f_path) = file_path {
-                println!("f_path {:?}", f_path);
-                let p_path = f_path.as_path().unwrap();
-                let file_name = p_path.file_name();
-                println!("file_name {:?}", file_name);
-                println!("p_path {:?}", p_path);
-                // if let Ok(mut doc_store) = app_state.doc_store.lock() {
-                //     doc_store.process_document_sync(p_path);
-                // }
-            // let mut doc_store = doc_store.lock().unwrap(); // Lock to mutate
-            // doc_store.process_document(p_path, &embedding_generator);
-            }
-            // if let Some(path) = file_path {
-            //     let embedding_generator = state.embedding_generator.clone();
-            //     let path_buf = path.clone(); // ✅ path is already a PathBuf
-            //     let file_name = path_buf.file_name()
-            //         .unwrap_or_default()
-            //         .to_string_lossy()
-            //         .to_string();
-                
-            //     // ✅ Clone necessary data for async
-            //     let path_for_async = path_buf.clone();
-            //     let app_handle = app_handle.clone();
-            //     let doc_store = state.doc_store.clone();
-            // }
-        });
+            println!("Ingest canon");
+            app.emit("open-file-dialog-for-ingest", ());
         }
         _ => {}
     }
