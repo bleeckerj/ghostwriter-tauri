@@ -89,9 +89,9 @@ async function greet() {
 }
 
 /** need to handle this asynchronously and the menu handler in Rust is synchronous
- * so we have to have Rust tell the frontend to open the dialog
- * and then we get the file path and send it back to Rust for ingestion
- */
+* so we have to have Rust tell the frontend to open the dialog
+* and then we get the file path and send it back to Rust for ingestion
+*/
 async function openDialogForIngestion() {
   // Open a dialog
   const file = await open({
@@ -105,14 +105,14 @@ async function openDialogForIngestion() {
     console.log(res);
     return res;
   }
-  );
-  console.log("ingestion result ", foo);
-  // const results = await invoke("search_similarity", {
-  //   query: file,
-  //   limit: 4
-  // });
-  // console.log(results);
-  // // Prints file path or URI
+);
+console.log("ingestion result ", foo);
+// const results = await invoke("search_similarity", {
+//   query: file,
+//   limit: 4
+// });
+// console.log(results);
+// // Prints file path or URI
 }
 
 async function searchSimilarity() {
@@ -224,13 +224,12 @@ window.addEventListener("DOMContentLoaded", async () => {
   let unlistenProgressIndicatorUpdateFn;
   let unlistenProgressIndicatorLoadFn;
   let unlistenOpenFileDialogForIngestFn;
-
+  let unlistenCanonListFn;
   try {
     unlistenSimpleLogMessageFn = await listen('simple-log-message', (event) => {
       console.log('Received event:', event);
       if (event.payload) {
         addSimpleLogEntry({
-          id: event.payload.id,
           id: event.payload.id,
           timestamp: event.payload.timestamp,
           message: event.payload.message,
@@ -241,105 +240,148 @@ window.addEventListener("DOMContentLoaded", async () => {
   } catch (error) {
     console.error('Failed to setup event listener:', error);
   }
+  
+  try {
+    unlistenCanonListFn = await listen('canon-list', (event) => {
+      console.log('This is the event:', event);
+      console.log('Payload:', event.payload);
+  
+      try {
+        const listing = JSON.parse(event.payload); // Parse the JSON string
+        console.log('Parsed listing:', listing);
+  
+        listing.documents.forEach((doc, index) => {
+          console.log(`Document ${index}:`, doc);
+          // Access document properties:
+          // console.log(`  ID: ${doc.id}`);
+          // console.log(`  Name: ${doc.name}`);
+          // console.log(`  File Path: ${doc.file_path}`);
+          // console.log(`  Created At: ${doc.created_at}`);
+  
+          // You can now use the 'doc' object to create a rich log entry, for example:
+          addRichLogEntry({
+            id: ""+doc.id,
+            timestamp: doc.created_at,
+            message: doc.name,
+            data: doc.id, // Or any other data you want to include
+            level: 'info',
+          });
+        });
+      } catch (error) {
+        console.error('Error parsing or iterating over payload:', error);
+      }
+    });
+  } catch (error) {
+    console.error('Failed to setup event listener:', error);
+  }
+  
 
   try {
     unlistenOpenFileDialogForIngestFn = await listen('open-file-dialog-for-ingest', (event) => {
       console.log('Received event:', event);
       openDialogForIngestion();
-    }
-    );  
+    });  
   } catch (error) {
     console.error('Failed to setup event listener:', error);
   }
-
+  
   try {
     unlistenOpenFileDialogForIngestFn = await listen('open-canon-list', (event) => {
       console.log('Hey Received event:', event);
     }
-    );  
-  } catch (error) {
-    console.error('Failed to setup event listener:', error);
-  }
-  
-  try {
-    unlistenRichLogMessageFn = await listen('rich-log-message', (event) => {
-      console.log('Received event:', event);
-      if (event.payload) {
-        addRichLogEntry({
-          id: Date.now(),
-          timestamp: event.payload.timestamp,
-          message: event.payload.message,
-          data: event.payload.data,
-          level: 'warn'
-        });
-      }
-    });
-  } catch (error) {
-    console.error('Failed to setup event listener:', error);
-  }
-  
-  try {
-    unlistenProgressIndicatorLoadFn = await listen('progress-indicator-load', (event) => {
-      console.log('Progress Indicator Received Load Event:', event);
-      if (event.payload) {
-        addProgressIndicatorNode({
-          progress_id: event.payload.progress_id,
-          current_step: event.current_step,
-          total_steps: event.total_steps,
-          current_file: event.payload.current_file,
-          meta: event.payload.meta
-        });
-      }
-    });
-  } catch (error) {
-    console.error('Failed to setup event listener:', error);
-  }
-  
-  try {
-    unlistenProgressIndicatorUpdateFn = await listen('progress-indicator-update', (event) => {
-      console.log('Progress Indicator Received Update Event:', event);
-      if (event.payload) {
-        window.updateProgressNode(diagnostics, event.payload.progress_id, {
-          current_step: event.payload.current_step,
-          current_file: event.payload.current_file,
-          total_steps: event.payload.total_steps,
-          meta: event.payload.meta
-        })
-      }
-      if (event.payload && event.payload.current_step === event.payload.total_steps) {
-        window.updateProgressNode(diagnostics, event.payload.progress_id, {
-          current_step: event.payload.current_step,
-          current_file: event.payload.current_file,
-          total_steps: event.payload.total_steps,
-          meta: "Completed Ingestion"
-        })
-      }
-    });
-  } catch (error) {
-    console.error('Failed to setup event listener:', error);
-  }
-  
-  invoke("simple_log_message", { message: 'Ghostwriter Up.', id: "tracker", level: "info" }).then((res) => {
-    console.log('simple_log_emissions', res);
-  });
-  // invoke("rich_log_message", { message: 'Ghostwriter Up.', data: "no data", level: "info" }).then((res) => {
-    //   console.log('rich_log_emissions', res);
-  // });
-  // Cleanup when window unloads
-  window.addEventListener('unload', () => {
-    if (unlistenFn) {
-      unlistenFn();
+  );  
+} catch (error) {
+  console.error('Failed to setup event listener:', error);
+}
+
+try {
+  unlistenRichLogMessageFn = await listen('rich-log-message', (event) => {
+    console.log('Received rich-log-message event:', event);
+    if (event.payload) {
+      addRichLogEntry({
+        id: Date.now(),
+        timestamp: event.payload.timestamp,
+        message: event.payload.message,
+        data: event.payload.data,
+        level: 'warn'
+      });
     }
   });
-  //   addSimpleLogEntry({
-  //     id: '1',
-  //     timestamp: new Date().toISOString(),
-  //     message: 'Ghostwriter Up.',
-  //     level: 'info'
-  //   }).run()
-  
-  // Initialize the resize handle
-  initializeResizeHandle();
+} catch (error) {
+  console.error('Failed to setup event listener:', error);
+}
+
+try {
+  unlistenProgressIndicatorLoadFn = await listen('progress-indicator-load', (event) => {
+    console.log('Progress Indicator Received Load Event:', event);
+    if (event.payload) {
+      addProgressIndicatorNode({
+        progress_id: event.payload.progress_id,
+        current_step: event.current_step,
+        total_steps: event.total_steps,
+        current_file: event.payload.current_file,
+        meta: event.payload.meta
+      });
+    }
+  });
+} catch (error) {
+  console.error('Failed to setup event listener:', error);
+}
+
+try {
+  unlistenProgressIndicatorUpdateFn = await listen('progress-indicator-update', (event) => {
+    console.log('Progress Indicator Received Update Event:', event);
+    if (event.payload) {
+      window.updateProgressNode(diagnostics, event.payload.progress_id, {
+        current_step: event.payload.current_step,
+        current_file: event.payload.current_file,
+        total_steps: event.payload.total_steps,
+        meta: event.payload.meta
+      })
+    }
+    if (event.payload && event.payload.current_step === event.payload.total_steps) {
+      window.updateProgressNode(diagnostics, event.payload.progress_id, {
+        current_step: event.payload.current_step,
+        current_file: event.payload.current_file,
+        total_steps: event.payload.total_steps,
+        meta: "Completed Ingestion"
+      })
+    }
+  });
+} catch (error) {
+  console.error('Failed to setup event listener:', error);
+}
+
+invoke("simple_log_message", { message: 'Ghostwriter Up.', id: "tracker", level: "info" }).then((res) => {
+  console.log('simple_log_emissions', res);
+});
+// invoke("rich_log_message", { message: 'Ghostwriter Up.', data: "no data", level: "info" }).then((res) => {
+  //   console.log('rich_log_emissions', res);
+// });
+// Cleanup when window unloads
+window.addEventListener('unload', () => {
+  if (unlistenSimpleLogMessageFn) {
+    unlistenSimpleLogMessageFn();
+  }
+  if (unlistenRichLogMessageFn) {
+    unlistenRichLogMessageFn();
+  }
+  if (unlistenProgressIndicatorUpdateFn) {
+    unlistenProgressIndicatorUpdateFn();
+  }
+  if (unlistenProgressIndicatorLoadFn) {
+    unlistenProgressIndicatorLoadFn();
+  }
+  if (unlistenOpenFileDialogForIngestFn) {
+    unlistenOpenFileDialogForIngestFn();
+  }
+  if (unlistenCanonListFn) {
+    unlistenCanonListFn();
+  }
+});
+
+// Initialize the resize handle
+initializeResizeHandle();
 });
 
 const editor = new Editor({
@@ -385,7 +427,23 @@ const diagnostics = new Editor({
     StarterKit,
     //DiagnosticLogEntryNode,
     SimpleLogEntryNode,
-    RichLogEntryNode,
+    RichLogEntryNode.configure({
+      onDelete: ({ node, getPos, editor }) => {
+        const pos = getPos(); // Get the position immediately
+        const doc_id = node.attrs.id; // Get the ID of the node which should be the doc_id
+        invoke("delete_canon_entry", { docid: doc_id }).then((res) => {
+
+        });
+        // Check if the position is valid and the node is still in the document
+        if (typeof pos === 'number' && pos >= 0 && pos < editor.state.doc.content.size) {
+          // The position is valid, so proceed with deleting the node
+          editor.chain().focus().deleteRange({ from: pos, to: pos + 1 }).run();
+        } else {
+          // The position is invalid, so log an error and do nothing
+          console.error('Invalid position for node:', node, pos);
+        }
+      },
+    }),
     DynamicTextMark,
     ProgressExtension,
   ],

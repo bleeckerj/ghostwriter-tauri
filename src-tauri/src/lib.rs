@@ -11,6 +11,7 @@ use serde_json::Value;
 use tokio::time::{sleep, Duration};
 use tauri::{generate_handler, Builder, Emitter, AppHandle, Manager};
 use chrono::{Local, Utc};  // Add Utc here
+use std::sync::Arc;
 
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use embeddings::EmbeddingGenerator;
@@ -306,6 +307,7 @@ async fn search_similarity(
         app_handle: tauri::AppHandle,
         message: String,
     ) -> Result<String, String> {
+        println!("Time here looks like {}", chrono::Local::now().to_rfc3339());
         // Step 1: Create rich log
         let rich_log_data = RichLog {
             message:message.to_string(),
@@ -378,6 +380,51 @@ async fn search_similarity(
         ) -> Result<String, String> {
             logger.rich_log_message(message, data, level);
             Ok("Rich Logged".to_string())
+        }
+        
+        #[tauri::command]
+        async fn delete_canon_entry(
+            logger: tauri::State<'_, NewLogger>,
+            app_state: tauri::State<'_, AppState>,
+            app_handle: tauri::AppHandle,
+            docid: String,
+        ) -> Result<String, String> {
+            let id = docid.clone();
+            
+            // Attempt to parse the doc_id string into an i64
+            let doc_id_int = match docid.parse::<i64>() {
+                Ok(id) => id,
+                Err(e) => {
+                    let error_message = format!("Failed to parse doc_id as integer: {}", e);
+                    logger.simple_log_message(
+                        error_message.clone(),
+                        id.clone(),
+                        "error".to_string(),
+                    );
+                    return Err(error_message);
+                }
+            };
+            
+            let doc_store = Arc::clone(&app_state.doc_store);
+            match doc_store.delete_document(doc_id_int).await {
+                Ok(_) => {
+                    logger.rich_log_message(
+                        "Deleting canon entry ".to_string(),
+                        id.clone(),
+                        "info".to_string(),
+                    );
+                    Ok("Canon Entry deleted".to_string())
+                }
+                Err(e) => {
+                    let error_message = format!("Failed to delete canon entry: {}", e);
+                    logger.simple_log_message(
+                        error_message.clone(),
+                        id.clone(),
+                        "error".to_string(),
+                    );
+                    Err(error_message)
+                }
+            }
         }
         
         
@@ -476,10 +523,11 @@ async fn search_similarity(
             }
             
             fn simple_log_message(&self, message: String, id: String, level: String) {
+                println!("Here the time looks like {}", chrono::Local::now().to_rfc3339());
                 let simple_log_data = SimpleLog {
                     message: format!("{}", message),
                     level: level.clone(),
-                    timestamp: chrono::Local::now().to_rfc3339(),
+                    timestamp: chrono::Local::now().to_rfc3339().to_string(),
                     id: Some(id.clone()),
                 };
                 match self.app_handle.emit("simple-log-message", simple_log_data) {
@@ -545,41 +593,42 @@ async fn search_similarity(
             .manage(app_state)
             .menu(|window| menu::build_menu(&window.app_handle()))
             .on_menu_event(|app, event| menu::handle_menu_event(app, event))
-        .setup(|app| {
-            let app_handle = app.handle();
-            let new_logger = NewLogger::new(app_handle.clone());
-            new_logger.simple_log_message(
-                "Ghostwriter Up.".to_string(),
-                "start".to_string(),
-                "info".to_string());
-                new_logger.rich_log_message(
-                    "Ghostwriter Up.".to_string(),
-                    "Ghostwriter is up and running.".to_string(),
-                    "info".to_string()
-                );
-                // app_state.update_logger_path(app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy().to_string()).expect("Failed to update logger path");
-                println!("{}", app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy());
-                
-                app.manage(new_logger.clone());
-                // Load .env file
-                dotenv::dotenv().ok();
-                Ok(())
-            })
-            .plugin(tauri_plugin_clipboard_manager::init())
-            .plugin(tauri_plugin_dialog::init())
-            .plugin(tauri_plugin_opener::init())
-            .invoke_handler(tauri::generate_handler![
-                greet,
-                completion_from_context,
-                search_similarity,
-                ingestion_from_file_dialog,
-                test_log_emissions,
-                simple_log_message,
-                rich_log_message,
-                ])
-                .run(tauri::generate_context!())
-                .expect("error while running tauri application");
-                
-                
-                
-            }
+            .setup(|app| {
+                let app_handle = app.handle();
+                let new_logger = NewLogger::new(app_handle.clone());
+                new_logger.simple_log_message(
+                    "Ghostwriter Is Up.".to_string(),
+                    "start".to_string(),
+                    "info".to_string());
+                    new_logger.rich_log_message(
+                        "Ghostwriter Is Up.".to_string(),
+                        "Ghostwriter is up and running.".to_string(),
+                        "info".to_string()
+                    );
+                    // app_state.update_logger_path(app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy().to_string()).expect("Failed to update logger path");
+                    println!("{}", app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy());
+                    
+                    app.manage(new_logger.clone());
+                    // Load .env file
+                    dotenv::dotenv().ok();
+                    Ok(())
+                })
+                .plugin(tauri_plugin_clipboard_manager::init())
+                .plugin(tauri_plugin_dialog::init())
+                .plugin(tauri_plugin_opener::init())
+                .invoke_handler(tauri::generate_handler![
+                    greet,
+                    completion_from_context,
+                    search_similarity,
+                    ingestion_from_file_dialog,
+                    test_log_emissions,
+                    simple_log_message,
+                    rich_log_message,
+                    delete_canon_entry,
+                    ])
+                    .run(tauri::generate_context!())
+                    .expect("error while running tauri application");
+                    
+                    
+                    
+                }

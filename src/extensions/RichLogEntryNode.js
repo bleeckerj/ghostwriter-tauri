@@ -14,6 +14,15 @@ const RichLogEntryNode = Node.create({
   
   atom: true, // Treat the node as a single unit
   
+  addOptions() {
+    return {
+      onDelete: () => {
+        // Default delete behavior (do nothing)
+        console.warn('No onDelete handler provided for RichLogEntryNode')
+      },
+    }
+  },
+  
   addAttributes() {
     return {
       id: {
@@ -50,23 +59,15 @@ const RichLogEntryNode = Node.create({
   },
 
   addNodeView() {
-    return ({ node, getPos }) => {
+    return ({ node, getPos, editor }) => {
       const dom = document.createElement('div')
       dom.classList.add('rich-log-entry', `rich-log-level-${node.attrs.level}`)
       
       // Timestamp
       const timestamp = document.createElement('span')
       timestamp.classList.add('rich-log-timestamp')
-      timestamp.textContent = new Date(node.attrs.timestamp)
-      .toLocaleString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      })
+      timestamp.textContent = node.attrs.timestamp // Use the timestamp string directly
+ 
       // Message
       const message = document.createElement('span')
       message.classList.add('rich-log-message')
@@ -76,13 +77,11 @@ const RichLogEntryNode = Node.create({
       const deleteBtn = document.createElement('button')
       deleteBtn.classList.add('rich-log-delete-btn')
       deleteBtn.textContent = 'DEL'
+      
+      // Use the onDelete option from the node's options
       deleteBtn.onclick = (e) => {
         e.preventDefault()
-        // Dispatch a custom event that we'll handle in the editor setup
-        const event = new CustomEvent('rich-log-entry-delete', {
-          detail: { id: node.attrs.id, pos: getPos() }
-        })
-        dom.dispatchEvent(event)
+        this.options.onDelete({ node, getPos, editor }) // Pass node, getPos, and editor
       }
       
       // Append elements

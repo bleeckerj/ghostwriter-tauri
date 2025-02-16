@@ -289,6 +289,8 @@ button {
 
 .simple-log-message {
   flex: 1;
+  @apply font-[ESKlarheitKurrentMono];
+
   @apply leading-5;
   @apply pt-1;
   @apply self-start;
@@ -301,7 +303,7 @@ button {
   @apply text-white;
   @apply font-bold;
   @apply px-2 py-1;
-  /* @apply font-[ESKlarheitKurrentMono]; */
+  @apply font-[ESKlarheitKurrentMono];
   @apply text-[0.7em];
   display: flex;
   align-items: center;
@@ -318,7 +320,7 @@ button {
   font-size: 0.9em;
   /* min-width: 150px; */
   @apply font-mono;
-  @apply self-start;
+  @apply leading-none;
   flex: 1;
 }
 .rich-log-message {
@@ -327,10 +329,14 @@ button {
   @apply text-balance;
   @apply pt-1;
   @apply self-start;
-  @apply font-[WarblerText];
+  @apply border-[0.5px] border-gray-400 p-4;
+
+  /*@apply font-[WarblerText];*/
+  @apply font-[ESKlarheitKurrentMono];
+
   @apply font-light;
-  @apply text-[1.25em];
-  /* @apply break-all; */
+  @apply text-[0.9em];
+  @apply break-all;
 }
 
 .rich-log-delete-btn {

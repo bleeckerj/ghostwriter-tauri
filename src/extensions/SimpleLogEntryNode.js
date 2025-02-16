@@ -55,13 +55,8 @@ const SimpleLogEntryNode = Node.create({
       // Timestamp
       const timestamp = document.createElement('span')
       timestamp.classList.add('simple-log-timestamp')
-      timestamp.textContent = new Date(node.attrs.timestamp)
-      .toISOString()
-      .replace('T', ' ')
-      .replace('Z', '')
-      + new Date().toString().match(/GMT([+-]\d{4})/)[1]  
-
-      // Message
+      timestamp.textContent = node.attrs.timestamp // Use the timestamp string directly
+       // Message
       const message = document.createElement('span')
       message.classList.add('simple-log-message')
       message.innerHTML = ' ' + DOMPurify.sanitize(node.attrs.message)

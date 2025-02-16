@@ -40,14 +40,14 @@ pub struct SimilarDocument {
     pub similarity: f32
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct DocumentListing {
     pub documents: Vec<DocumentInfo>,
     pub canon_file: String,
     pub canon_name: String,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct DocumentInfo {
     pub id: i64,
     pub name: String,
@@ -105,7 +105,8 @@ impl DocumentStore {
             name TEXT NOT NULL,
             owner TEXT NOT NULL,
             created_at TEXT NOT NULL,
-            modified_at TEXT NOT NULL
+            modified_at TEXT NOT NULL,
+            notes TEXT NOT NULL
             )",
             [],
         )?;
@@ -333,43 +334,61 @@ impl DocumentStore {
         Ok(())
     }
     
+    pub async fn delete_document(&self, doc_id: i64) -> Result<(), Box<dyn std::error::Error>> {
+        let mut conn = self.conn.lock().await;
+        
+        // Start a transaction to ensure atomicity
+        let tx = conn.transaction()?;
+        
+        // Delete embeddings associated with the document
+        tx.execute("DELETE FROM embeddings WHERE doc_id = ?1", params![doc_id])?;
+        
+        // Delete the document itself
+        tx.execute("DELETE FROM documents WHERE id = ?1", params![doc_id])?;
+        
+        // Commit the transaction
+        tx.commit()?;
+        
+        Ok(())
+    }
     
     
-    // pub async fn process_document(
-    //     &mut self, 
-    //     path: &Path,
-    //     embedding_generator: &EmbeddingGenerator
-    // ) -> Result<(), Box<dyn std::error::Error>> {
-    //     // Find suitable ingestor
-    //     println!("Processing document: {:?}", path);
-    //     let ingestor = self.ingestors.iter()
-    //     .find(|i| i.can_handle(path))
-    //     .ok_or_else(|| "No suitable ingestor found".to_string())?;
+    /***
+    * ## USAGE
+
+    let canon_id_to_update: i64 = 123; // Replace with the actual canon_id
+    let new_name = "New Canon Name".to_string();
+    let new_owner = "New Owner".to_string();
+    let new_notes = Some("Some new notes".to_string()); // Or None if you want to clear the notes
     
-    //     // Process the document
-    //     let ingested = ingestor.ingest_file(path).await?;
+    let result = document_store
+    .update_canon(canon_id_to_update, new_name, new_owner, new_notes)
+    .await;
     
-    //     // Create document
-    //     let document = Document {
-    //         id: 0,  // This will be set by the database
-    //         name: ingested.title,
-    //         created_at: Local::now().to_rfc3339(),
-    //         file_path: ingested.metadata.source_path,
-    //         embedding: vec![],
-    //     };
+    match result {
+    Ok(_) => println!("Canon with ID {} updated successfully", canon_id_to_update),
+    Err(e) => eprintln!("Error updating canon with ID {}: {}", canon_id_to_update, e),
+    }
+    */
+    pub async fn update_canon(
+        &self,
+        canon_id: i64,
+        name: String,
+        owner: String,
+        notes: Option<String>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let conn = self.conn.lock().await;
+        let modified_at = Local::now().to_rfc3339();
+        
+        let mut stmt = conn.prepare(
+            "UPDATE canon SET name = ?1, owner = ?2, notes = ?3, modified_at = ?4 WHERE id = ?5",
+        )?;
+        
+        stmt.execute(params![name, owner, notes, modified_at, canon_id])?;
+        
+        Ok(())
+    }
     
-    //     // Insert document and get ID
-    //     let doc_id = {
-    //         let conn = self.conn.lock().await;
-    //         self.add_document_internal(&conn, document)?
-    //     };
-    
-    //     // Process and store embeddings
-    //     self.process_embeddings(doc_id, ingested.content, embedding_generator).await?;
-    
-    //     println!("Document processed with ID: {}", doc_id);
-    //     Ok(())
-    // }
     
     async fn process_embeddings(
         &self, 

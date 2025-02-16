@@ -1,4 +1,5 @@
 use pdfium_render::prelude::embedded_destination;
+use serde::Serialize;
 use tauri::{
     AppHandle,
     Manager,
@@ -111,20 +112,31 @@ use std::sync::Arc;
             tauri::async_runtime::spawn(async move {
                 match doc_store.fetch_documents().await {  // ✅ Ensure `fetch_documents` is async
                     Ok(listing) => {
-                        let _ = app_handle.emit("rich-log-message", json!({
-                            "message": format!("Canon: {} File: {}", listing.canon_name, listing.canon_file),
-                            "data": "",
-                            "timestamp": chrono::Local::now().to_rfc3339(),
-                            "level": "info"
-                        }));
-        
-                        for doc in listing.documents {
-                            let _ = app_handle.emit("rich-log-message", json!({
-                                "message": format!("{}", doc.name),
-                                "timestamp": chrono::Local::now().to_rfc3339(),
-                                "level": "info"
-                            }));
+                        // Serialize the listing to JSON
+                        match serde_json::to_string(&listing) {
+                            Ok(json_string) => {
+                                // Emit the JSON string
+                                // Send to the front end, basically.
+                                app_handle.emit("canon-list", json_string);
+                            }
+                            Err(e) => {
+                                // Handle serialization error
+                                eprintln!("Error serializing listing to JSON: {}", e);
+                                app_handle.emit("rich-log-message", json!({
+                                    "message": "Error serializing document listing",
+                                    "data": e.to_string(),
+                                    "timestamp": chrono::Local::now().to_rfc3339(),
+                                    "level": "error"
+                                }));
+                            }
                         }
+                        // for doc in listing.documents {
+                        //     let _ = app_handle.emit("rich-log-message", json!({
+                        //         "message": format!("{}", doc.name),
+                        //         "timestamp": chrono::Local::now().to_rfc3339(),
+                        //         "level": "info"
+                        //     }));
+                        // }
                     }
                     Err(e) => {
                         let _ = app_handle.emit("rich-log-message", json!({
