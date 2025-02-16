@@ -18,6 +18,8 @@ use crate::ingest::{
     pdf_ingestor::PdfIngestor,
     mdx_ingestor::MdxIngestor,
     markdown_ingestor::MarkdownIngestor,
+    epub_ingestor::EpubIngestor,
+    text_ingestor::TextIngestor,
 };
 use tauri::Manager; // Add this import
 use tauri::Emitter;
@@ -130,6 +132,10 @@ impl DocumentStore {
         
         doc_store.register_ingestor(Box::new(MdxIngestor));
         doc_store.register_ingestor(Box::new(PdfIngestor));
+        doc_store.register_ingestor(Box::new(MarkdownIngestor));
+        doc_store.register_ingestor(Box::new(EpubIngestor));
+        doc_store.register_ingestor(Box::new(TextIngestor));
+
         
         Ok(doc_store)
     }
@@ -163,16 +169,22 @@ impl DocumentStore {
         limit: usize,
     ) -> Result<Vec<(String, usize, String, f32)>, Box<dyn std::error::Error>> {
         let conn = self.conn.lock().await;
+        // let mut stmt = conn.prepare(
+        //     "SELECT d.id, d.name, d.file_path, d.created_at, e.id, e.chunk, e.embedding 
+        //      FROM documents d 
+        //      JOIN embeddings e ON d.id = e.doc_id 
+        //      LIMIT ?"
+        // )?;  // Use ? directly for rusqlite::Error
+        
         let mut stmt = conn.prepare(
             "SELECT d.id, d.name, d.file_path, d.created_at, e.id, e.chunk, e.embedding 
              FROM documents d 
-             JOIN embeddings e ON d.id = e.doc_id 
-             LIMIT ?"
+             JOIN embeddings e ON d.id = e.doc_id"
         )?;  // Use ? directly for rusqlite::Error
-        
+
         let mut similarities = Vec::new();
         
-        let rows = stmt.query_map([limit as i64], |row| {
+        let rows = stmt.query_map([], |row| {
             let name: String = row.get(1)?;  // Use ? directly for rusqlite errors
             let chunk_id: usize = row.get(4)?;
             let chunk: String = row.get(5)?;
@@ -189,6 +201,23 @@ impl DocumentStore {
             
             Ok((name, chunk_id, chunk, similarity))
         })?;  // Use ? directly for rusqlite::Error
+        // let rows = stmt.query_map([limit as i64], |row| {
+        //     let name: String = row.get(1)?;  // Use ? directly for rusqlite errors
+        //     let chunk_id: usize = row.get(4)?;
+        //     let chunk: String = row.get(5)?;
+        //     let embedding_json: String = row.get(6)?;
+            
+        //     let chunk_embedding: Vec<f32> = serde_json::from_str(&embedding_json)
+        //     .map_err(|e| rusqlite::Error::FromSqlConversionFailure(
+        //         6,
+        //         rusqlite::types::Type::Text,
+        //         Box::new(e)
+        //     ))?;
+            
+        //     let similarity = cosine_similarity(query_embedding, &chunk_embedding);
+            
+        //     Ok((name, chunk_id, chunk, similarity))
+        // })?;  // Use ? directly for rusqlite::Error
         
         for row in rows {
             similarities.push(row?);
@@ -199,7 +228,7 @@ impl DocumentStore {
             b.3.partial_cmp(&a.3)  // Changed from .2 to .3 to access similarity
             .unwrap_or(std::cmp::Ordering::Equal)
         });
-        
+        println!("Similarities: {:?}", similarities.len());
         // Take top k results
         Ok(similarities.into_iter().take(limit).collect())
     }
@@ -401,7 +430,7 @@ impl DocumentStore {
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!("app_handle: {:?}", app_handle);
         // Chunk the content
-        let chunks = self.embedding_generator.chunk_text(&content, 1000, 100); // adjust size/overlap as needed
+        let chunks = self.embedding_generator.chunk_text(&content, 2048, 0); // adjust size/overlap as needed
         // Emit progress update
         println!("Processing {} chunks", chunks.len());
         app_handle.emit("progress-indicator-load", json!({

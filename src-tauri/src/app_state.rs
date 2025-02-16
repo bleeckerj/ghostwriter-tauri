@@ -14,12 +14,14 @@ use std::path::PathBuf;
 use tauri::Manager;
 use std::fs;
 
+
 pub struct AppState {
     pub doc_store: Arc<DocumentStore>,
     pub embedding_generator: Arc<EmbeddingGenerator>,
     pub conversation: Mutex<Conversation>,
     pub buffer: Mutex<String>,
-    pub logger: Arc<Mutex<Logger>>,  // ✅ Now using Arc<Mutex<Logger>>
+    pub logger: Arc<Mutex<Logger>>,  
+    pub api_key: Mutex<Option<String>>,  // ✅ Add API key field
 }
 
 impl AppState {
@@ -28,42 +30,59 @@ impl AppState {
         embedding_generator: EmbeddingGenerator,
         initial_log_path: &str,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        // Initialize logger
         let logger = Logger::new(initial_log_path)?;
 
         Ok(Self {
-            logger: Arc::new(Mutex::new(logger)),  // ✅ Correct type
+            logger: Arc::new(Mutex::new(logger)),
             doc_store: Arc::new(doc_store),
             embedding_generator: Arc::new(embedding_generator),
             conversation: Mutex::new(Conversation::new(16000)),
             buffer: Mutex::new(String::new()),
+            api_key: Mutex::new(None),  // ✅ Initialize with None
         })
-        
     }
 
-
-    // Add method to update logger path
-    pub async fn update_logger_path(&self, app_handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-        let log_path = app_handle
+    // ✅ Load API key from a file
+    pub async fn load_api_key(&self, app_handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+        let path = app_handle
             .path()
             .app_local_data_dir()
-            .unwrap_or(std::path::PathBuf::new())
-            .join("log.json")  // This properly handles path separators
-            .to_string_lossy()
-            .to_string();  // Convert to owned String
+            .unwrap_or_default()
+            .join("api_key.txt");
 
-        fs::create_dir(app_handle
-            .path()
-            .app_local_data_dir()
-            .unwrap_or(std::path::PathBuf::new()))?;
+        if let Ok(contents) = fs::read_to_string(&path) {
+            let mut api_key = self.api_key.lock().await;
+            *api_key = Some(contents.trim().to_string());
+            println!("Loaded API Key: {}", contents.trim());
+        }
 
-        print!("Trying to update logger path to: {}", log_path);
-        let new_logger = Logger::new(&log_path)?;
-        
-        let mut logger = self.logger.lock().await;  // ✅ Use `.await` to acquire the lock asynchronously
-        *logger = new_logger;
-        
-        
+        Ok(())
+    }
+
+    // ✅ Save API key to a file
+    pub async fn save_api_key(&self, _app_handle: &AppHandle, key: String) -> Result<(), Box<dyn std::error::Error>> {
+        let env_path = ".env"; // ✅ Save to .env in the app's root directory
+
+        // ✅ Read existing .env contents (if any)
+        let mut env_contents = fs::read_to_string(env_path).unwrap_or_else(|_| String::new());
+
+        // ✅ Remove any existing `OPENAI_API_KEY` entry
+        env_contents = env_contents
+            .lines()
+            .filter(|line| !line.starts_with("OPENAI_API_KEY="))
+            .map(|line| format!("{}\n", line))
+            .collect();
+
+        // ✅ Append the new API key entry
+        env_contents.push_str(&format!("OPENAI_API_KEY={}\n", key));
+
+        // ✅ Write back to .env
+        fs::write(env_path, env_contents)?;
+
+        let mut api_key = self.api_key.lock().await; // ✅ Store it in-memory as well
+        *api_key = Some(key);
+
+        println!("API Key saved to .env.");
         Ok(())
     }
 }

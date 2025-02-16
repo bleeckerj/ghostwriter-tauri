@@ -6,10 +6,11 @@ use pdf_extract::Path;
 use std::io::Stdout;
 use std::path::PathBuf;
 use std::sync::Mutex;
+use std::fmt;
 use serde::Serialize;
 use serde_json::Value;
 use tokio::time::{sleep, Duration};
-use tauri::{generate_handler, Builder, Emitter, AppHandle, Manager};
+use tauri::{generate_handler, Runtime, Builder, Emitter, AppHandle, Manager, Window, State, WebviewWindowBuilder, WebviewWindow, WebviewUrl};
 use chrono::{Local, Utc};  // Add Utc here
 use std::sync::Arc;
 
@@ -44,10 +45,11 @@ use lazy_static::lazy_static;
 use std::time::Instant;
 
 lazy_static! {
-    static ref OPENAI_API_KEY: String = {
+    static ref OPENAI_API_KEY: Option<String> = {
         dotenv::dotenv().ok();
-        env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY must be set")
+        env::var("OPENAI_API_KEY").ok()
     };
+    static ref API_KEY_MISSING: Mutex<bool> = Mutex::new(false);
 }
 
 // At the top of your file with other constants
@@ -61,6 +63,43 @@ struct CompletionTiming {
     openai_request_ms: u128,
     total_ms: u128,
 }
+
+impl fmt::Display for CompletionTiming {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Completion Timing:\n\
+            Embedding Generation: {} ms\n\
+            Similarity Search: {} ms\n\
+            OpenAI Request: {} ms\n\
+            Total: {} ms",
+            self.embedding_generation_ms,
+            self.similarity_search_ms,
+            self.openai_request_ms,
+            self.total_ms
+        )
+    }
+}
+
+#[tauri::command]
+async fn save_api_key(
+    app_handle: tauri::AppHandle, 
+    state: tauri::State<'_, AppState>, 
+    key: String
+) -> Result<(), String> {  // ✅ Function must return `Result`
+    let mut api_key = state.api_key.lock().await; // ✅ Use `.await` instead of `.unwrap()`
+    *api_key = Some(key.clone()); // ✅ Store the API key
+    
+    // ✅ Save the API key to a file
+    if let Err(err) = state.save_api_key(&app_handle, key).await {
+        eprintln!("Failed to save API key: {}", err);
+        return Err(format!("Failed to save API key: {}", err)); // ✅ Return an error string
+    }
+    
+    Ok(())
+}
+
+
 
 
 #[tauri::command]
@@ -113,13 +152,10 @@ async fn completion_from_context(
     
     // Time similarity search
     let start_search = Instant::now();
-    // let similar_docs = state
-    // .doc_store
-    // .lock()
-    // .unwrap()
-    // .search(&embedding, 3)
-    // .map_err(|e| e.to_string())?;
-    let similar_docs = state.doc_store.search(&embedding, 3).await.map_err(|e| e.to_string())?;
+
+    // similar docs get the top 4, which may all be from the same source
+    let similar_docs = state.doc_store.search(&embedding, 4).await.map_err(|e| e.to_string())?;
+
     let search_duration = start_search.elapsed();
     
     // Prepare the context for the LLM
@@ -137,8 +173,17 @@ async fn completion_from_context(
     }
     
     let mut vector_search_results: Vec<VectorSearchResult> = Vec::new();
-    
+    let mut new_logger = NewLogger::new(app_handle.clone());
+
     for (i, (doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
+        let msg = format!(
+            "Doc: {}\nSimilarity: {:.4}\nContent:\n{}\n\n",
+            doc_name,
+            similarity,
+            chunk_text,
+        );
+        new_logger.simple_log_message(msg, chunk_id.to_string(), "info".to_string());
+
         vector_search_results.push(VectorSearchResult {
             similarity: *similarity,
             name: doc_name.clone(),
@@ -201,7 +246,42 @@ async fn completion_from_context(
     
     // Time OpenAI request
     let start_openai = Instant::now();
-    let response = Client::new()
+    dotenv::dotenv().ok();
+    
+    let openai_api_key = env::var("OPENAI_API_KEY").expect("
+    OPENAI_API_KEY not found. Error.");
+    
+    
+    let has_dotenv = dotenv::dotenv().is_ok();
+    let api_key = env::var("OPENAI_API_KEY");
+    let logger_clone = state.logger.clone();
+    let client = match &*OPENAI_API_KEY {
+        Some(key) => {
+            Client::with_config(
+                OpenAIConfig::new()
+                .with_api_key(key.clone())
+            )
+        }
+        None => {
+            println!("OPENAI_API_KEY not found.  Running without it.");
+            *API_KEY_MISSING.lock().unwrap() = true; // Set the flag
+            println!("OPENAI_API_KEY not found.  Running without it.");
+            //let mut logger = state.logger.lock().await;
+            let mut new_logger = NewLogger::new(app_handle.clone());
+            new_logger.simple_log_message(
+                "OPENAI_API_KEY not found or invalid. No use running without it.".to_string(),
+                "".to_string(),
+                "error".to_string()
+            );
+            new_logger.simple_log_message(
+                "Try restarting and re-entering your OpenAI API Key".to_string(),
+                "".to_string(),
+                "error".to_string()
+            );
+            Client::new() // Create a client without an API key
+        }
+    };
+    let response = client
     .chat()
     .create(request)
     .await
@@ -230,6 +310,14 @@ async fn completion_from_context(
                 vector_search_results: vector_search_results,
                 completion_result: content.clone(),
             };
+
+            let new_logger = NewLogger::new(app_handle.clone());
+
+            new_logger.simple_log_message(
+                timing.to_string(),
+                "completion_time".to_string(),
+                "info".to_string()
+            );
             
             state
             .logger
@@ -523,7 +611,6 @@ async fn search_similarity(
             }
             
             fn simple_log_message(&self, message: String, id: String, level: String) {
-                println!("Here the time looks like {}", chrono::Local::now().to_rfc3339());
                 let simple_log_data = SimpleLog {
                     message: format!("{}", message),
                     level: level.clone(),
@@ -531,7 +618,7 @@ async fn search_similarity(
                     id: Some(id.clone()),
                 };
                 match self.app_handle.emit("simple-log-message", simple_log_data) {
-                    Ok(_) => println!("Simple log emitted successfully"),
+                    Ok(_) => {},
                     Err(e) => {
                         eprintln!("Failed to emit simple log: {}", e);
                     }
@@ -556,20 +643,47 @@ async fn search_similarity(
         
         
         
+        fn check_api_key<R: Runtime>(app_handle: &AppHandle<R>) {
+            if *API_KEY_MISSING.lock().unwrap() {
+                let _ = WebviewWindowBuilder::new(
+                    app_handle,
+                    "api_key_window", 
+                    WebviewUrl::App("api_key.html".into()) // ✅ Provide a valid URL
+                )
+                .title("Enter OpenAI API Key")
+                .resizable(false)
+                .decorations(true)
+                .always_on_top(true)
+                .build()
+                .expect("Failed to create API Key entry window");
+            }
+        }
+        
+        
+        
+        
+        
+        
         #[cfg_attr(mobile, tauri::mobile_entry_point)]
         pub fn run() {
             
-            match dotenv::dotenv() {
-                Ok(_) => println!("Successfully loaded .env file"),
-                Err(e) => eprintln!("Error loading .env file: {}", e),
-            }
-            let api_key = std::env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY not set");
+            let has_dotenv = dotenv::dotenv().is_ok();
+            let api_key = env::var("OPENAI_API_KEY");
             
-            // Create the client with config
-            let client = Client::with_config(
-                OpenAIConfig::new()
-                .with_api_key(api_key.clone())
-            );
+            let client = match &*OPENAI_API_KEY {
+                Some(key) => {
+                    Client::with_config(
+                        OpenAIConfig::new()
+                        .with_api_key(key.clone())
+                    )
+                }
+                None => {
+                    println!("OPENAI_API_KEY not found.  Running without it.");
+                    *API_KEY_MISSING.lock().unwrap() = true; // Set the flag
+                    Client::new() // Create a client without an API key
+                }
+            };
+            
             
             let a_embedding_generator = EmbeddingGenerator::new(client.clone());
             let b_embedding_generator = EmbeddingGenerator::new(client);
@@ -595,6 +709,10 @@ async fn search_similarity(
             .on_menu_event(|app, event| menu::handle_menu_event(app, event))
             .setup(|app| {
                 let app_handle = app.handle();
+                
+                // ✅ Check the API_KEY_MISSING flag and open API Key entry window if needed
+                check_api_key(&app_handle);
+                
                 let new_logger = NewLogger::new(app_handle.clone());
                 new_logger.simple_log_message(
                     "Ghostwriter Is Up.".to_string(),
@@ -625,6 +743,7 @@ async fn search_similarity(
                     simple_log_message,
                     rich_log_message,
                     delete_canon_entry,
+                    save_api_key,
                     ])
                     .run(tauri::generate_context!())
                     .expect("error while running tauri application");

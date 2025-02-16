@@ -421,6 +421,8 @@ button {
   @apply self-start; /* Ensures top alignment */
   word-break: break-word; /* Allows breaking long words */
   white-space: normal; /* Allows natural wrapping */
+  height: 11em; /* Set a fixed height */
+  overflow: hidden; /* Hide overflow content */
 }
 
 .resize-handle {
