@@ -16,7 +16,8 @@ use std::fmt::Debug;
 use crate::embeddings::EmbeddingGenerator;  // Change this line
 use crate::ingest::{
     pdf_ingestor::PdfIngestor,
-    mdx_ingestor::MdxIngestor
+    mdx_ingestor::MdxIngestor,
+    markdown_ingestor::MarkdownIngestor,
 };
 use tauri::Manager; // Add this import
 use tauri::Emitter;

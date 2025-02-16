@@ -12,7 +12,7 @@ import { InlineActionItem } from './extensions/InlineActionItem';
 import { PluginKey } from 'prosemirror-state';
 //import {Menu, Submenu} from '@tauri-apps/api/menu'
 
-import { open } from '@tauri-apps/plugin-dialog';
+import { open, confirm } from '@tauri-apps/plugin-dialog';
 
 const { invoke } = window.__TAURI__.core;
 
@@ -384,6 +384,40 @@ window.addEventListener('unload', () => {
 initializeResizeHandle();
 });
 
+// Function to handle the onDelete logic
+const handleRichLogEntryDelete = ({ node, getPos, editor }) => {
+  const pos = getPos(); // Get the position immediately
+  const doc_id = node.attrs.id; // Get the ID of the node which should be the doc_id
+
+  // Show confirmation dialog
+  confirm("Delete "+node.attrs.message, "Confirmation")
+    .then((confirmed) => {
+      if (confirmed) {
+        // User confirmed, proceed with deletion
+        invoke("delete_canon_entry", { docid: doc_id })
+          .then((res) => {
+            // Deletion successful
+          })
+          .catch((error) => {
+            console.error("Failed to delete canon entry:", error);
+            // Handle error
+          });
+
+        // Check if the position is valid and the node is still in the document
+        if (typeof pos === 'number' && pos >= 0 && pos < editor.state.doc.content.size) {
+          // The position is valid, so proceed with deleting the node
+          editor.chain().focus().deleteRange({ from: pos, to: pos + 1 }).run();
+        } else {
+          // The position is invalid, so log an error and do nothing
+          console.error('Invalid position for node:', node, pos);
+        }
+      } else {
+        // User cancelled, do nothing
+        console.log("Deletion cancelled by user");
+      }
+    });
+};
+
 const editor = new Editor({
   element: document.querySelector('.element'),
   extensions: [
@@ -428,21 +462,7 @@ const diagnostics = new Editor({
     //DiagnosticLogEntryNode,
     SimpleLogEntryNode,
     RichLogEntryNode.configure({
-      onDelete: ({ node, getPos, editor }) => {
-        const pos = getPos(); // Get the position immediately
-        const doc_id = node.attrs.id; // Get the ID of the node which should be the doc_id
-        invoke("delete_canon_entry", { docid: doc_id }).then((res) => {
-
-        });
-        // Check if the position is valid and the node is still in the document
-        if (typeof pos === 'number' && pos >= 0 && pos < editor.state.doc.content.size) {
-          // The position is valid, so proceed with deleting the node
-          editor.chain().focus().deleteRange({ from: pos, to: pos + 1 }).run();
-        } else {
-          // The position is invalid, so log an error and do nothing
-          console.error('Invalid position for node:', node, pos);
-        }
-      },
+      onDelete: handleRichLogEntryDelete,
     }),
     DynamicTextMark,
     ProgressExtension,
@@ -607,3 +627,4 @@ function initializeResizeHandle() {
   
   handle.addEventListener('mousedown', startResize);
 }
+

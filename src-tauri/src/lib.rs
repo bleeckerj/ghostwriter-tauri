@@ -408,8 +408,8 @@ async fn search_similarity(
             let doc_store = Arc::clone(&app_state.doc_store);
             match doc_store.delete_document(doc_id_int).await {
                 Ok(_) => {
-                    logger.rich_log_message(
-                        "Deleting canon entry ".to_string(),
+                    logger.simple_log_message(
+                        "Deleted canon entry ".to_string(),
                         id.clone(),
                         "info".to_string(),
                     );
