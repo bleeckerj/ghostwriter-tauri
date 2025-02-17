@@ -178,7 +178,7 @@ async fn completion_from_context(
 
     for (i, (doc_id, doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
         let msg = format!(
-            "Doc: {}\nSimilarity: {:.4}\nContent:\n{}\n\n",
+            "Doc: {}<br/> <span class='font-bold'>Similarity: {:.4}</span><br/><span>Content:<br/>{}</span>",
             doc_name,
             similarity,
             chunk_text,
