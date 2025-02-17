@@ -166,16 +166,10 @@ impl DocumentStore {
     pub async fn search(
         &self,
         query_embedding: &[f32],
-        limit: usize,
-    ) -> Result<Vec<(String, usize, String, f32)>, Box<dyn std::error::Error>> {
+        similar_docs_count: usize,
+        min_score: f32,
+    ) -> Result<Vec<(i64, String, usize, String, f32)>, Box<dyn std::error::Error>> {
         let conn = self.conn.lock().await;
-        // let mut stmt = conn.prepare(
-        //     "SELECT d.id, d.name, d.file_path, d.created_at, e.id, e.chunk, e.embedding 
-        //      FROM documents d 
-        //      JOIN embeddings e ON d.id = e.doc_id 
-        //      LIMIT ?"
-        // )?;  // Use ? directly for rusqlite::Error
-        
         let mut stmt = conn.prepare(
             "SELECT d.id, d.name, d.file_path, d.created_at, e.id, e.chunk, e.embedding 
              FROM documents d 
@@ -185,6 +179,7 @@ impl DocumentStore {
         let mut similarities = Vec::new();
         
         let rows = stmt.query_map([], |row| {
+            let doc_id: i64 = row.get(0)?;  // Extract the document id
             let name: String = row.get(1)?;  // Use ? directly for rusqlite errors
             let chunk_id: usize = row.get(4)?;
             let chunk: String = row.get(5)?;
@@ -199,38 +194,35 @@ impl DocumentStore {
             
             let similarity = cosine_similarity(query_embedding, &chunk_embedding);
             
-            Ok((name, chunk_id, chunk, similarity))
+            Ok((doc_id, name, chunk_id, chunk, similarity))
         })?;  // Use ? directly for rusqlite::Error
-        // let rows = stmt.query_map([limit as i64], |row| {
-        //     let name: String = row.get(1)?;  // Use ? directly for rusqlite errors
-        //     let chunk_id: usize = row.get(4)?;
-        //     let chunk: String = row.get(5)?;
-        //     let embedding_json: String = row.get(6)?;
-            
-        //     let chunk_embedding: Vec<f32> = serde_json::from_str(&embedding_json)
-        //     .map_err(|e| rusqlite::Error::FromSqlConversionFailure(
-        //         6,
-        //         rusqlite::types::Type::Text,
-        //         Box::new(e)
-        //     ))?;
-            
-        //     let similarity = cosine_similarity(query_embedding, &chunk_embedding);
-            
-        //     Ok((name, chunk_id, chunk, similarity))
-        // })?;  // Use ? directly for rusqlite::Error
         
         for row in rows {
             similarities.push(row?);
         }
         
-        // Sort by similarity score in descending order
+        // Filter by min_score and sort by similarity score in descending order
+        similarities.retain(|&(_, _, _, _, similarity)| similarity >= min_score);
         similarities.sort_by(|a, b| {
-            b.3.partial_cmp(&a.3)  // Changed from .2 to .3 to access similarity
+            b.4.partial_cmp(&a.4)  // Changed from .3 to .4 to access similarity
             .unwrap_or(std::cmp::Ordering::Equal)
         });
-        println!("Similarities: {:?}", similarities.len());
-        // Take top k results
-        Ok(similarities.into_iter().take(limit).collect())
+
+        // Collect top results with unique doc_id
+        let mut unique_results = Vec::new();
+        let mut seen_doc_ids = std::collections::HashSet::new();
+
+        for result in similarities {
+            if seen_doc_ids.len() >= similar_docs_count {
+                break;
+            }
+            if seen_doc_ids.insert(result.0) {
+                unique_results.push(result);
+            }
+        }
+
+        println!("Similarities: {:?}", unique_results.len());
+        Ok(unique_results)
     }
     
     pub async fn fetch_documents(&self) -> Result<DocumentListing, Box<dyn std::error::Error>> {

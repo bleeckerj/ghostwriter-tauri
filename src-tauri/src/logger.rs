@@ -20,7 +20,7 @@ pub struct CompletionLogEntry {
     pub input_text: String,
     pub system_prompt: String,
     pub conversation_context: String,
-    pub vector_search_results: Vec<VectorSearchResult>,
+    pub vector_search_results_for_log: Vec<VectorSearchResult>,
     pub completion_result: String,
 }
 

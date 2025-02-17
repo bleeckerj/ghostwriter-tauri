@@ -154,28 +154,29 @@ async fn completion_from_context(
     let start_search = Instant::now();
 
     // similar docs get the top 4, which may all be from the same source
-    let similar_docs = state.doc_store.search(&embedding, 4).await.map_err(|e| e.to_string())?;
+    let similar_docs = state.doc_store.search(&embedding, 4, 0.82).await.map_err(|e| e.to_string())?;
 
     let search_duration = start_search.elapsed();
     
     // Prepare the context for the LLM
     // This has all the document metadata..is that okay?
     let mut context = String::new();
-    for (i, (doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
-        context.push_str(&format!(
-            "--- Result {} (Chunk Id: {} Doc: {}) ---\nSimilarity: {:.4}\nContent:\n{}\n\n",
-            (i + 1),
-            chunk_id,
-            doc_name,
-            similarity,
-            chunk_text,
-        ));
+    for (i, (doc_id, doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
+        context.push_str(&format!("{}\n", chunk_text));
+        // context.push_str(&format!(
+        //     "--- Result {} (Chunk Id: {} Doc: {}) ---\nSimilarity: {:.4}\nContent:\n{}\n\n",
+        //     (i + 1),
+        //     chunk_id,
+        //     doc_name,
+        //     similarity,
+        //     chunk_text,
+        // ));
     }
     
-    let mut vector_search_results: Vec<VectorSearchResult> = Vec::new();
+    let mut vector_search_results_for_log: Vec<VectorSearchResult> = Vec::new();
     let mut new_logger = NewLogger::new(app_handle.clone());
 
-    for (i, (doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
+    for (i, (doc_id, doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
         let msg = format!(
             "Doc: {}\nSimilarity: {:.4}\nContent:\n{}\n\n",
             doc_name,
@@ -184,7 +185,7 @@ async fn completion_from_context(
         );
         new_logger.simple_log_message(msg, chunk_id.to_string(), "info".to_string());
 
-        vector_search_results.push(VectorSearchResult {
+        vector_search_results_for_log.push(VectorSearchResult {
             similarity: *similarity,
             name: doc_name.clone(),
             content: chunk_text.clone(),
@@ -307,7 +308,7 @@ async fn completion_from_context(
                 input_text: input.to_string(),
                 system_prompt: system_content.clone(),
                 conversation_context: conversation_context,
-                vector_search_results: vector_search_results,
+                vector_search_results_for_log: vector_search_results_for_log,
                 completion_result: content.clone(),
             };
 
@@ -371,7 +372,7 @@ async fn search_similarity(
     // .map_err(|e| format!("Failed to acquire doc store lock: {}", e))?;
     
     let results = state.doc_store
-    .search(&embedding, limit)
+    .search(&embedding, limit, 0.82)
     .await // ✅ Now correctly awaiting the async function
     .map_err(|e| format!("Search failed: {}", e))?;
     
@@ -379,7 +380,7 @@ async fn search_similarity(
     // Transform results into SearchResult structs
     Ok(results
         .into_iter()
-        .map(|(doc, index, chunk, similarity)| SearchResult {
+        .map(|(doc_id, doc, index, chunk, similarity)| SearchResult {
             document_name: doc,
             chunk_id: index,
             chunk_text: chunk,

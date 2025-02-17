@@ -289,11 +289,12 @@ button {
 
 .simple-log-message {
   flex: 1;
-  @apply font-[ESKlarheitKurrentMono];
-
-  @apply leading-5;
+  @apply font-[Haffer];
+  @apply text-[1.1em];
+  line-height: 1;
   @apply pt-1;
   @apply self-start;
+  @apply font-[0.9em];
 }
 
 
