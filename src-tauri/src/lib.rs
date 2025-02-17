@@ -516,7 +516,30 @@ async fn search_similarity(
             }
         }
         
-        
+        #[tauri::command]
+        async fn list_canon_docs(
+            logger: tauri::State<'_, NewLogger>,
+            app_state: tauri::State<'_, AppState>,
+            app_handle: tauri::AppHandle,
+        ) -> Result<String, String> {
+            let doc_store = Arc::clone(&app_state.doc_store);
+            match doc_store.fetch_documents().await {
+                Ok(listing) => {
+                    let json_string = serde_json::to_string(&listing).map_err(|e| e.to_string())?;
+                    app_handle.emit("canon-list", json_string).map_err(|e| e.to_string())?;
+                    Ok("Canon list emitted".to_string())
+                }
+                Err(e) => {
+                    let error_message = format!("Failed to fetch canon documents: {}", e);
+                    logger.simple_log_message(
+                        error_message.clone(),
+                        "".to_string(),
+                        "error".to_string(),
+                    );
+                    Err(error_message)
+                }
+            } 
+        }
         
         
         #[derive(Serialize, Clone)]
@@ -745,6 +768,7 @@ async fn search_similarity(
                     rich_log_message,
                     delete_canon_entry,
                     save_api_key,
+                    list_canon_docs,
                     ])
                     .run(tauri::generate_context!())
                     .expect("error while running tauri application");

@@ -211,6 +211,8 @@ button {
   overflow-y: auto;
   min-height: 0;
   position: relative;
+  overscroll-behavior: none; /* Completely prevents bouncing */
+  scroll-behavior: smooth; /* Optional: makes programmatic scrolling smooth */
 }
 
 

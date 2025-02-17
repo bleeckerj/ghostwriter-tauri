@@ -583,6 +583,7 @@ function initializeResizeHandle() {
   const handle = document.querySelector('.resize-handle');
   const topArea = document.querySelector('.scroll-area');
   const bottomArea = document.querySelector('.diagnostics-scroll-area');
+  const diagnosticsEditor = document.querySelector('#diagnostics-editor');
   let startY;
   let startHeights;
   const MIN_HEIGHT_BOTTOM = 16; // 1rem = 16px typically
@@ -605,7 +606,7 @@ function initializeResizeHandle() {
     const containerHeight = topArea.parentElement.offsetHeight;
     const newTopHeight = startHeights.top + delta;
     const newBottomHeight = startHeights.bottom - delta;
-    
+    const maxHeight = diagnosticsEditor.offsetHeight; // Get current height of diagnostics-editor
     // Check if bottom area should collapse (dragging down)
     if (newBottomHeight < MIN_HEIGHT_BOTTOM) {
       bottomArea.classList.add('collapsed');
@@ -613,6 +614,11 @@ function initializeResizeHandle() {
       bottomArea.style.flex = '0';
       return;
     }
+    
+    // Check if bottom area would exceed max height (dragging up)
+    // if (newBottomHeight > maxHeight) {
+    //   return;
+    // }
     
     // Check if top area would become too small (dragging up)
     if (newTopHeight < MIN_HEIGHT_TOP) {
@@ -627,7 +633,6 @@ function initializeResizeHandle() {
     
     // Only update flex values if not collapsed
     if (!bottomArea.classList.contains('collapsed')) {
-      // Use containerHeight directly since we don't need to subtract MIN_HEIGHT anymore
       const topPercent = (newTopHeight / containerHeight) * 100;
       const bottomPercent = (newBottomHeight / containerHeight) * 100;
       
