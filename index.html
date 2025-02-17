@@ -42,9 +42,18 @@
   <!-- Add the resize handle -->
   <div class="resize-handle" title="Drag to resize"></div>
 
-  <div class="diagnostics-scroll-area">
+  <div class="diagnostics-scroll-area bg-transparent">
+    <div id="action-buttons" class="diagnostic-btn-area bg-gray-200 border-[0.5px] text-[0.8em]  w-full rounded-sm pl-4">
+      <span class="diagnostics-area-button enabled">CLEAR</span>
+      <span class="diagnostics-area-button disabled">LIST</span>
+      <span class="diagnostics-area-button disabled">INGST</span>
+      <span class="diagnostics-area-button disabled">INCNT</span>
+
+      <span class="diagnostics-area-button disabled">PREFS</span>
+
+    </div>
     <div class="diagnostics-content  h-full">
-      <div class="diagnostics bg-blue-700"></div>
+      <div class="diagnostics bg-blue-700 rounded-sm"></div>
     </div>
   </div>
     
