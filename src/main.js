@@ -13,6 +13,7 @@ import { PluginKey } from 'prosemirror-state';
 //import {Menu, Submenu} from '@tauri-apps/api/menu'
 
 import { open, confirm } from '@tauri-apps/plugin-dialog';
+import { list } from 'postcss';
 
 const { invoke } = window.__TAURI__.core;
 
@@ -20,6 +21,12 @@ let greetInputEl;
 let greetMsgEl;
 //let greetBtnEl;
 let incantBtnEl;
+let listCanonBtnEl;
+let clearDiagnosticsBtnEl;
+let openPreferencesBtnEl;
+let ingestBtnEl;
+let openLogsBtnEl;
+let similaritySearchBtnEl;
 
 // const macOS = navigator.userAgent.includes('Macintosh')
 
@@ -118,7 +125,7 @@ console.log("ingestion result ", foo);
 async function searchSimilarity() {
   const results = await invoke("search_similarity", { 
     query: editor.getText(), 
-    limit: 4 
+    limit: 10 
   });
   
   // Add log entries for the results
@@ -127,7 +134,7 @@ async function searchSimilarity() {
       id: Date.now() + "_" + index,
       timestamp: Date.now(),
       message: `<div>
-        <p class='border-l-[4px] border-pink-100 pl-2 pr-8 text-pretty'>${result.chunk_text}</p>
+        <p class='border-l-[4px] border-amber-300 pl-2 pr-8 text-pretty'>${result.chunk_text}</p>
         <p class='mt-1 px-2 py-1 rounded-sm bg-gray-800 w-fit'>${result.similarity_score}</p>
         <span class='font-bold'>${result.document_name}</span>
       </div>`,
@@ -212,8 +219,17 @@ window.addEventListener("DOMContentLoaded", async () => {
   //greetBtnEl.addEventListener("click", searchSimilarity);
   // greetBtnEl.addEventListener("click", greet);
   incantBtnEl = document.querySelector("#incant-btn");
-  incantBtnEl.textContent = "INGEST";
-  incantBtnEl.addEventListener("click", openDialogForIngestion);
+  incantBtnEl.addEventListener("click", completionFromContext);
+  listCanonBtnEl = document.querySelector("#list-canon-btn");
+  listCanonBtnEl.addEventListener("click", showCanonList);
+  similaritySearchBtnEl = document.querySelector("#similarity-search-btn");
+  similaritySearchBtnEl.addEventListener("click", searchSimilarity);
+  ingestBtnEl = document.querySelector("#ingest-btn");
+  ingestBtnEl.addEventListener("click", openDialogForIngestion);
+  clearDiagnosticsBtnEl = document.querySelector("#clear-diagnostics-btn");
+  clearDiagnosticsBtnEl.addEventListener("click", () => {
+      diagnostics.commands.clearContent();
+  });
   // document.querySelector("#greet-form").addEventListener("submit", (e) => {
     //   e.preventDefault();
   //   greet();
@@ -245,11 +261,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     unlistenCanonListFn = await listen('canon-list', (event) => {
       console.log('This is the event:', event);
       console.log('Payload:', event.payload);
-  
+      
       try {
         const listing = JSON.parse(event.payload); // Parse the JSON string
         console.log('Parsed listing:', listing);
-  
+        
         listing.documents.forEach((doc, index) => {
           console.log(`Document ${index}:`, doc);
           // Access document properties:
@@ -257,7 +273,7 @@ window.addEventListener("DOMContentLoaded", async () => {
           // console.log(`  Name: ${doc.name}`);
           // console.log(`  File Path: ${doc.file_path}`);
           // console.log(`  Created At: ${doc.created_at}`);
-  
+          
           // You can now use the 'doc' object to create a rich log entry, for example:
           addRichLogEntry({
             id: ""+doc.id,
@@ -275,7 +291,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     console.error('Failed to setup event listener:', error);
   }
   
-
+  
   try {
     unlistenOpenFileDialogForIngestFn = await listen('open-file-dialog-for-ingest', (event) => {
       console.log('Received event:', event);
@@ -288,134 +304,133 @@ window.addEventListener("DOMContentLoaded", async () => {
   try {
     unlistenOpenFileDialogForIngestFn = await listen('open-canon-list', (event) => {
       console.log('Hey Received event:', event);
+    });  
+  } catch (error) {
+    console.error('Failed to setup event listener:', error);
+  }
+  
+  try {
+    unlistenRichLogMessageFn = await listen('rich-log-message', (event) => {
+      console.log('Received rich-log-message event:', event);
+      if (event.payload) {
+        addRichLogEntry({
+          id: Date.now(),
+          timestamp: event.payload.timestamp,
+          message: event.payload.message,
+          data: event.payload.data,
+          level: 'warn'
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Failed to setup event listener:', error);
+  }
+  
+  try {
+    unlistenProgressIndicatorLoadFn = await listen('progress-indicator-load', (event) => {
+      console.log('Progress Indicator Received Load Event:', event);
+      if (event.payload) {
+        addProgressIndicatorNode({
+          progress_id: event.payload.progress_id,
+          current_step: event.current_step,
+          total_steps: event.total_steps,
+          current_file: event.payload.current_file,
+          meta: event.payload.meta
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Failed to setup event listener:', error);
+  }
+  
+  try {
+    unlistenProgressIndicatorUpdateFn = await listen('progress-indicator-update', (event) => {
+      console.log('Progress Indicator Received Update Event:', event);
+      if (event.payload) {
+        window.updateProgressNode(diagnostics, event.payload.progress_id, {
+          current_step: event.payload.current_step,
+          current_file: event.payload.current_file,
+          total_steps: event.payload.total_steps,
+          meta: event.payload.meta
+        })
+      }
+      if (event.payload && event.payload.current_step === event.payload.total_steps) {
+        window.updateProgressNode(diagnostics, event.payload.progress_id, {
+          current_step: event.payload.current_step,
+          current_file: event.payload.current_file,
+          total_steps: event.payload.total_steps,
+          meta: "Completed Ingestion"
+        })
+      }
+    });
+  } catch (error) {
+    console.error('Failed to setup event listener:', error);
+  }
+  
+  invoke("simple_log_message", { message: 'Ghostwriter Up.', id: "tracker", level: "info" }).then((res) => {
+    console.log('simple_log_emissions', res);
+  });
+  // invoke("rich_log_message", { message: 'Ghostwriter Up.', data: "no data", level: "info" }).then((res) => {
+    //   console.log('rich_log_emissions', res);
+  // });
+  // Cleanup when window unloads
+  window.addEventListener('unload', () => {
+    if (unlistenSimpleLogMessageFn) {
+      unlistenSimpleLogMessageFn();
     }
-  );  
-} catch (error) {
-  console.error('Failed to setup event listener:', error);
-}
-
-try {
-  unlistenRichLogMessageFn = await listen('rich-log-message', (event) => {
-    console.log('Received rich-log-message event:', event);
-    if (event.payload) {
-      addRichLogEntry({
-        id: Date.now(),
-        timestamp: event.payload.timestamp,
-        message: event.payload.message,
-        data: event.payload.data,
-        level: 'warn'
-      });
+    if (unlistenRichLogMessageFn) {
+      unlistenRichLogMessageFn();
+    }
+    if (unlistenProgressIndicatorUpdateFn) {
+      unlistenProgressIndicatorUpdateFn();
+    }
+    if (unlistenProgressIndicatorLoadFn) {
+      unlistenProgressIndicatorLoadFn();
+    }
+    if (unlistenOpenFileDialogForIngestFn) {
+      unlistenOpenFileDialogForIngestFn();
+    }
+    if (unlistenCanonListFn) {
+      unlistenCanonListFn();
     }
   });
-} catch (error) {
-  console.error('Failed to setup event listener:', error);
-}
-
-try {
-  unlistenProgressIndicatorLoadFn = await listen('progress-indicator-load', (event) => {
-    console.log('Progress Indicator Received Load Event:', event);
-    if (event.payload) {
-      addProgressIndicatorNode({
-        progress_id: event.payload.progress_id,
-        current_step: event.current_step,
-        total_steps: event.total_steps,
-        current_file: event.payload.current_file,
-        meta: event.payload.meta
-      });
-    }
-  });
-} catch (error) {
-  console.error('Failed to setup event listener:', error);
-}
-
-try {
-  unlistenProgressIndicatorUpdateFn = await listen('progress-indicator-update', (event) => {
-    console.log('Progress Indicator Received Update Event:', event);
-    if (event.payload) {
-      window.updateProgressNode(diagnostics, event.payload.progress_id, {
-        current_step: event.payload.current_step,
-        current_file: event.payload.current_file,
-        total_steps: event.payload.total_steps,
-        meta: event.payload.meta
-      })
-    }
-    if (event.payload && event.payload.current_step === event.payload.total_steps) {
-      window.updateProgressNode(diagnostics, event.payload.progress_id, {
-        current_step: event.payload.current_step,
-        current_file: event.payload.current_file,
-        total_steps: event.payload.total_steps,
-        meta: "Completed Ingestion"
-      })
-    }
-  });
-} catch (error) {
-  console.error('Failed to setup event listener:', error);
-}
-
-invoke("simple_log_message", { message: 'Ghostwriter Up.', id: "tracker", level: "info" }).then((res) => {
-  console.log('simple_log_emissions', res);
-});
-// invoke("rich_log_message", { message: 'Ghostwriter Up.', data: "no data", level: "info" }).then((res) => {
-  //   console.log('rich_log_emissions', res);
-// });
-// Cleanup when window unloads
-window.addEventListener('unload', () => {
-  if (unlistenSimpleLogMessageFn) {
-    unlistenSimpleLogMessageFn();
-  }
-  if (unlistenRichLogMessageFn) {
-    unlistenRichLogMessageFn();
-  }
-  if (unlistenProgressIndicatorUpdateFn) {
-    unlistenProgressIndicatorUpdateFn();
-  }
-  if (unlistenProgressIndicatorLoadFn) {
-    unlistenProgressIndicatorLoadFn();
-  }
-  if (unlistenOpenFileDialogForIngestFn) {
-    unlistenOpenFileDialogForIngestFn();
-  }
-  if (unlistenCanonListFn) {
-    unlistenCanonListFn();
-  }
-});
-
-// Initialize the resize handle
-initializeResizeHandle();
+  
+  // Initialize the resize handle
+  initializeResizeHandle();
 });
 
 // Function to handle the onDelete logic
 const handleRichLogEntryDelete = ({ node, getPos, editor }) => {
   const pos = getPos(); // Get the position immediately
   const doc_id = node.attrs.id; // Get the ID of the node which should be the doc_id
-
+  
   // Show confirmation dialog
   confirm("Delete "+node.attrs.message, "Confirmation")
-    .then((confirmed) => {
-      if (confirmed) {
-        // User confirmed, proceed with deletion
-        invoke("delete_canon_entry", { docid: doc_id })
-          .then((res) => {
-            // Deletion successful
-          })
-          .catch((error) => {
-            console.error("Failed to delete canon entry:", error);
-            // Handle error
-          });
-
-        // Check if the position is valid and the node is still in the document
-        if (typeof pos === 'number' && pos >= 0 && pos < editor.state.doc.content.size) {
-          // The position is valid, so proceed with deleting the node
-          editor.chain().focus().deleteRange({ from: pos, to: pos + 1 }).run();
-        } else {
-          // The position is invalid, so log an error and do nothing
-          console.error('Invalid position for node:', node, pos);
-        }
+  .then((confirmed) => {
+    if (confirmed) {
+      // User confirmed, proceed with deletion
+      invoke("delete_canon_entry", { docid: doc_id })
+      .then((res) => {
+        // Deletion successful
+      })
+      .catch((error) => {
+        console.error("Failed to delete canon entry:", error);
+        // Handle error
+      });
+      
+      // Check if the position is valid and the node is still in the document
+      if (typeof pos === 'number' && pos >= 0 && pos < editor.state.doc.content.size) {
+        // The position is valid, so proceed with deleting the node
+        editor.chain().focus().deleteRange({ from: pos, to: pos + 1 }).run();
       } else {
-        // User cancelled, do nothing
-        console.log("Deletion cancelled by user");
+        // The position is invalid, so log an error and do nothing
+        console.error('Invalid position for node:', node, pos);
       }
-    });
+    } else {
+      // User cancelled, do nothing
+      console.log("Deletion cancelled by user");
+    }
+  });
 };
 
 const editor = new Editor({
@@ -468,6 +483,20 @@ const diagnostics = new Editor({
     ProgressExtension,
   ],
 })
+
+async function showCanonList() {
+  try {
+    await invoke("list_canon_docs", { limit: 10 });
+  } catch (error) {
+    console.error('Failed to list canon docs:', error);
+    addSimpleLogEntry({
+      id: Date.now(),
+      timestamp: Date.now(),
+      message: 'Failed to list canon docs from backend: '+error,
+      level: 'error'
+    });
+  }
+}
 
 function addSimpleLogEntry(entry) {
   let pos = diagnostics.state.selection.from + 2
