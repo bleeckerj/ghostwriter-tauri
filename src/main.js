@@ -12,7 +12,7 @@ import { InlineActionItem } from './extensions/InlineActionItem';
 import { PluginKey } from 'prosemirror-state';
 //import {Menu, Submenu} from '@tauri-apps/api/menu'
 
-import { open, confirm } from '@tauri-apps/plugin-dialog';
+import { open, confirm, save } from '@tauri-apps/plugin-dialog';
 
 const { invoke } = window.__TAURI__.core;
 
@@ -113,6 +113,48 @@ console.log("ingestion result ", foo);
 // });
 // console.log(results);
 // // Prints file path or URI
+}
+
+async function openDialogForCanon() {
+  // Open a dialog
+  const file = await open({
+    title: "Select a Canon File",
+    filters: [
+      {
+        name: "Canon Files",
+        extensions: ["db"],
+      },
+    ],
+    multiple: false,
+    directory: false,
+  });
+  //console.log(file);
+  await invoke("canon_from_file_dialog", {
+    filePath: file
+  }).then((res) => {
+    console.log(res);
+    return res;
+  });
+}
+
+async function createNewCanon() {
+  // Open a dialog
+  const file = await save({
+    title: "Create New Canon",
+    filters: [
+      {
+        name: "Canon Files",
+        extensions: ["db"],
+      },
+    ],
+    canCreateDirectories: true,
+  });
+  await invoke("create_new_canon", {
+    filePath: file
+  }).then((res) => {
+    console.log(res);
+    return res;
+  });
 }
 
 async function searchSimilarity() {
@@ -225,6 +267,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   let unlistenProgressIndicatorLoadFn;
   let unlistenOpenFileDialogForIngestFn;
   let unlistenCanonListFn;
+  let unlistenOpenFileDialogForCanonFn;
+  let unlistenCreateNewCanonFn
   try {
     unlistenSimpleLogMessageFn = await listen('simple-log-message', (event) => {
       console.log('Received event:', event);
@@ -281,6 +325,24 @@ window.addEventListener("DOMContentLoaded", async () => {
       console.log('Received event:', event);
       openDialogForIngestion();
     });  
+  } catch (error) {
+    console.error('Failed to setup event listener:', error);
+  }
+
+  try {
+    unlistenOpenFileDialogForCanonFn = await listen('open-file-dialog-for-canon', (event) => {
+      console.log('Received event:', event);
+      openDialogForCanon();
+    });
+  } catch (error) {
+    console.error('Failed to setup event listener:', error);
+  }
+
+  try {
+    unlistenCreateNewCanonFn = await listen('create-new-canon', (event) => {
+      console.log('Received event:', event);
+      createNewCanon();
+    });
   } catch (error) {
     console.error('Failed to setup event listener:', error);
   }
@@ -377,6 +439,12 @@ window.addEventListener('unload', () => {
   }
   if (unlistenCanonListFn) {
     unlistenCanonListFn();
+  }
+  if (unlistenOpenFileDialogForCanonFn) {
+    unlistenOpenFileDialogForCanonFn();
+  }
+  if (unlistenCreateNewCanonFn) {
+    unlistenCreateNewCanonFn();
   }
 });
 
@@ -527,7 +595,15 @@ function addRichLogEntry(entry) {
   }, 0);
 }
 
-
+function clearEditorContent(editor) {
+  editor.commands.clearContent();
+  addSimpleLogEntry({ 
+    id: Date.now(),
+    timestamp: Date.now(),
+    message: 'Cleared.',
+    level: 'info'
+  });
+}
 
 // Function to update node color
 function updateNodeColor(id, newColor) {

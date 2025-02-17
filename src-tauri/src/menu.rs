@@ -25,7 +25,9 @@ use std::sync::Arc;
  // Constants for menu IDs
  pub const MENU_FILE_NEW: &str = "file-new";
  pub const MENU_FILE_QUIT: &str = "file-quit";
- 
+ pub const MENU_FILE_SAVE: &str = "file-save";
+ pub const MENU_FILE_SAVE_AS: &str = "file-save-as";
+
  // Canon menu IDs 
  pub const MENU_CANON_LIST: &str = "canon-list";
  pub const MENU_CANON_NEW: &str = "canon-new";
@@ -100,7 +102,7 @@ use std::sync::Arc;
 
     match event.id.0.as_str() {
         MENU_FILE_NEW => {
-            println!("New file");
+            println!("New document");
         }
 
         MENU_FILE_QUIT => {
@@ -152,10 +154,13 @@ use std::sync::Arc;
         }
         MENU_CANON_NEW => {
             // Handle new canon
+            println!("New canon");
+            app.emit("create-new-canon", ());
         }
         MENU_CANON_LOAD => {
             // Handle load canon
             println!("Load canon");
+            app.emit("open-file-dialog-for-canon", ());
         }
         MENU_CANON_INGEST => {
             // Handle ingest canon

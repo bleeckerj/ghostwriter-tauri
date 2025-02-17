@@ -63,6 +63,7 @@ pub struct DocumentStore {
     ingestors: Vec<Arc<Box<dyn DocumentIngestor>>>,
     next_id: usize,
     embedding_generator: Arc<EmbeddingGenerator>,
+    canon_file: Arc<Mutex<PathBuf>>, // Add this field
 }
 
 
@@ -71,7 +72,7 @@ impl DocumentStore {
         store_path: PathBuf,
         embedding_generator: Arc<EmbeddingGenerator>
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        std::fs::create_dir_all(& store_path)?;
+        std::fs::create_dir_all(&store_path)?;
         let db_path = store_path.join("documents.db");
         
         let conn = Connection::open(&db_path)?;
@@ -128,6 +129,7 @@ impl DocumentStore {
             ingestors: Vec::new(),
             next_id,
             embedding_generator,
+            canon_file: Arc::new(Mutex::new(db_path.clone())), // Initialize canon_file
         };
         
         doc_store.register_ingestor(Box::new(MdxIngestor));
@@ -374,25 +376,8 @@ impl DocumentStore {
         Ok(())
     }
     
-    
-    /***
-    * ## USAGE
 
-    let canon_id_to_update: i64 = 123; // Replace with the actual canon_id
-    let new_name = "New Canon Name".to_string();
-    let new_owner = "New Owner".to_string();
-    let new_notes = Some("Some new notes".to_string()); // Or None if you want to clear the notes
-    
-    let result = document_store
-    .update_canon(canon_id_to_update, new_name, new_owner, new_notes)
-    .await;
-    
-    match result {
-    Ok(_) => println!("Canon with ID {} updated successfully", canon_id_to_update),
-    Err(e) => eprintln!("Error updating canon with ID {}: {}", canon_id_to_update, e),
-    }
-    */
-    pub async fn update_canon(
+    pub async fn update_canon_metadata(
         &self,
         canon_id: i64,
         name: String,
@@ -411,7 +396,81 @@ impl DocumentStore {
         Ok(())
     }
     
+    pub async fn change_canon_file(
+        &self,
+        new_canon_file: PathBuf,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        // Lock the database connection before replacing it
+        let mut conn_guard = self.conn.lock().await;
+        let new_conn = Connection::open(&new_canon_file)?;
+        *conn_guard = new_conn;  // ✅ Replace the database connection safely
     
+        // Lock the canon_file before updating it
+        let mut canon_file_guard = self.canon_file.lock().await;
+        *canon_file_guard = new_canon_file;  // ✅ Safely update the path
+    
+        Ok(())
+    }
+
+    pub async fn create_new_canon_file(
+        &self,
+        new_canon_file: PathBuf,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        // Create a new database file
+        let new_conn = Connection::open(&new_canon_file)?;
+        // Create the tables
+        new_conn.execute(
+            "CREATE TABLE IF NOT EXISTS documents 
+            (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            file_path TEXT NOT NULL UNIQUE
+            )",
+            [],
+        )?;
+        
+        new_conn.execute(
+            "CREATE TABLE IF NOT EXISTS embeddings 
+            (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            doc_id INTEGER NOT NULL,
+            chunk TEXT NOT NULL, 
+            embedding JSON NOT NULL,
+            FOREIGN KEY(doc_id) REFERENCES documents(id)
+            )",
+            [],
+        )?;
+        
+        new_conn.execute(
+            "CREATE TABLE IF NOT EXISTS canon 
+            (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            owner TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            modified_at TEXT NOT NULL,
+            notes TEXT NOT NULL
+            )",
+            [],
+        )?;
+        
+        // Lock the database connection before replacing it
+        let mut conn_guard = self.conn.lock().await;
+        *conn_guard = new_conn;  // ✅ Replace the database connection safely
+    
+        // Lock the canon_file before updating it
+        let mut canon_file_guard = self.canon_file.lock().await;
+        *canon_file_guard = new_canon_file;  // ✅ Safely update the path
+    
+        Ok(())
+    }
+    
+    
+    
+    
+    
+
     async fn process_embeddings(
         &self, 
         doc_id: i64, 

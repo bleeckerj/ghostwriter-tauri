@@ -131,6 +131,33 @@ async fn ingestion_from_file_dialog(
     Ok("Ingested file".to_string())
 }
 
+#[tauri::command]
+async fn create_new_canon(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    file_path: String,
+) -> Result<String, String> {
+    let mut doc_store = state.doc_store.clone();
+    let path_for_file_path = PathBuf::from(file_path);
+
+    doc_store.create_new_canon_file(path_for_file_path).await;
+    Ok("Changed canon file".to_string())
+}
+
+#[tauri::command]
+async fn canon_from_file_dialog(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    file_path: String,
+) -> Result<String, String> {
+    let mut doc_store = state.doc_store.clone();
+    let path_for_file_path = PathBuf::from(file_path);
+
+    doc_store.change_canon_file(path_for_file_path).await;
+    Ok("Changed canon file".to_string())
+}
+
+
 
 // Modify the function return type to include timing
 #[tauri::command]
@@ -745,6 +772,8 @@ async fn search_similarity(
                     rich_log_message,
                     delete_canon_entry,
                     save_api_key,
+                    create_new_canon,
+                    canon_from_file_dialog,
                     ])
                     .run(tauri::generate_context!())
                     .expect("error while running tauri application");
