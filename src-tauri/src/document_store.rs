@@ -24,6 +24,7 @@ use crate::ingest::{
 use tauri::Manager; // Add this import
 use tauri::Emitter;
 use serde_json::json;
+use tokio::runtime::Handle;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 
@@ -63,6 +64,8 @@ pub struct DocumentStore {
     ingestors: Vec<Arc<Box<dyn DocumentIngestor>>>,
     next_id: usize,
     embedding_generator: Arc<EmbeddingGenerator>,
+    canon_name: String,
+    canon_path: String,
 }
 
 
@@ -75,7 +78,12 @@ impl DocumentStore {
         let db_path = store_path.join("documents.db");
         
         let conn = Connection::open(&db_path)?;
-        
+        let canon_path = db_path.to_string_lossy().to_string();
+        let canon_name = Path::new(&canon_path)
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_else(|| "UnknownDB".to_string());  // ✅ Get database name directly
+
         // Create tables if they don't exist
         conn.execute(
             "CREATE TABLE IF NOT EXISTS documents 
@@ -128,6 +136,8 @@ impl DocumentStore {
             ingestors: Vec::new(),
             next_id,
             embedding_generator,
+            canon_path : canon_path.clone(),
+            canon_name: "".to_string(),
         };
         
         doc_store.register_ingestor(Box::new(MdxIngestor));
@@ -135,7 +145,7 @@ impl DocumentStore {
         doc_store.register_ingestor(Box::new(MarkdownIngestor));
         doc_store.register_ingestor(Box::new(EpubIngestor));
         doc_store.register_ingestor(Box::new(TextIngestor));
-
+        
         
         Ok(doc_store)
     }
@@ -175,7 +185,7 @@ impl DocumentStore {
              FROM documents d 
              JOIN embeddings e ON d.id = e.doc_id"
         )?;  // Use ? directly for rusqlite::Error
-
+        
         let mut similarities = Vec::new();
         
         let rows = stmt.query_map([], |row| {
@@ -207,11 +217,11 @@ impl DocumentStore {
             b.4.partial_cmp(&a.4)  // Changed from .3 to .4 to access similarity
             .unwrap_or(std::cmp::Ordering::Equal)
         });
-
+        
         // Collect top results with unique doc_id
         let mut unique_results = Vec::new();
         let mut seen_doc_ids = std::collections::HashSet::new();
-
+        
         for result in similarities {
             if seen_doc_ids.len() >= similar_docs_count {
                 break;
@@ -220,7 +230,7 @@ impl DocumentStore {
                 unique_results.push(result);
             }
         }
-
+        
         println!("Similarities: {:?}", unique_results.len());
         Ok(unique_results)
     }
@@ -374,10 +384,17 @@ impl DocumentStore {
         Ok(())
     }
     
+    pub fn get_database_path(&self) -> &str {
+        &self.canon_path  // ✅ Already stored, just return it
+    }
+
+    pub fn get_database_name(&self) -> &str {
+        &self.canon_name  // ✅ Already stored, just return it
+    }
     
     /***
     * ## USAGE
-
+    
     let canon_id_to_update: i64 = 123; // Replace with the actual canon_id
     let new_name = "New Canon Name".to_string();
     let new_owner = "New Owner".to_string();
@@ -497,6 +514,7 @@ impl DocumentStore {
         .cloned()
     }
     
+
     
     pub async fn test_async_process(&self) -> Result<(), Box<dyn std::error::Error>> {
         for i in 1..=10 {

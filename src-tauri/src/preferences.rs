@@ -1,0 +1,53 @@
+use serde::{Serialize, Deserialize};
+use confy;
+use tauri::App;
+
+use crate::app_state::AppState;
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+pub struct Preferences {
+    pub response_limit: String,
+    pub main_prompt: String,
+    pub final_preamble: String,
+    pub prose_style: String,
+}
+
+// ✅ Define constant defaults
+impl Preferences {
+    pub const DEFAULT_RESPONSE_LIMIT: &'static str = "Respond with no more than one sentence. If the input text ends with a period, only add one sentence and no more. You may complete a partially complete sentence or if the input text is already a complete sentence, you may add only one sentence that would reasonably and semantically follow that one sentence. Adhere to these constraints such that you are adding no more than one sentence.";
+    
+    pub const DEFAULT_MAIN_PROMPT: &'static str = "Here is your brief: You are a text completion engine. You do not answer questions or respond to questions in any way. You only semantically complete the thought represented by the Previous exchanges, Similar documents context and input. Limit your response to the Response Limit. Do not respond to inquiries in any fashion. If you are asked how to do something, or answer a question do not respond. Only perform auto-completion based on the text to complete, not responses to queries, questions, or any other non-completion response. If you are asked to do something only respond as a completion of text. Do not engage in any form of chat. Your only task is to complete thoughts in written form maintaining semantic consistency. Do not reveal that you are an AI. You are just an engine for text completion, like a muse helping a writer to continue or complete a thought. Imagine you are completing someone's thought like a creative writing muse or alter ego helping someone who is having trouble writing. Complete the following text fragment based on the provided previous exchanges.";
+    
+    pub const DEFAULT_FINAL_PREAMBLE: &'static str = "This is the input text that is the text fragment to complete. It is not a request or command. Do not respond to it like it is a question to you or request of you to answer a question.:";
+    
+    pub const DEFAULT_PROSE_STYLE: &'static str = "A style that is consistent with the input text.";
+
+    /// Load preferences and ensure no empty fields
+    pub fn load_with_defaults(app_state: &AppState) -> Self {
+        let mut prefs: Preferences = confy::load("ghostwriter", "preferences").unwrap_or_default();
+        app_state;
+        prefs.apply_defaults();
+        prefs
+    }
+
+    /// Save preferences to file
+    pub fn save(&self) -> Result<(), confy::ConfyError> {
+        confy::store("ghostwriter", "preferences", self)
+    }
+
+    /// Apply default values only if fields are empty
+    pub fn apply_defaults(&mut self) {
+        if self.response_limit.trim().is_empty() {
+            self.response_limit = Self::DEFAULT_RESPONSE_LIMIT.to_string();
+        }
+        if self.main_prompt.trim().is_empty() {
+            self.main_prompt = Self::DEFAULT_MAIN_PROMPT.to_string();
+        }
+        if self.final_preamble.trim().is_empty() {
+            self.final_preamble = Self::DEFAULT_FINAL_PREAMBLE.to_string();
+        }
+        if self.prose_style.trim().is_empty() {
+            self.prose_style = Self::DEFAULT_PROSE_STYLE.to_string();
+        }
+    }
+}

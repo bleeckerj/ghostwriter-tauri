@@ -13,8 +13,12 @@ import { PluginKey } from 'prosemirror-state';
 //import {Menu, Submenu} from '@tauri-apps/api/menu'
 
 import { open, confirm } from '@tauri-apps/plugin-dialog';
+import { getCurrentWebviewWindow, WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { list } from 'postcss';
 
+
+let w = getCurrentWebviewWindow();
+w.setBackgroundColor('#f3f4f6');
 const { invoke } = window.__TAURI__.core;
 
 let greetInputEl;
@@ -25,9 +29,10 @@ let listCanonBtnEl;
 let clearDiagnosticsBtnEl;
 let openPreferencesBtnEl;
 let ingestBtnEl;
-let openLogsBtnEl;
+let openLogBtnEl;
 let similaritySearchBtnEl;
-
+let panel;
+let panelToggleBtn;
 // const macOS = navigator.userAgent.includes('Macintosh')
 
 // async function createMenuWithSubmenu() {
@@ -228,8 +233,51 @@ window.addEventListener("DOMContentLoaded", async () => {
   ingestBtnEl.addEventListener("click", openDialogForIngestion);
   clearDiagnosticsBtnEl = document.querySelector("#clear-diagnostics-btn");
   clearDiagnosticsBtnEl.addEventListener("click", () => {
-      diagnostics.commands.clearContent();
+    diagnostics.commands.clearContent();
+    //const currentWindow = getCurrentWebviewWindow()
+    // currentWindow.setBackgroundColor('#f3f4f6').then(() => {
+    //   console.log('Background color set to #f3f4f6');
+    // });
+    // currentWindow.setFullscreen(true).then(() => {
+    //   console.log('Fullscreen set to true');
+    // });
+    
   });
+  panel = document.getElementById('side-panel');
+  panelToggleBtn = document.getElementById('panel-toggle-btn');
+  panelToggleBtn.addEventListener('click', () => {
+    console.log('Toggling panel');
+    console.log('Panel before:', panel.classList.contains('open'));
+    
+    panel.classList.toggle('open');
+    panelToggleBtn.classList.toggle('open');
+  });
+  
+  openLogBtnEl = document.querySelector("#open-log-btn");
+  openLogBtnEl.addEventListener("click", () => {
+    const currentWindow = getCurrentWebviewWindow()
+    console.log(currentWindow);
+    const webview = new WebviewWindow('unique-window-label', {
+      url: 'view-log.html', // URL to load
+      title: 'log.json',
+      width: 800,
+      height: 600,
+      resizable: true,
+      fullscreen: false,
+      decorations: true, // window decorations (title bar, borders)
+      transparent: false,
+      center: true
+    })
+    webview.once('tauri://created', function () {
+      // webview successfully created
+      console.log("created");
+    });
+    webview.once('tauri://error', function (e) {
+      // an error happened creating the webview
+      console.log("woops", e)
+    });
+  });
+  
   // document.querySelector("#greet-form").addEventListener("submit", (e) => {
     //   e.preventDefault();
   //   greet();
@@ -662,3 +710,4 @@ function initializeResizeHandle() {
   handle.addEventListener('mousedown', startResize);
 }
 
+// Add this to your existing JavaScript

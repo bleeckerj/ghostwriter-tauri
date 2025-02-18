@@ -17,11 +17,18 @@ pub struct VectorSearchResult {
 #[derive(Serialize, Deserialize)]
 pub struct CompletionLogEntry {
     pub timestamp: DateTime<Utc>,
+    pub canon_name: String,
+    pub canon_path: String,
     pub input_text: String,
     pub system_prompt: String,
     pub conversation_context: String,
     pub vector_search_results_for_log: Vec<VectorSearchResult>,
     pub completion_result: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Completion {
+    pub completion: CompletionLogEntry,
 }
 
 pub struct Logger {
@@ -42,7 +49,7 @@ impl Logger {
 
     pub fn log_completion(
         &mut self,
-        entry: CompletionLogEntry,
+        entry: Completion,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let json = serde_json::to_string_pretty(&entry)?;
         writeln!(self.log_file, "{}", json)?;

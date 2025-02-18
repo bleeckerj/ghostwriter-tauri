@@ -13,6 +13,7 @@ use tokio::sync::Mutex;
 use std::path::PathBuf;
 use tauri::Manager;
 use std::fs;
+use crate::preferences::Preferences;
 
 
 pub struct AppState {
@@ -21,7 +22,8 @@ pub struct AppState {
     pub conversation: Mutex<Conversation>,
     pub buffer: Mutex<String>,
     pub logger: Arc<Mutex<Logger>>,  
-    pub api_key: Mutex<Option<String>>,  // ✅ Add API key field
+    pub api_key: Mutex<Option<String>>, 
+    pub preferences: Mutex<Preferences>,  // Store preferences in memory
 }
 
 impl AppState {
@@ -31,16 +33,25 @@ impl AppState {
         initial_log_path: &str,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let logger = Logger::new(initial_log_path)?;
-
-        Ok(Self {
+        
+        // Create AppState first without preferences
+        let app_state = Self {
             logger: Arc::new(Mutex::new(logger)),
             doc_store: Arc::new(doc_store),
             embedding_generator: Arc::new(embedding_generator),
             conversation: Mutex::new(Conversation::new(16000)),
             buffer: Mutex::new(String::new()),
-            api_key: Mutex::new(None),  // ✅ Initialize with None
-        })
+            api_key: Mutex::new(None),
+            preferences: Mutex::new(Preferences::default()), // Start with default preferences
+        };
+
+        // Then load preferences with access to app_state
+        let preferences = Preferences::load_with_defaults(&app_state);
+        *app_state.preferences.blocking_lock() = preferences;
+
+        Ok(app_state)
     }
+
 
     // ✅ Load API key from a file
     pub async fn load_api_key(&self, app_handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {

@@ -149,6 +149,8 @@ button {
   padding-right: 0.5rem;
   overflow: hidden; /* Add this to prevent container scrolling */
   @apply select-none; /* Prevent text selection while dragging */
+  position: relative;
+  overflow-x: hidden; /* Hide horizontal overflow */
 }
 
 .scroll-area {
@@ -198,7 +200,7 @@ button {
   display: flex;
   flex-direction: row;
   justify-content: flex-start;
-  @apply gap-6;
+  @apply gap-4;
   align-items: center;
   padding: 0.5rem;
   @apply mb-2;
@@ -553,4 +555,37 @@ button {
   @apply before:content-[''] before:absolute before:left-0 before:top-0;
   @apply before:w-full before:h-full before:border-[0.5px] before:border-transparent;
   /* @apply hover:before:border-l-0 hover:before:border-t-0 hover:before:border-black; */
+}
+
+/* Side panel styles */
+.side-panel {
+  position: fixed;
+  top: 0;
+  right: -300px; /* Start offscreen */
+  height: 100vh;
+  width: 300px;
+  background-color: white;
+  border-left: 1px solid #e5e7eb;
+  transition: right 0.3s ease-in-out;
+  z-index: 50;
+  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1);
+}
+
+.side-panel.open {
+  right: 0;
+}
+
+.side-panel-content {
+  height: 100%;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+/* Button transition */
+.panel-toggle {
+  transition: transform 0.3s ease-in-out;
+}
+
+.panel-toggle.open {
+  transform: rotate(180deg);
 }

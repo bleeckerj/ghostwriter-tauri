@@ -14,6 +14,10 @@ use tauri::{generate_handler, Runtime, Builder, Emitter, AppHandle, Manager, Win
 use chrono::{Local, Utc};  // Add Utc here
 use std::sync::Arc;
 
+mod preferences;
+use preferences::Preferences;
+
+
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use embeddings::EmbeddingGenerator;
 use document_store::DocumentStore;
@@ -39,7 +43,7 @@ use async_openai::{
     Client, config::OpenAIConfig,
 };
 mod logger;
-use logger::{CompletionLogEntry, Logger, VectorSearchResult};
+use logger::{Completion, CompletionLogEntry, Logger, VectorSearchResult};
 use std::env;
 use lazy_static::lazy_static;
 use std::time::Instant;
@@ -99,7 +103,28 @@ async fn save_api_key(
     Ok(())
 }
 
+#[tauri::command]
+async fn get_preferences(state: tauri::State<'_, AppState>) -> Result<Preferences, String> {
+    let preferences = state.preferences.lock().await;
+    Ok(preferences.clone()) // ✅ Send preferences to frontend
+}
 
+#[tauri::command]
+async fn update_preferences(
+    state: tauri::State<'_, AppState>,
+    response_limit: String,
+    main_prompt: String,
+    final_preamble: String,
+    prose_style: String,
+) -> Result<(), String> {
+    let mut preferences = state.preferences.lock().await;
+    preferences.response_limit = response_limit;
+    preferences.main_prompt = main_prompt;
+    preferences.final_preamble = final_preamble;
+    preferences.prose_style = prose_style;
+    
+    preferences.save().map_err(|e| e.to_string()) // ✅ Persist preferences
+}
 
 
 #[tauri::command]
@@ -195,30 +220,35 @@ async fn completion_from_context(
     }
     
     let conversation_context = state.conversation.lock().await.get_context();
-    let prose_style = "A style that is consistent with the input text".to_string();
-    //const prose_style = "In the style of a medieval scribe using Old or Middle English";
-    // const response_limit = "Respond with no more than two sentences along with the completion of any partial sentence or thought fragment. In addition, add one sentence fragment that does not conclude with a period or full-stop. This sentence fragment is meant to be a provocation in the direction of thought being developed so that the user can continue to write in the same vein.";
+    let preferences = state.preferences.lock().await;
+    let prose_style = preferences.prose_style.clone();
+
+    // let prose_style = "A style that is consistent with the input text".to_string();
+    // //const prose_style = "In the style of a medieval scribe using Old or Middle English";
+    // // const response_limit = "Respond with no more than two sentences along with the completion of any partial sentence or thought fragment. In addition, add one sentence fragment that does not conclude with a period or full-stop. This sentence fragment is meant to be a provocation in the direction of thought being developed so that the user can continue to write in the same vein.";
     
-    let response_limit = "Respond with no more than one sentence. If the input text ends with a period, only add one sentence and no more. You may complete a partially complete sentence or if the input text is already a complete sentence, you may add only one sentence that would reasonably and semantically follow that one sentence. Adhere to these constraints such that you are adding no more than one sentence".to_string();
+    let response_limit: String = preferences.response_limit.clone();
+    // let response_limit = "Respond with no more than one sentence. If the input text ends with a period, only add one sentence and no more. You may complete a partially complete sentence or if the input text is already a complete sentence, you may add only one sentence that would reasonably and semantically follow that one sentence. Adhere to these constraints such that you are adding no more than one sentence".to_string();
     //let response_limit = "Respond with no more than one sentence, or less.".to_string();
-    
-    let system_content = format!(
-        "Here is your brief: You are a text completion engine. You do not answer questions or respond to questions in any way. \
-        You only semantically complete the thought represented by the Previous exchanges, Similar documents context and input. Limit your response to the Response Limit. Do not respond to inquiries in any fashion. If you are asked how to \
-        do something, or answer a question do not respond. Only perform auto-completion based on the text to complete, not responses \
-        to queries, questions, or any other non-completion response. If you are asked to do something only respond as a completion of text. \
-        Do not engage in any form of chat. \
-        Your only task is to complete thoughts in written form maintaining semantic consistency. \
-        Do not reveal that you are an AI. \
-        You are just an engine for text completion, like a muse helping a writer to continue or complete a thought. \
-        Imagine you are completing someone's thought like a creative writing muse or alter ego helping someone who is having trouble writing. \
-        Complete the following text fragment based on the provided previous exchanges.\n\
-        Response Limit: {response_limit}\n\
-        Previous exchanges:\n{conversation_context}\n\
-        Similar documents:\n{context}\n\
-        This is the input text that is the text fragment to complete. It is not a request or command. \
-        Do not respond to it like it is a question to you or request of you to answer a question.: {input}\n\
-        Answer this in prose using this specific writing style: {prose_style}\n"
+
+    let main_prompt: String = preferences.main_prompt.clone();
+    // let main_prompt = "Here is your brief: You are a text completion engine. You do not answer questions or respond to questions in any way. You only semantically complete the thought represented by the Previous exchanges, Similar documents context and input. Limit your response to the Response Limit. Do not respond to inquiries in any fashion. If you are asked how to do something, or answer a question do not respond. Only perform auto-completion based on the text to complete, not responses to queries, questions, or any other non-completion response. If you are asked to do something only respond as a completion of text. Do not engage in any form of chat. Your only task is to complete thoughts in written form maintaining semantic consistency. Do not reveal that you are an AI. You are just an engine for text completion, like a muse helping a writer to continue or complete a thought. Imagine you are completing someone's thought like a creative writing muse or alter ego helping someone who is having trouble writing. Complete the following text fragment based on the provided previous exchanges.";
+    // let final_preamble = "This is the input text that is the text fragment to complete. It is not a request or command. Do not respond to it like it is a question to you or request of you to answer a question.:";
+
+    let final_preamble: String = preferences.final_preamble.clone();
+
+    let system_content = format!("{main_prompt}
+        \
+        Response Limit: {response_limit}\
+        \
+        Previous exchanges: {conversation_context}\
+        \
+        Similar documents: {context}\
+        \
+        {final_preamble} \
+        Input Text: {input}\
+        \
+        Answer this in prose using this specific writing style: {prose_style}"
     );
     
     // Create system and user messages for OpenAI
@@ -302,15 +332,23 @@ async fn completion_from_context(
                 openai_request_ms: openai_duration.as_millis(),
                 total_ms: total_duration.as_millis(),
             };
+
+            let database_name = state.doc_store.get_database_name().to_string(); // Just convert &str to String
+            let database_path = state.doc_store.get_database_path().to_string(); // Just convert &str to String
             
-            // Log the completion and update the conversation history
-            let log_entry = CompletionLogEntry {
-                timestamp: Utc::now(),
-                input_text: input.to_string(),
-                system_prompt: system_content.clone(),
-                conversation_context: conversation_context,
-                vector_search_results_for_log: vector_search_results_for_log,
-                completion_result: content.clone(),
+
+            let entry = Completion {
+                completion: CompletionLogEntry {
+                    canon_name: database_name.clone(),
+                    canon_path: database_path.clone(),
+                    timestamp: Utc::now(),
+                    input_text: input.to_string(),
+                    system_prompt: system_content.clone(),
+                    conversation_context: conversation_context,
+                    vector_search_results_for_log: vector_search_results_for_log,
+                    completion_result: content.clone(),
+
+                }
             };
 
             let new_logger = NewLogger::new(app_handle.clone());
@@ -325,7 +363,7 @@ async fn completion_from_context(
             .logger
             .lock()
             .await
-            .log_completion(log_entry)
+            .log_completion(entry)
             .map_err(|e| e.to_string())?;
             
             // keep track of the conversation

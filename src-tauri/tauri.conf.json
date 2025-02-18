@@ -9,6 +9,7 @@
     "devUrl": "http://localhost:5111",
     "frontendDist": "../dist"
   },
+
   "app": {
     "withGlobalTauri": true,
     "windows": [
@@ -17,7 +18,16 @@
         "width": 800,
         "height": 600,
         "minWidth": 800,
-        "minHeight": 600
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "dragDropEnabled": true,
+        "windowEffects": {
+          "effects": [
+            "mica"
+          ]
+        }
       }
     ],
     "security": {
