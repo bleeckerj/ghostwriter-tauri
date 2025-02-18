@@ -24,8 +24,16 @@ impl Preferences {
 
     /// Load preferences and ensure no empty fields
     pub fn load_with_defaults(app_state: &AppState) -> Self {
-        let mut prefs: Preferences = confy::load("ghostwriter", "preferences").unwrap_or_default();
-        app_state;
+        let mut prefs: Preferences = match confy::load("ghostwriter", "preferences") {
+            Ok(loaded_prefs) => {
+                println!("Loaded preferences: {:?}", loaded_prefs);
+                loaded_prefs
+            },
+            Err(e) => {
+                println!("Error loading preferences: {:?}", e);
+                Preferences::default()
+            }
+        };
         prefs.apply_defaults();
         prefs
     }

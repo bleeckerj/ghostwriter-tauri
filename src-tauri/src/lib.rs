@@ -339,14 +339,14 @@ async fn completion_from_context(
 
             let entry = Completion {
                 completion: CompletionLogEntry {
-                    canon_name: database_name.clone(),
-                    canon_path: database_path.clone(),
                     timestamp: Utc::now(),
+                    completion_result: content.clone(),
                     input_text: input.to_string(),
                     system_prompt: system_content.clone(),
-                    conversation_context: conversation_context,
+                    conversation_context: conversation_context.clone(),
                     vector_search_results_for_log: vector_search_results_for_log,
-                    completion_result: content.clone(),
+                    canon_name: database_name.clone(),
+                    canon_path: database_path.clone(),
 
                 }
             };

@@ -17,13 +17,13 @@ pub struct VectorSearchResult {
 #[derive(Serialize, Deserialize)]
 pub struct CompletionLogEntry {
     pub timestamp: DateTime<Utc>,
-    pub canon_name: String,
-    pub canon_path: String,
     pub input_text: String,
+    pub completion_result: String,
     pub system_prompt: String,
     pub conversation_context: String,
     pub vector_search_results_for_log: Vec<VectorSearchResult>,
-    pub completion_result: String,
+    pub canon_name: String,
+    pub canon_path: String,
 }
 
 #[derive(Serialize, Deserialize)]
