@@ -177,12 +177,13 @@ async fn completion_from_context(
     let mut new_logger = NewLogger::new(app_handle.clone());
 
     for (i, (doc_id, doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
-        let msg = format!(
-            "Doc: {}<br/> <span class='font-bold'>Similarity: {:.4}</span><br/><span>Content:<br/>{}</span>",
-            doc_name,
-            similarity,
-            chunk_text,
-        );
+
+        let msg = format!("<div>
+            <p class='border-l-[4px] border-amber-300 pl-2 pr-8 text-pretty'>{}</p>
+            <p class='mt-1 px-2 py-1 rounded-sm bg-gray-800 w-fit'>{}</p>
+            <span class='font-bold'>{}</span>
+          </div>", chunk_text, similarity, doc_name);
+
         new_logger.simple_log_message(msg, chunk_id.to_string(), "info".to_string());
 
         vector_search_results_for_log.push(VectorSearchResult {
