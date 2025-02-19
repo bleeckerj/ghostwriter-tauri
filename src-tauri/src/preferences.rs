@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 use confy;
 use tauri::App;
-
+use crate::logger::{Completion, CompletionLogEntry, Logger, VectorSearchResult};
 use crate::app_state::AppState;
 use tauri::AppHandle;
 
@@ -61,6 +61,10 @@ impl Preferences {
 
     pub fn set_app_handle(&mut self, app_handle: AppHandle) {
         self.app_handle = Some(app_handle);
+    }
+
+    pub fn prefs_file_path() -> String {
+        confy::get_configuration_file_path("ghostwriter", "preferences").unwrap().to_str().unwrap().to_string()
     }
 
     /// Apply default values only if fields are empty

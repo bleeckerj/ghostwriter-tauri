@@ -239,6 +239,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   prefsProseStyleTextArea.addEventListener("dblclick", () => {
     prefsProseStyleTextArea.select();
   });
+
   prefsLoadBtn = document.querySelector("#prefs-load-btn");
   prefsLoadBtn.addEventListener("click", () => {
     invoke("load_preferences").then((res) => {
@@ -246,6 +247,26 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     });
   });
+
+  prefsSaveBtn = document.querySelector("#prefs-save-btn");
+  prefsSaveBtn.addEventListener("click", () => {
+    invoke("save_preferences", {
+      main_prompt: prefsMainPromptTextArea.value,
+      response_limit: prefsResponseLimitTextArea.value,
+      final_preamble: prefsFinalPreambleTextArea.value,
+      prose_style: prefsProseStyleTextArea.value
+    }).then((res) => {
+      console.log('Preferences Saved:', res);
+    });
+  });
+
+  prefsResetBtn = document.querySelector("#prefs-reset-btn");
+  prefsResetBtn.addEventListener("click", () => {
+    invoke("reset_preferences").then((res) => {
+      console.log('Preferences Reset:', res);
+    });
+  });
+  
 
   panelToggleBtn = document.getElementById('panel-toggle-btn');
   
