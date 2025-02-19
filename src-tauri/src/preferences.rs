@@ -56,6 +56,7 @@ impl Preferences {
 
     /// Save preferences to file
     pub fn save(&self) -> Result<(), confy::ConfyError> {
+        //let path = confy::store_path("ghostwriter", "preferences");
         confy::store("ghostwriter", "preferences", self)
     }
 
@@ -65,6 +66,19 @@ impl Preferences {
 
     pub fn prefs_file_path() -> String {
         confy::get_configuration_file_path("ghostwriter", "preferences").unwrap().to_str().unwrap().to_string()
+    }
+
+    pub fn reset_to_defaults(&mut self) {
+        self.response_limit = Self::DEFAULT_RESPONSE_LIMIT.to_string();
+        self.main_prompt = Self::DEFAULT_MAIN_PROMPT.to_string();
+        self.final_preamble = Self::DEFAULT_FINAL_PREAMBLE.to_string();
+        self.prose_style = Self::DEFAULT_PROSE_STYLE.to_string();
+        self.similarity_threshold = Self::SIMILARITY_THRESHOLD_DEFAULT;
+        self.max_tokens = Self::MAX_TOKENS_DEFAULT;
+        self.temperature = Self::TEMPERATURE_DEFAULT;
+        self.shuffle_similars = Self::SHUFFLE_SIMILARS_DEFAULT;
+        self.similarity_count = Self::SIMILARITY_COUNT_DEFAULT;
+        self.max_history = Self::MAX_HISTORY_DEFAULT;
     }
 
     /// Apply default values only if fields are empty

@@ -122,26 +122,49 @@ async fn load_preferences(app_handle: tauri::AppHandle, state: tauri::State<'_, 
 
 #[tauri::command]
 async fn update_preferences(
+    app_handle: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
-    response_limit: String,
-    main_prompt: String,
-    final_preamble: String,
-    prose_style: String,
-) -> Result<(), String> {
+    responselimit: String,
+    mainprompt: String,
+    finalpreamble: String,
+    prosestyle: String) -> Result<(), String> {
+
+    println!("Hello");
+    println!("");
+    println!("update_preferences called with: {}, {}, {}, {}",
+        responselimit, mainprompt, finalpreamble, prosestyle);
+
     let mut preferences = state.preferences.lock().await;
-    preferences.response_limit = response_limit;
-    preferences.main_prompt = main_prompt;
-    preferences.final_preamble = final_preamble;
-    preferences.prose_style = prose_style;
-    
-    preferences.save().map_err(|e| e.to_string()) // ✅ Persist preferences
+    preferences.response_limit = responselimit;
+    preferences.main_prompt = mainprompt;
+    preferences.final_preamble = finalpreamble;
+    preferences.prose_style = prosestyle;
+
+    // Attempt to save preferences and handle any errors
+    if let Err(e) = preferences.save() {
+        let error_message = format!("Failed to save preferences: {}", e);
+        let new_logger = NewLogger::new(app_handle.clone());
+        new_logger.simple_log_message(error_message.clone(), "preferences".to_string(), "error".to_string());
+        return Err(error_message);
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
-async fn reset_preferences(state: tauri::State<'_, AppState>) -> Result<(), String> {
+async fn reset_preferences(state: tauri::State<'_, AppState>) -> Result<(Preferences), String> {
     let mut preferences = state.preferences.lock().await;
-    *preferences = Preferences::default();
-    preferences.save().map_err(|e| e.to_string()) // ✅ Persist preferences
+    preferences.reset_to_defaults();
+    preferences.save().map_err(|e| e.to_string()); // ✅ Persist preferences
+    Ok(preferences.clone())
+}
+
+#[tauri::command]
+async fn prefs_file_path() -> Result<String, String> {
+    // let mut preferences = state.preferences.lock().await;
+    // *preferences = Preferences::default();
+    // let path = preferences.get_preferences_file_path().map_err(|e| e.to_string());
+    Ok(Preferences::prefs_file_path())
 }
 
 
@@ -829,6 +852,7 @@ async fn search_similarity(
                     load_preferences,
                     update_preferences,
                     reset_preferences,
+                    prefs_file_path,
                     ])
                     .run(tauri::generate_context!())
                     .expect("error while running tauri application");

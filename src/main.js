@@ -48,7 +48,7 @@ let prefsTemperatureRange;
 let prefsTemperatureValue;
 let prefsSimilarityCountRange;
 let prefsMaxHistoryRange;
-
+let closePreferencesBtnEl;
 
 async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -220,6 +220,10 @@ window.addEventListener("DOMContentLoaded", async () => {
   clearDiagnosticsBtnEl.addEventListener("click", () => {
     diagnostics.commands.clearContent();
   });
+  closePreferencesBtnEl = document.querySelector("#prefs-close-btn");
+  closePreferencesBtnEl.addEventListener("click", () => {
+    panel.classList.remove('open');
+  });
   panel = document.getElementById('side-panel');
 
   // PREFERENCES PANEL
@@ -244,26 +248,48 @@ window.addEventListener("DOMContentLoaded", async () => {
   prefsLoadBtn.addEventListener("click", () => {
     invoke("load_preferences").then((res) => {
       console.log('Preferences Loaded:', res);
-
+      prefsMainPromptTextArea.value = res.main_prompt;
+      prefsResponseLimitTextArea.value = res.response_limit;
+      prefsFinalPreambleTextArea.value = res.final_preamble;
+      prefsProseStyleTextArea.value = res.prose_style;
     });
+
+    invoke("prefs_file_path").then((res) => { 
+      const resJson = JSON.stringify(res, null, 2);
+      console.log("prefs file path", res);
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: resJson,
+        level: "info"
+      });
+    });
+
   });
 
   prefsSaveBtn = document.querySelector("#prefs-save-btn");
   prefsSaveBtn.addEventListener("click", () => {
-    invoke("save_preferences", {
-      main_prompt: prefsMainPromptTextArea.value,
-      response_limit: prefsResponseLimitTextArea.value,
-      final_preamble: prefsFinalPreambleTextArea.value,
-      prose_style: prefsProseStyleTextArea.value
+    console.log("what's this ->", prefsResponseLimitTextArea.value);
+
+    invoke("update_preferences", {
+      responselimit: prefsResponseLimitTextArea.value,
+      mainprompt: prefsMainPromptTextArea.value,
+      finalpreamble: prefsFinalPreambleTextArea.value, 
+      prosestyle: prefsProseStyleTextArea.value
     }).then((res) => {
       console.log('Preferences Saved:', res);
     });
+    console.log("Saving preferences");
   });
 
   prefsResetBtn = document.querySelector("#prefs-reset-btn");
   prefsResetBtn.addEventListener("click", () => {
     invoke("reset_preferences").then((res) => {
       console.log('Preferences Reset:', res);
+      prefsMainPromptTextArea.value = res.main_prompt;
+      prefsResponseLimitTextArea.value = res.response_limit;
+      prefsFinalPreambleTextArea.value = res.final_preamble;
+      prefsProseStyleTextArea.value = res.prose_style;
     });
   });
   
@@ -272,7 +298,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   
   panelToggleBtn.addEventListener('click', () => {
     console.log('Toggling panel');
-    console.log('Panel before:', panel.classList.contains('open')); 
+    // console.log('Panel before:', panel.classList.contains('open')); 
     invoke("load_preferences").then((res) => {
       console.log('Preferences Loaded:', res);
       prefsMainPromptTextArea.textContent = res.main_prompt;
