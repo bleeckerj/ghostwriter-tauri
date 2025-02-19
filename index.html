@@ -50,32 +50,34 @@
     </p>
   </div>
     <!-- Add the side panel -->
-  <div id="side-panel" class="side-panel">
-    <h2 class="text-[0.8em] font-['ESKlarheitKurrentMono'] mb-4 w-full mx-auto text-center">Incantation Preferences & Parameters</h2>
-      <div class="grid grid-cols-4 gap-1 w-3/4 mb-8 mx-auto">
+  <div id="side-panel" class="side-panel w-11/12">
+    <h2 class="text-[0.8em] font-['ESKlarheitKurrentMono'] mb-1 w-full mx-auto text-center">Incantation Preferences & Parameters</h2>
+    <div class="fixed-buttons">
+      <div class="grid grid-cols-4 gap-1 w-3/4 mb-0 mx-auto">
         <div id="prefs-load-btn" class="diagnostics-area-button enabled">LOAD</div>
         <div id="prefs-save-btn" class="diagnostics-area-button enabled">SAVE</div>
         <div id="prefs-reset-btn" class="diagnostics-area-button enabled">RSET</div>
         <div id="prefs-close-btn" class="diagnostics-area-button enabled">CLOSE</div>
       </div>
-      <div class="mx-auto w-11/12">
+    </div>
+      <div class="side-panel-content mx-auto ml-2 w-11/12">
         <label class="form-control">
           <div class="label">
             <span class="label-text text-sm font-['Haffer'] ml-1">Main Prompt</span>
           </div>
-        <textarea id="prefs-main-prompt" type="text" placeholder="Main Prompt" class="text-pretty w-full h-[200px] text-xs font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
+        <textarea id="prefs-main-prompt" type="text" placeholder="Main Prompt" class="text-pretty w-full h-[200px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
         </label>
         <label class="form-control">
           <div class="label">
             <span class="label-text text-sm font-['Haffer'] ml-1">Response Limit</span>
           </div>
-        <textarea id="prefs-response-limit" type="text" placeholder="Response Limit" class="text-pretty w-full h-[100px] text-xs font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
+        <textarea id="prefs-response-limit" type="text" placeholder="Response Limit" class="text-pretty w-full h-[100px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
         </label>
         <label class="form-control">
           <div class="label">
             <span class="label-text text-sm font-['Haffer'] ml-1">Final Preamble</span>
           </div>
-        <textarea id="prefs-final-preamble" type="text" placeholder="Final Preamble" class="text-pretty w-full h-[100px] text-xs font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
+        <textarea id="prefs-final-preamble" type="text" placeholder="Final Preamble" class="text-pretty w-full h-[100px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
         </label>
         <label class="form-control">
           <div class="label">

@@ -578,23 +578,38 @@ button {
   z-index: 50;
   box-shadow: -2px 0 4px rgba(0, 0, 0, 0.5);
   @apply bg-slate-50;
-  @apply mx-auto;
-  overflow-y: auto; /* Enable vertical scrolling */
-  overscroll-behavior: none; /* Completely prevents bouncing */
+  
+  display: flex; /* Make it a flex container */
+  flex-direction: column; /* Stack elements vertically */
 }
+
+
+/* Keep buttons fixed at the top */
+.fixed-buttons {
+  position: sticky;
+  top: 0;
+  background-color: white;
+  padding: 0.5rem;
+  z-index: 10; /* Keeps it above the scrolling content */
+  border-bottom: 1px solid #e5e7eb;
+  @apply bg-slate-50;
+  @apply shadow-[0px_2px_2px_rgba(0,0,0,0.3)];
+}
+
 
 .side-panel.open {
   right: 0;
 }
 
 .side-panel-content {
-  height: 100%;
+  flex-grow: 1; /* Takes up remaining space */
+  overflow-y: auto; /* Enables scrolling */
+  overflow-x: hidden; /* Prevents horizontal scrolling */
   padding: 1rem;
-  overflow-y: auto;
-  overflow-x: hidden; /* Hide horizontal overflow */
-  overscroll-behavior: none; /* Completely prevents bouncing */
+  overscroll-behavior: none;
   @apply bg-slate-50;
 }
+
 
 /* Button transition */
 .panel-toggle {
