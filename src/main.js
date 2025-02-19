@@ -124,8 +124,8 @@ async function searchSimilarity() {
       id: Date.now() + "_" + index,
       timestamp: Date.now(),
       message: `<div>
-        <p class='border-l-[4px] border-amber-300 pl-2 pr-8 text-pretty'>${result.chunk_text}</p>
-        <p class='mt-1 px-2 py-1 rounded-sm bg-gray-800 w-fit'>${result.similarity_score}</p>
+        <div class='border-l-[4px] border-amber-300 pl-2 pr-8 text-pretty font-["InputMono"]'>${result.chunk_text}</div>
+        <div class='mt-2 px-2 py-1 rounded-sm bg-gray-800 w-fit'>${result.similarity_score}</div>
         <span class='font-bold'>${result.document_name}</span>
       </div>`,
       level: 'info'
@@ -248,6 +248,13 @@ window.addEventListener("DOMContentLoaded", async () => {
   prefsLoadBtn.addEventListener("click", () => {
     invoke("load_preferences").then((res) => {
       console.log('Preferences Loaded:', res);
+      const resJson = JSON.stringify(res, null, 2);
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'Preferences loaded<br/>'+resJson,
+        level: 'info'
+      });
       prefsMainPromptTextArea.value = res.main_prompt;
       prefsResponseLimitTextArea.value = res.response_limit;
       prefsFinalPreambleTextArea.value = res.final_preamble;
@@ -306,13 +313,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       prefsFinalPreambleTextArea.textContent = res.final_preamble;
       prefsProseStyleTextArea.textContent = res.prose_style;
 
-      const resJson = JSON.stringify(res, null, 2);
-      addSimpleLogEntry({
-        id: "",
-        timestamp: Date.now(),
-        message: 'Preferences loaded<br/>'+resJson,
-        level: 'info'
-      });
+      
       panel.classList.toggle('open');
       panelToggleBtn.classList.toggle('open');
     });
@@ -556,6 +557,8 @@ const handleRichLogEntryDelete = ({ node, getPos, editor }) => {
 
 const editor = new Editor({
   element: document.querySelector('.element'),
+  autofocus: true,
+  editable: true,
   extensions: [
     StarterKit,
     DynamicTextMark,
@@ -593,6 +596,7 @@ const editor = new Editor({
 
 const diagnostics = new Editor({
   element: document.querySelector('.diagnostics'),
+  editable: false,
   extensions: [
     StarterKit,
     //DiagnosticLogEntryNode,
@@ -608,6 +612,10 @@ const diagnostics = new Editor({
 async function showCanonList() {
   try {
     await invoke("list_canon_docs", { limit: 10 });
+    let pluginKey = new PluginKey('inlineActionItem');
+    console.log('Plugin Key:', pluginKey);
+    // const tr = view.state.tr.setMeta(pluginKey, { disabled: true });
+    // view.dispatch(tr);
   } catch (error) {
     console.error('Failed to list canon docs:', error);
     addSimpleLogEntry({

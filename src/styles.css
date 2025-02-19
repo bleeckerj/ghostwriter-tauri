@@ -168,7 +168,7 @@ button {
   overflow-y: auto;  /* changed from scroll to prevent double scrollbars */
   @apply border-[1px] border-gray-400;
   border-radius: 0.25rem;
-  @apply bg-blue-300;
+  @apply bg-slate-50;
   display: flex;  /* Add this */
   flex-direction: column;  /* Add this */
   margin-bottom: 0rem;  /* Add some space at bottom */
@@ -351,7 +351,7 @@ button {
 
 .simple-log-message {
   flex: 1;
-  @apply font-[Haffer];
+  @apply font-[InputMono];
   @apply text-[1.1em];
   line-height: 1;
   @apply pt-1;
@@ -537,27 +537,29 @@ button {
 .inline-action-item {
   /* --- Baseline from Snippet #1 --- */
   position: relative; /* Needed if using absolutely positioned pseudo-elements */
- background-color: rgb(255, 255, 255);
- @apply h-[1em] w-[2em];
+ /*background-color: rgb(255, 255, 255);*/
+@apply text-right;
+@apply font-['InputMono'] font-bold;
+ @apply h-[1em] w-[1em];
  /* color: white; */
-  @apply -translate-y-[-0px];
+  @apply -translate-y-[-4px];
   /* padding: 0px 6px; */
   /* border-radius: 4px; */
   /* font-size: 12px; */
-  @apply rounded-r-full;
+  @apply rounded-md;
   cursor: pointer;
   user-select: none;
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  /* align-items: center;
+  justify-content: center; */
   margin: 0 2px;
-  transition: opacity 0.2s ease-in-out;
-
+  transition: scale 0.2s ease-in-out;
+@apply shadow-sm;
   /* --- Additions from Snippet #2 (selective) --- */
   /* @apply border border-black;              */
   /* @apply shadow-[4px_0px_0px_0px];         */
   /* @apply hover:shadow-none;                */
-  @apply hover:translate-x-[4px];         
+  @apply hover:shadow-none hover:scale-[1.05];         
 
   /* Pseudo-element trick for a border effect on hover */
   @apply before:content-[''] before:absolute before:left-0 before:top-0;

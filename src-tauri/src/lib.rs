@@ -245,9 +245,9 @@ async fn completion_from_context(
     for (i, (doc_id, doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
 
         let msg = format!("<div>
-            <p class='border-l-[4px] border-amber-300 pl-2 pr-8 text-pretty'>{}</p>
-            <p class='mt-1 px-2 py-1 rounded-sm bg-gray-800 w-fit'>{}</p>
-            <span class='font-bold'>{}</span>
+            <div class='border-l-[4px] border-amber-300 pl-2 pr-8 text-pretty leading-tight font-[InputMono]'>{}</div>
+            <div class='mt-2 px-2 py-1 rounded-sm bg-gray-700 w-fit'>{}</div>
+            <span class='mt-2 font-bold'>{}</span>
           </div>", chunk_text, similarity, doc_name);
 
         new_logger.simple_log_message(msg, chunk_id.to_string(), "info".to_string());

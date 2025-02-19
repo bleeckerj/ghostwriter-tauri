@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Viewer</title>
+    <link rel="stylesheet" href="/src/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.0/jsoneditor.min.css" rel="stylesheet">
+    <style>
+        #jsoneditor { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <div class="text-[2em] font-['Haffer']">Ghostwriter JSON Log Viewer</div>
+    <div id="jsoneditor"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.0/jsoneditor.min.js"></script>
+    <script>
+        async function loadJson() {
+            try {
+                const response = await fetch("log.json"); // Fetch from webroot
+                const data = await response.json();
+
+                const container = document.getElementById("jsoneditor");
+                const editor = new JSONEditor(container, { mode: "tree" });
+                editor.set(data);
+            } catch (error) {
+                console.error("Error loading JSON:", error);
+            }
+        }
+
+        loadJson();
+    </script>
+</body>
+</html>

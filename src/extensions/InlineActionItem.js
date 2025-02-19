@@ -30,8 +30,8 @@ export const InlineActionItem = Node.create({
     return ['span', { 
       ...HTMLAttributes,
       'data-type': 'inline-action',
-      class: 'inline-action-item'
-    }, '⇰']
+      class: 'inline-action-item bg-gradient-animated'
+    }, ' ']
   },
 
   // renderHTML({ HTMLAttributes }) {

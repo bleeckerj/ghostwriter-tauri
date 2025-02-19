@@ -2,6 +2,8 @@
 import { Node } from '@tiptap/core'
 import { mergeAttributes } from '@tiptap/core'
 import DOMPurify from 'dompurify';
+import { TextSelection } from 'prosemirror-state';
+import { NodeSelection } from "prosemirror-state";
 
 const SimpleLogEntryNode = Node.create({
   name: 'simpleLogEntry',
@@ -48,8 +50,9 @@ const SimpleLogEntryNode = Node.create({
   },
 
   addNodeView() {
-    return ({ node, getPos }) => {
+    return ({ node, getPos, editor }) => {
       const dom = document.createElement('div')
+      dom.classList.add('selectable-node');
       dom.classList.add('simple-log-entry', `simple-log-level-${node.attrs.level}`)
       
       // Timestamp
@@ -65,8 +68,26 @@ const SimpleLogEntryNode = Node.create({
       dom.appendChild(timestamp)
       dom.appendChild(message)
       
+      dom.addEventListener("click", () => {
+        if (typeof getPos === "function") {
+          const { state, view } = editor;
+          console.log('SimpleLogEntryNode clicked', node);
+
+          // Calculate selection range from start to end of the node
+          const startPos = getPos();
+          const endPos = startPos + node.nodeSize;
+  
+          // Create and dispatch a text selection over the entire node
+          const transaction = state.tr.setSelection(
+            TextSelection.create(state.doc, startPos, endPos - 1)
+          );
+          view.dispatch(transaction);
+        }
+      });
+  
+
       return {
-        dom,
+        dom:dom,
         destroy: () => {
           // Clean up any event listeners if needed
         },
