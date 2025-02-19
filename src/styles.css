@@ -1,4 +1,11 @@
 @import "tailwindcss";
+@plugin "daisyui";
+
+body {
+  overflow-y: hidden;
+  overflow-x: hidden; /* Hide horizontal overflow */
+  overscroll-behavior: none; /* Completely prevents bouncing */
+}
 
 .logo.vanilla:hover {
   filter: drop-shadow(0 0 2em #ffe21c);
@@ -151,6 +158,7 @@ button {
   @apply select-none; /* Prevent text selection while dragging */
   position: relative;
   overflow-x: hidden; /* Hide horizontal overflow */
+  overscroll-behavior: none; /* Completely prevents bouncing */
 }
 
 .scroll-area {
@@ -561,14 +569,15 @@ button {
 .side-panel {
   position: fixed;
   top: 0;
-  right: -300px; /* Start offscreen */
+  right: -400px; /* Start offscreen */
   height: 100vh;
-  width: 300px;
+  width: 400px;
   background-color: white;
   border-left: 1px solid #e5e7eb;
   transition: right 0.3s ease-in-out;
   z-index: 50;
-  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1);
+  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.5);
+
 }
 
 .side-panel.open {
@@ -579,6 +588,9 @@ button {
   height: 100%;
   padding: 1rem;
   overflow-y: auto;
+  overflow-x: hidden; /* Hide horizontal overflow */
+  overscroll-behavior: none; /* Completely prevents bouncing */
+  @apply bg-slate-50;
 }
 
 /* Button transition */

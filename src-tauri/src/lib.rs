@@ -103,10 +103,21 @@ async fn save_api_key(
     Ok(())
 }
 
+/**
+ *  PREFERENCES
+ */
 #[tauri::command]
 async fn get_preferences(state: tauri::State<'_, AppState>) -> Result<Preferences, String> {
     let preferences = state.preferences.lock().await;
     Ok(preferences.clone()) // ✅ Send preferences to frontend
+}
+
+
+#[tauri::command]
+async fn load_preferences(app_handle: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<(Preferences), String> {
+    let preferences = Preferences::load_with_defaults(&state, app_handle.clone());
+    *state.preferences.lock().await = preferences.clone();
+    Ok((preferences))
 }
 
 #[tauri::command]
@@ -123,6 +134,13 @@ async fn update_preferences(
     preferences.final_preamble = final_preamble;
     preferences.prose_style = prose_style;
     
+    preferences.save().map_err(|e| e.to_string()) // ✅ Persist preferences
+}
+
+#[tauri::command]
+async fn reset_preferences(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let mut preferences = state.preferences.lock().await;
+    *preferences = Preferences::default();
     preferences.save().map_err(|e| e.to_string()) // ✅ Persist preferences
 }
 
@@ -752,7 +770,7 @@ async fn search_similarity(
             let b_embedding_generator = EmbeddingGenerator::new(client);
             let path = PathBuf::from("./resources/ghostwriter-selectric/vector_store/");
             
-            println!("Initializing DocumentStore with path: {:?}", path);
+            println!("Initializing Do cumentStore with path: {:?}", path);
             
             let doc_store = DocumentStore::new(path.clone(), std::sync::Arc::new(a_embedding_generator)).expect(&format!(
                 "Failed to initialize document store at path: {:?}",
@@ -772,7 +790,7 @@ async fn search_similarity(
             .on_menu_event(|app, event| menu::handle_menu_event(app, event))
             .setup(|app| {
                 let app_handle = app.handle();
-                
+
                 // ✅ Check the API_KEY_MISSING flag and open API Key entry window if needed
                 check_api_key(&app_handle);
                 
@@ -808,6 +826,9 @@ async fn search_similarity(
                     delete_canon_entry,
                     save_api_key,
                     list_canon_docs,
+                    load_preferences,
+                    update_preferences,
+                    reset_preferences,
                     ])
                     .run(tauri::generate_context!())
                     .expect("error while running tauri application");

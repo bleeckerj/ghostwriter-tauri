@@ -33,31 +33,22 @@ let openLogBtnEl;
 let similaritySearchBtnEl;
 let panel;
 let panelToggleBtn;
-// const macOS = navigator.userAgent.includes('Macintosh')
 
-// async function createMenuWithSubmenu() {
-//   const submenu = await Submenu.new({
-//     text: 'Options',
-//     items: [
-//       {
-//         id: 'option1',
-//         text: 'Option 1',
-//         action: () => { console.log('Option 1 clicked'); }
-//       },
-//       {
-//         id: "option2",
-//         text: "Option 2",
-//         action: () => { console.log("Option 2 clicked"); },
-//       },
-//     ],
-//   });
+let prefsLoadBtn;
+let prefsSaveBtn;
+let prefsResetBtn;
 
-//   const menu = await Menu.new({ items: [submenu] });
+let prefsMainPromptTextArea;
+let prefsResponseLimitTextArea;
+let prefsFinalPreambleTextArea;
+let prefsProseStyleTextArea;
+let prefsSimilarityThreasholdRange;
+let prefsSimilarityThreasholdValue;
+let prefsTemperatureRange;
+let prefsTemperatureValue;
+let prefsSimilarityCountRange;
+let prefsMaxHistoryRange;
 
-//   menu.setAsAppMenu();
-// }
-
-//createMenuWithSubmenu();
 
 async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -119,12 +110,6 @@ async function openDialogForIngestion() {
   }
 );
 console.log("ingestion result ", foo);
-// const results = await invoke("search_similarity", {
-//   query: file,
-//   limit: 4
-// });
-// console.log(results);
-// // Prints file path or URI
 }
 
 async function searchSimilarity() {
@@ -234,23 +219,57 @@ window.addEventListener("DOMContentLoaded", async () => {
   clearDiagnosticsBtnEl = document.querySelector("#clear-diagnostics-btn");
   clearDiagnosticsBtnEl.addEventListener("click", () => {
     diagnostics.commands.clearContent();
-    //const currentWindow = getCurrentWebviewWindow()
-    // currentWindow.setBackgroundColor('#f3f4f6').then(() => {
-    //   console.log('Background color set to #f3f4f6');
-    // });
-    // currentWindow.setFullscreen(true).then(() => {
-    //   console.log('Fullscreen set to true');
-    // });
-    
   });
   panel = document.getElementById('side-panel');
+
+  // PREFERENCES PANEL
+  prefsMainPromptTextArea = document.querySelector("#prefs-main-prompt");
+  prefsMainPromptTextArea.addEventListener("dblclick", () => {
+    prefsMainPromptTextArea.select();
+  });
+  prefsResponseLimitTextArea = document.querySelector("#prefs-response-limit");
+  prefsResponseLimitTextArea.addEventListener("dblclick", () => {
+    prefsResponseLimitTextArea.select();
+  });
+  prefsFinalPreambleTextArea = document.querySelector("#prefs-final-preamble");
+  prefsFinalPreambleTextArea.addEventListener("dblclick", () => {
+    prefsFinalPreambleTextArea.select();
+  });
+  prefsProseStyleTextArea = document.querySelector("#prefs-prose-style");
+  prefsProseStyleTextArea.addEventListener("dblclick", () => {
+    prefsProseStyleTextArea.select();
+  });
+  prefsLoadBtn = document.querySelector("#prefs-load-btn");
+  prefsLoadBtn.addEventListener("click", () => {
+    invoke("load_preferences").then((res) => {
+      console.log('Preferences Loaded:', res);
+
+    });
+  });
+
   panelToggleBtn = document.getElementById('panel-toggle-btn');
+  
   panelToggleBtn.addEventListener('click', () => {
     console.log('Toggling panel');
-    console.log('Panel before:', panel.classList.contains('open'));
-    
-    panel.classList.toggle('open');
-    panelToggleBtn.classList.toggle('open');
+    console.log('Panel before:', panel.classList.contains('open')); 
+    invoke("load_preferences").then((res) => {
+      console.log('Preferences Loaded:', res);
+      prefsMainPromptTextArea.textContent = res.main_prompt;
+      prefsResponseLimitTextArea.textContent = res.response_limit;
+      prefsFinalPreambleTextArea.textContent = res.final_preamble;
+      prefsProseStyleTextArea.textContent = res.prose_style;
+
+      const resJson = JSON.stringify(res, null, 2);
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'Preferences loaded<br/>'+resJson,
+        level: 'info'
+      });
+      panel.classList.toggle('open');
+      panelToggleBtn.classList.toggle('open');
+    });
+
   });
   
   openLogBtnEl = document.querySelector("#open-log-btn");
@@ -278,10 +297,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
   });
   
-  // document.querySelector("#greet-form").addEventListener("submit", (e) => {
-    //   e.preventDefault();
-  //   greet();
-  // });
+
+
+
   // Add Tauri event listener here
   let unlistenSimpleLogMessageFn;
   let unlistenRichLogMessageFn;
@@ -289,6 +307,10 @@ window.addEventListener("DOMContentLoaded", async () => {
   let unlistenProgressIndicatorLoadFn;
   let unlistenOpenFileDialogForIngestFn;
   let unlistenCanonListFn;
+  let unlistenPrefsLoadFn;
+  let unlistenPrefsSaveFn;
+  let unlistenPrefsResetFn;
+
   try {
     unlistenSimpleLogMessageFn = await listen('simple-log-message', (event) => {
       console.log('Received event:', event);
@@ -415,6 +437,10 @@ window.addEventListener("DOMContentLoaded", async () => {
     console.error('Failed to setup event listener:', error);
   }
   
+  invoke("load_preferences").then((res) => {
+    console.log('Preferences Loaded:', res);
+  });
+
   invoke("simple_log_message", { message: 'Ghostwriter Up.', id: "tracker", level: "info" }).then((res) => {
     console.log('simple_log_emissions', res);
   });
@@ -553,7 +579,7 @@ function addSimpleLogEntry(entry) {
     type: 'simpleLogEntry',
     attrs: {
       id: entry.id,
-      timestamp: entry.timestamp,
+      timestamp: formatTimestamp(entry.timestamp),
       message: entry.message,
       level: entry.level,
     }
@@ -563,6 +589,15 @@ function addSimpleLogEntry(entry) {
   setTimeout(() => {
     diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, 0);
+}
+
+function formatTimestamp(timestamp) {
+  const date = new Date(timestamp); // Ensure timestamp is a Date object
+
+  const formatted = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}-${String(date.getFullYear()).slice(-2)} ` +
+                    `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}:${String(date.getMilliseconds()).padStart(3, '0')}`;
+
+  return formatted;
 }
 
 function addProgressIndicatorNode(entry) {

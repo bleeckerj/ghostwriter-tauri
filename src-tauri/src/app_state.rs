@@ -44,11 +44,6 @@ impl AppState {
             api_key: Mutex::new(None),
             preferences: Mutex::new(Preferences::default()), // Start with default preferences
         };
-
-        // Then load preferences with access to app_state
-        let preferences = Preferences::load_with_defaults(&app_state);
-        *app_state.preferences.blocking_lock() = preferences;
-
         Ok(app_state)
     }
 

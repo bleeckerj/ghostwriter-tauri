@@ -3,6 +3,7 @@ use confy;
 use tauri::App;
 
 use crate::app_state::AppState;
+use tauri::AppHandle;
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct Preferences {
@@ -16,6 +17,8 @@ pub struct Preferences {
     pub shuffle_similars: bool,
     pub similarity_count: u32,
     pub max_history: u32,
+    #[serde(skip)]
+    pub app_handle: Option<AppHandle>,
 }
 
 // ✅ Define constant defaults
@@ -36,7 +39,7 @@ impl Preferences {
     pub const DEFAULT_PROSE_STYLE: &'static str = "A style that is consistent with the input text.";
 
     /// Load preferences and ensure no empty fields
-    pub fn load_with_defaults(app_state: &AppState) -> Self {
+    pub fn load_with_defaults(app_state: &AppState, app_handle: AppHandle) -> Self {
         let mut prefs: Preferences = match confy::load("ghostwriter", "preferences") {
             Ok(loaded_prefs) => {
                 println!("Loaded preferences: {:?}", loaded_prefs);
@@ -54,6 +57,10 @@ impl Preferences {
     /// Save preferences to file
     pub fn save(&self) -> Result<(), confy::ConfyError> {
         confy::store("ghostwriter", "preferences", self)
+    }
+
+    pub fn set_app_handle(&mut self, app_handle: AppHandle) {
+        self.app_handle = Some(app_handle);
     }
 
     /// Apply default values only if fields are empty

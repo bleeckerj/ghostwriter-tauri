@@ -331,3 +331,38 @@
     font-style: italic;
   }
   
+  @font-face {
+    font-family: 'NYTCheltenham';
+    src: url('/src/fonts/nyt-cheltenham/nyt-cheltenham-bold.woff2') format('woff2');
+    font-weight: bold;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'NYTCheltenham';
+    src: url('/src/fonts/nyt-cheltenham/nyt-cheltenham-italics.woff2') format('woff2');
+    font-weight: normal;
+    font-style: italic;
+  }
+  
+  @font-face {
+    font-family: 'NYTCheltenham';
+    src: url('/src/fonts/nyt-cheltenham/nyt-cheltenham-medium-italics.woff2') format('woff2');
+    font-weight: 500; /* Medium */
+    font-style: italic;
+  }
+  
+  @font-face {
+    font-family: 'NYTCheltenham';
+    src: url('/src/fonts/nyt-cheltenham/nyt-cheltenham-medium.woff2') format('woff2');
+    font-weight: 500; /* Medium */
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'NYTCheltenham';
+    src: url('/src/fonts/nyt-cheltenham/nyt-cheltenham-normal.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+  }
+  
