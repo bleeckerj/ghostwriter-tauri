@@ -12,11 +12,11 @@ pub struct Preferences {
     pub final_preamble: String,
     pub prose_style: String,
     pub similarity_threshold: f32,
-    pub max_tokens: u32,
+    pub max_tokens: usize,
     pub temperature: f32,
     pub shuffle_similars: bool,
-    pub similarity_count: u32,
-    pub max_history: u32,
+    pub similarity_count: usize,
+    pub max_history: usize,
     #[serde(skip)]
     pub app_handle: Option<AppHandle>,
 }
@@ -24,11 +24,11 @@ pub struct Preferences {
 // ✅ Define constant defaults
 impl Preferences {
     pub const SIMILARITY_THRESHOLD_DEFAULT: f32 = 0.83;
-    pub const MAX_TOKENS_DEFAULT: u32 = 50;
+    pub const MAX_TOKENS_DEFAULT: usize = 100;
     pub const TEMPERATURE_DEFAULT: f32 = 0.7;
-    pub const SHUFFLE_SIMILARS_DEFAULT: bool = true;
-    pub const SIMILARITY_COUNT_DEFAULT: u32 = 3;
-    pub const MAX_HISTORY_DEFAULT: u32 = 3;
+    pub const SHUFFLE_SIMILARS_DEFAULT: bool = false;
+    pub const SIMILARITY_COUNT_DEFAULT: usize = 3;
+    pub const MAX_HISTORY_DEFAULT: usize = 300;
 
     pub const DEFAULT_RESPONSE_LIMIT: &'static str = "Respond with no more than one sentence. If the input text ends with a period, only add one sentence and no more. You may complete a partially complete sentence or if the input text is already a complete sentence, you may add only one sentence that would reasonably and semantically follow that one sentence. Adhere to these constraints such that you are adding no more than one sentence.";
     
@@ -110,5 +110,6 @@ impl Preferences {
         if self.max_history == 0 {
             self.max_history = Self::MAX_HISTORY_DEFAULT;
         }
+        self.shuffle_similars = Self::SHUFFLE_SIMILARS_DEFAULT;
     }
 }

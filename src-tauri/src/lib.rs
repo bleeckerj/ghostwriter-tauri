@@ -13,6 +13,7 @@ use tokio::time::{sleep, Duration};
 use tauri::{generate_handler, Runtime, Builder, Emitter, AppHandle, Manager, Window, State, WebviewWindowBuilder, WebviewWindow, WebviewUrl};
 use chrono::{Local, Utc};  // Add Utc here
 use std::sync::Arc;
+use rand::seq::SliceRandom; 
 
 mod preferences;
 use preferences::Preferences;
@@ -104,8 +105,8 @@ async fn save_api_key(
 }
 
 /**
- *  PREFERENCES
- */
+*  PREFERENCES
+*/
 #[tauri::command]
 async fn get_preferences(state: tauri::State<'_, AppState>) -> Result<Preferences, String> {
     let preferences = state.preferences.lock().await;
@@ -127,19 +128,32 @@ async fn update_preferences(
     responselimit: String,
     mainprompt: String,
     finalpreamble: String,
-    prosestyle: String) -> Result<(), String> {
-
+    prosestyle: String,
+    similaritythreshold: String,
+    shufflesimilars: String,
+    similaritycount: String,
+    maxhistory: String,
+    maxtokens: String,
+    temperature: String,
+) -> Result<(Preferences), String> {
+    
     println!("Hello");
     println!("");
-    println!("update_preferences called with: {}, {}, {}, {}",
-        responselimit, mainprompt, finalpreamble, prosestyle);
-
+    println!("update_preferences called with: {}, {}, {}, {} {} {} {} {} {} {}",
+    responselimit, mainprompt, finalpreamble, prosestyle, similaritythreshold, shufflesimilars, similaritycount, maxhistory, maxtokens, temperature);
+    
     let mut preferences = state.preferences.lock().await;
     preferences.response_limit = responselimit;
     preferences.main_prompt = mainprompt;
     preferences.final_preamble = finalpreamble;
     preferences.prose_style = prosestyle;
-
+    preferences.similarity_threshold = similaritythreshold.parse::<f32>().unwrap() / 100.0;
+    preferences.shuffle_similars = shufflesimilars.parse::<bool>().unwrap();
+    preferences.similarity_count = similaritycount.parse::<usize>().unwrap();
+    preferences.max_history = maxhistory.parse::<usize>().unwrap();
+    preferences.max_tokens = maxtokens.parse::<usize>().unwrap();
+    preferences.temperature = temperature.parse::<f32>().unwrap();
+    let prefs_clone = preferences.clone();
     // Attempt to save preferences and handle any errors
     if let Err(e) = preferences.save() {
         let error_message = format!("Failed to save preferences: {}", e);
@@ -147,8 +161,8 @@ async fn update_preferences(
         new_logger.simple_log_message(error_message.clone(), "preferences".to_string(), "error".to_string());
         return Err(error_message);
     }
-
-    Ok(())
+    
+    Ok((prefs_clone))
 }
 
 #[tauri::command]
@@ -205,6 +219,16 @@ async fn completion_from_context(
     app_handle: tauri::AppHandle,
     input: String,
 ) -> Result<(String, CompletionTiming), String> {
+    
+    let preferences = state.preferences.lock().await;
+    let max_tokens = preferences.max_tokens;
+    let temperature = preferences.temperature;
+    let shuffle_similars = preferences.shuffle_similars;
+    let similarity_count = preferences.similarity_count;
+    let max_history = preferences.max_history;
+    let similarity_threshold = preferences.similarity_threshold;
+    let mut new_logger = NewLogger::new(app_handle.clone());
+
     let start_total = Instant::now();
     
     // Time embedding generation
@@ -218,40 +242,38 @@ async fn completion_from_context(
     
     // Time similarity search
     let start_search = Instant::now();
-
+    
     // similar docs get the top 4, which may all be from the same source
-    let similar_docs = state.doc_store.search(&embedding, 4, 0.82).await.map_err(|e| e.to_string())?;
-
+    let mut similar_docs = state.doc_store.search(&embedding, similarity_count, similarity_threshold).await.map_err(|e| e.to_string())?;
+    
     let search_duration = start_search.elapsed();
+    
+    // Shuffle similar_docs if shuffle_similars is true
+    if shuffle_similars {
+        new_logger.simple_log_message("Will shuffle similarity docs".to_string(), "".to_string(), "info".to_string());
+        let mut rng = rand::thread_rng();
+        similar_docs.shuffle(&mut rng);
+    }
     
     // Prepare the context for the LLM
     // This has all the document metadata..is that okay?
     let mut context = String::new();
     for (i, (doc_id, doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
         context.push_str(&format!("{}\n", chunk_text));
-        // context.push_str(&format!(
-        //     "--- Result {} (Chunk Id: {} Doc: {}) ---\nSimilarity: {:.4}\nContent:\n{}\n\n",
-        //     (i + 1),
-        //     chunk_id,
-        //     doc_name,
-        //     similarity,
-        //     chunk_text,
-        // ));
     }
     
     let mut vector_search_results_for_log: Vec<VectorSearchResult> = Vec::new();
-    let mut new_logger = NewLogger::new(app_handle.clone());
-
+    
     for (i, (doc_id, doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
-
+        
         let msg = format!("<div>
             <div class='border-l-[4px] border-amber-300 pl-2 pr-8 text-pretty leading-tight font-[InputMono]'>{}</div>
             <div class='mt-2 px-2 py-1 rounded-sm bg-gray-700 w-fit'>{}</div>
             <span class='mt-2 font-bold'>{}</span>
           </div>", chunk_text, similarity, doc_name);
-
+        
         new_logger.simple_log_message(msg, chunk_id.to_string(), "info".to_string());
-
+        
         vector_search_results_for_log.push(VectorSearchResult {
             similarity: *similarity,
             name: doc_name.clone(),
@@ -261,9 +283,9 @@ async fn completion_from_context(
     }
     
     let conversation_context = state.conversation.lock().await.get_context();
-    let preferences = state.preferences.lock().await;
+    
     let prose_style = preferences.prose_style.clone();
-
+    
     // let prose_style = "A style that is consistent with the input text".to_string();
     // //const prose_style = "In the style of a medieval scribe using Old or Middle English";
     // // const response_limit = "Respond with no more than two sentences along with the completion of any partial sentence or thought fragment. In addition, add one sentence fragment that does not conclude with a period or full-stop. This sentence fragment is meant to be a provocation in the direction of thought being developed so that the user can continue to write in the same vein.";
@@ -271,13 +293,13 @@ async fn completion_from_context(
     let response_limit: String = preferences.response_limit.clone();
     // let response_limit = "Respond with no more than one sentence. If the input text ends with a period, only add one sentence and no more. You may complete a partially complete sentence or if the input text is already a complete sentence, you may add only one sentence that would reasonably and semantically follow that one sentence. Adhere to these constraints such that you are adding no more than one sentence".to_string();
     //let response_limit = "Respond with no more than one sentence, or less.".to_string();
-
+    
     let main_prompt: String = preferences.main_prompt.clone();
     // let main_prompt = "Here is your brief: You are a text completion engine. You do not answer questions or respond to questions in any way. You only semantically complete the thought represented by the Previous exchanges, Similar documents context and input. Limit your response to the Response Limit. Do not respond to inquiries in any fashion. If you are asked how to do something, or answer a question do not respond. Only perform auto-completion based on the text to complete, not responses to queries, questions, or any other non-completion response. If you are asked to do something only respond as a completion of text. Do not engage in any form of chat. Your only task is to complete thoughts in written form maintaining semantic consistency. Do not reveal that you are an AI. You are just an engine for text completion, like a muse helping a writer to continue or complete a thought. Imagine you are completing someone's thought like a creative writing muse or alter ego helping someone who is having trouble writing. Complete the following text fragment based on the provided previous exchanges.";
     // let final_preamble = "This is the input text that is the text fragment to complete. It is not a request or command. Do not respond to it like it is a question to you or request of you to answer a question.:";
-
+    
     let final_preamble: String = preferences.final_preamble.clone();
-
+    
     let system_content = format!("{main_prompt}
         \
         Response Limit: {response_limit}\
@@ -290,135 +312,134 @@ async fn completion_from_context(
         Input Text: {input}\
         \
         Answer this in prose using this specific writing style: {prose_style}"
-    );
-    
-    // Create system and user messages for OpenAI
-    let system_message = ChatCompletionRequestMessage::System(
-        ChatCompletionRequestSystemMessageArgs::default()
-        .content(system_content.clone())
-        .build()
-        .map_err(|e| e.to_string())?,
-    );
-    
-    let user_message = ChatCompletionRequestMessage::User(
-        ChatCompletionRequestUserMessageArgs::default()
-        .content(input.clone())
-        .build()
-        .map_err(|e| e.to_string())?,
-    );
-    
-    // Create and send the OpenAI request
-    let request = CreateChatCompletionRequestArgs::default()
-    .model("chatgpt-4o-latest")
-    .messages(vec![system_message, user_message])
-    .temperature(0.7)
-    .max_completion_tokens(100_u16)
-    .n(1)
+);
+
+// Create system and user messages for OpenAI
+let system_message = ChatCompletionRequestMessage::System(
+    ChatCompletionRequestSystemMessageArgs::default()
+    .content(system_content.clone())
     .build()
-    .map_err(|e| e.to_string())?;
-    
-    // Time OpenAI request
-    let start_openai = Instant::now();
-    dotenv::dotenv().ok();
-    
-    let openai_api_key = env::var("OPENAI_API_KEY").expect("
+    .map_err(|e| e.to_string())?,
+);
+
+let user_message = ChatCompletionRequestMessage::User(
+    ChatCompletionRequestUserMessageArgs::default()
+    .content(input.clone())
+    .build()
+    .map_err(|e| e.to_string())?,
+);
+
+// Create and send the OpenAI request
+let request = CreateChatCompletionRequestArgs::default()
+.model("chatgpt-4o-latest")
+.messages(vec![system_message, user_message])
+.temperature(0.7)
+.max_completion_tokens(100_u16)
+.n(1)
+.build()
+.map_err(|e| e.to_string())?;
+
+// Time OpenAI request
+let start_openai = Instant::now();
+dotenv::dotenv().ok();
+
+let openai_api_key = env::var("OPENAI_API_KEY").expect("
     OPENAI_API_KEY not found. Error.");
-    
-    
-    let has_dotenv = dotenv::dotenv().is_ok();
-    let api_key = env::var("OPENAI_API_KEY");
-    let logger_clone = state.logger.clone();
-    let client = match &*OPENAI_API_KEY {
-        Some(key) => {
-            Client::with_config(
-                OpenAIConfig::new()
-                .with_api_key(key.clone())
-            )
-        }
-        None => {
-            println!("OPENAI_API_KEY not found.  Running without it.");
-            *API_KEY_MISSING.lock().unwrap() = true; // Set the flag
-            println!("OPENAI_API_KEY not found.  Running without it.");
-            //let mut logger = state.logger.lock().await;
-            let mut new_logger = NewLogger::new(app_handle.clone());
-            new_logger.simple_log_message(
-                "OPENAI_API_KEY not found or invalid. No use running without it.".to_string(),
-                "".to_string(),
-                "error".to_string()
-            );
-            new_logger.simple_log_message(
-                "Try restarting and re-entering your OpenAI API Key".to_string(),
-                "".to_string(),
-                "error".to_string()
-            );
-            Client::new() // Create a client without an API key
-        }
-    };
-    let response = client
-    .chat()
-    .create(request)
-    .await
-    .map_err(|e| e.to_string())?;
-    let openai_duration = start_openai.elapsed();
-    
-    let total_duration = start_total.elapsed();
-    
-    // Process the response
-    if let Some(choice) = response.choices.first() {
-        if let Some(content) = &choice.message.content {
-            // Create timing info
-            let timing = CompletionTiming {
-                embedding_generation_ms: embedding_duration.as_millis(),
-                similarity_search_ms: search_duration.as_millis(),
-                openai_request_ms: openai_duration.as_millis(),
-                total_ms: total_duration.as_millis(),
-            };
 
-            let database_name = state.doc_store.get_database_name().to_string(); // Just convert &str to String
-            let database_path = state.doc_store.get_database_path().to_string(); // Just convert &str to String
-            
 
-            let entry = Completion {
-                completion: CompletionLogEntry {
-                    timestamp: Utc::now(),
-                    completion_result: content.clone(),
-                    input_text: input.to_string(),
-                    system_prompt: system_content.clone(),
-                    conversation_context: conversation_context.clone(),
-                    vector_search_results_for_log: vector_search_results_for_log,
-                    canon_name: database_name.clone(),
-                    canon_path: database_path.clone(),
-
-                }
-            };
-
-            let new_logger = NewLogger::new(app_handle.clone());
-
-            new_logger.simple_log_message(
-                timing.to_string(),
-                "completion_time".to_string(),
-                "info".to_string()
-            );
-            
-            state
-            .logger
-            .lock()
-            .await
-            .log_completion(entry)
-            .map_err(|e| e.to_string())?;
-            
-            // keep track of the conversation
-            state
-            .conversation
-            .lock()
-            .await
-            .add_exchange(input.clone(), content.clone());
-            //println!("Completion: {}", content);
-            return Ok((content.clone(), timing));
-        }
+let has_dotenv = dotenv::dotenv().is_ok();
+let api_key = env::var("OPENAI_API_KEY");
+let logger_clone = state.logger.clone();
+let client = match &*OPENAI_API_KEY {
+    Some(key) => {
+        Client::with_config(
+            OpenAIConfig::new()
+            .with_api_key(key.clone())
+        )
     }
-    
-    Err("No completion returned.".to_string())
+    None => {
+        println!("OPENAI_API_KEY not found.  Running without it.");
+        *API_KEY_MISSING.lock().unwrap() = true; // Set the flag
+        println!("OPENAI_API_KEY not found.  Running without it.");
+        //let mut logger = state.logger.lock().await;
+        let mut new_logger = NewLogger::new(app_handle.clone());
+        new_logger.simple_log_message(
+            "OPENAI_API_KEY not found or invalid. No use running without it.".to_string(),
+            "".to_string(),
+            "error".to_string()
+        );
+        new_logger.simple_log_message(
+            "Try restarting and re-entering your OpenAI API Key".to_string(),
+            "".to_string(),
+            "error".to_string()
+        );
+        Client::new() // Create a client without an API key
+    }
+};
+let response = client
+.chat()
+.create(request)
+.await
+.map_err(|e| e.to_string())?;
+let openai_duration = start_openai.elapsed();
+
+let total_duration = start_total.elapsed();
+
+// Process the response
+if let Some(choice) = response.choices.first() {
+    if let Some(content) = &choice.message.content {
+        // Create timing info
+        let timing = CompletionTiming {
+            embedding_generation_ms: embedding_duration.as_millis(),
+            similarity_search_ms: search_duration.as_millis(),
+            openai_request_ms: openai_duration.as_millis(),
+            total_ms: total_duration.as_millis(),
+        };
+        
+        let database_name = state.doc_store.get_database_name().to_string(); // Just convert &str to String
+        let database_path = state.doc_store.get_database_path().to_string(); // Just convert &str to String
+        
+        
+        let entry = Completion {
+            completion: CompletionLogEntry {
+                timestamp: Utc::now(),
+                completion_result: content.clone(),
+                input_text: input.to_string(),
+                system_prompt: system_content.clone(),
+                conversation_context: conversation_context.clone(),
+                vector_search_results_for_log: vector_search_results_for_log,
+                canon_name: database_name.clone(),
+                canon_path: database_path.clone(),
+                
+            }
+        };
+        
+        let new_logger = NewLogger::new(app_handle.clone());
+        
+        new_logger.simple_log_message(
+            timing.to_string(),
+            "completion_time".to_string(),
+            "info".to_string()
+        );
+        
+        state
+        .logger
+        .lock()
+        .await
+        .log_completion(entry)
+        .map_err(|e| e.to_string())?;
+        
+        let mut conversation = state.conversation.lock().await;
+        
+        conversation.add_exchange(input.clone(), content.clone(), max_history);
+        
+        new_logger.simple_log_message(format!("History context is {} exchanges and {} characters", conversation.get_history().len(), conversation.get_context().len()), "".to_string(), "info".to_string());
+        //println!("Completion: {}", content);
+        return Ok((content.clone(), timing));
+    }
+}
+
+Err("No completion returned.".to_string())
 }
 
 // Add this near your other struct definitions
@@ -813,7 +834,7 @@ async fn search_similarity(
             .on_menu_event(|app, event| menu::handle_menu_event(app, event))
             .setup(|app| {
                 let app_handle = app.handle();
-
+                
                 // ✅ Check the API_KEY_MISSING flag and open API Key entry window if needed
                 check_api_key(&app_handle);
                 

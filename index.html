@@ -11,83 +11,172 @@
 
 <body>
   <main class="container">
-  <!-- <p class="bg-amber-300 rounded-2xl p-4 mx-auto w-11/12 text-center font-['Haffer'] font-extrabold text-[1.5em]">Welcome to Ghostwriter</p> -->
-  
-  <!-- <div class="row pb-2 m-8" id="buttons"> -->
-    <!-- <input id="greet-input" class="bg-blue-700 mr-[5em] p-2 rounded-sm border-[0.5px] border-black" placeholder="Write Something..." /> -->
-     <!-- <div class="mb-8 relative"> -->
-  
-  <div class="absolute right-4 top-3 z-10 flex items-center transparent rounded-full shadow-sm shadow-black">
-    <img class="h-[2em]" src="/src/images/icons/LaboratoryCircle_Guy_01_CircleTeal.webp" />
-  </div>
-<!-- </div> -->
-  <div class="scroll-area">
-    <div class="editor-content h-full">
-      <div class="element"></div>
-    </div>
-  </div>
-
-  <!-- Add the resize handle -->
-  <div class="resize-handle" title="Drag to resize"></div>
-
-  <div class="diagnostics-scroll-area bg-transparent">
-
-
-    <div id="action-buttons" class="diagnostics-btn-area bg-gray-200 border-[0.5px] text-[0.8em] w-full rounded-sm pl-4">
-      <span id="clear-diagnostics-btn" class="diagnostics-area-button enabled">CLEAR</span>
-      <span id="list-canon-btn" class="diagnostics-area-button enabled">LIST</span>
-      <span id="ingest-btn" class="diagnostics-area-button enabled">INGST</span>
-      <span id="incant-btn" class="diagnostics-area-button enabled">INCNT</span>
-      <span id="panel-toggle-btn" class="diagnostics-area-button enabled">PREFS</span>
-      <span id="similarity-search-btn" class="diagnostics-area-button enabled">SSRCH</span>
-      <span id="open-log-btn" class="diagnostics-area-button enabled">LOGJ</span>
-    </div>
-    <div id="diagnostics-editor" class="diagnostics-content bg-blue-700 h-full bg-2 rounded-sm">
-      <div class="diagnostics bg-blue-700 rounded-sm mb-2"></div>
-    </div>
-    <p id="greet-msg" class="mt-2 greet-msg bg-gray-200 border-[0.5px] text-[0.8em] w-full mb-1 rounded-sm pl-4">
-      <span>Hello.</span>
-    </p>
-  </div>
-    <!-- Add the side panel -->
-  <div id="side-panel" class="side-panel w-11/12">
-    <h2 class="text-[0.8em] font-['ESKlarheitKurrentMono'] mb-1 w-full mx-auto text-center">Incantation Preferences & Parameters</h2>
-    <div class="fixed-buttons">
-      <div class="grid grid-cols-4 gap-1 w-3/4 mb-0 mx-auto">
-        <div id="prefs-load-btn" class="diagnostics-area-button enabled">LOAD</div>
-        <div id="prefs-save-btn" class="diagnostics-area-button enabled">SAVE</div>
-        <div id="prefs-reset-btn" class="diagnostics-area-button enabled">RSET</div>
-        <div id="prefs-close-btn" class="diagnostics-area-button enabled">CLOSE</div>
+    <!-- <p class="bg-amber-300 rounded-2xl p-4 mx-auto w-11/12 text-center font-['Haffer'] font-extrabold text-[1.5em]">Welcome to Ghostwriter</p> -->
+    
+    <!-- <div class="row pb-2 m-8" id="buttons"> -->
+      <!-- <input id="greet-input" class="bg-blue-700 mr-[5em] p-2 rounded-sm border-[0.5px] border-black" placeholder="Write Something..." /> -->
+      <!-- <div class="mb-8 relative"> -->
+        
+        <div class="absolute right-4 top-3 z-10 flex items-center transparent rounded-full shadow-sm shadow-black">
+          <img class="h-[2em]" src="/src/images/icons/LaboratoryCircle_Guy_01_CircleTeal.webp" />
+        </div>
+        
+      <!-- </div> -->
+      <div class="scroll-area">
+        <div class="editor-content h-full">
+          <div class="element"></div>
+        </div>
       </div>
-    </div>
-      <div class="side-panel-content mx-auto ml-2 w-11/12">
-        <label class="form-control">
-          <div class="label">
-            <span class="label-text text-sm font-['Haffer'] ml-1">Main Prompt</span>
-          </div>
-        <textarea id="prefs-main-prompt" type="text" placeholder="Main Prompt" class="text-pretty w-full h-[200px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
-        </label>
-        <label class="form-control">
-          <div class="label">
-            <span class="label-text text-sm font-['Haffer'] ml-1">Response Limit</span>
-          </div>
-        <textarea id="prefs-response-limit" type="text" placeholder="Response Limit" class="text-pretty w-full h-[100px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
-        </label>
-        <label class="form-control">
-          <div class="label">
-            <span class="label-text text-sm font-['Haffer'] ml-1">Final Preamble</span>
-          </div>
-        <textarea id="prefs-final-preamble" type="text" placeholder="Final Preamble" class="text-pretty w-full h-[100px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
-        </label>
-        <label class="form-control">
-          <div class="label">
-            <span class="label-text text-sm font-['Haffer'] ml-1">Prose Style</span>
-          </div>
-        <textarea id="prefs-prose-style" type="text" placeholder="Prose Style" class="text-pretty w-full h-[24px] text-xs font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
-        </label>
+      
+      <!-- Add the resize handle -->
+      <div class="resize-handle" title="Drag to resize"></div>
+      
+      <div class="diagnostics-scroll-area bg-transparent">
+        
+        
+        <div id="action-buttons" class="diagnostics-btn-area bg-gray-200 border-[0.5px] text-[0.8em] w-full rounded-sm pl-4">
+          <span id="clear-diagnostics-btn" class="diagnostics-area-button enabled">CLEAR</span>
+          <span id="list-canon-btn" class="diagnostics-area-button enabled">LIST</span>
+          <span id="ingest-btn" class="diagnostics-area-button enabled">INGST</span>
+          <span id="incant-btn" class="diagnostics-area-button enabled">INCNT</span>
+          <span id="panel-toggle-btn" class="diagnostics-area-button enabled">PREFS</span>
+          <span id="similarity-search-btn" class="diagnostics-area-button enabled">SSRCH</span>
+          <span id="open-log-btn" class="diagnostics-area-button enabled">LOGJ</span>
+        </div>
+        <div id="diagnostics-editor" class="diagnostics-content bg-blue-700 h-full bg-2 rounded-sm">
+          <div class="diagnostics bg-blue-700 rounded-sm mb-2"></div>
+        </div>
+        <p id="greet-msg" class="mt-2 greet-msg bg-gray-200 border-[0.5px] text-[0.8em] w-full mb-1 rounded-sm pl-4">
+          <span>Hello.</span>
+        </p>
       </div>
-    </div>
-  </main>
-  
-</body>
-</html>
+      <!-- Add the side panel -->
+      <div id="side-panel" class="side-panel w-11/12">
+        <h2 class="text-[0.8em] font-['ESKlarheitKurrentMono'] mb-1 w-full mx-auto text-center">Incantation Preferences & Parameters</h2>
+        <div class="fixed-buttons">
+          <div class="grid grid-cols-4 gap-1 w-3/4 mb-0 mx-auto">
+            <div id="prefs-load-btn" class="diagnostics-area-button enabled">LOAD</div>
+            <div id="prefs-save-btn" class="diagnostics-area-button enabled">SAVE</div>
+            <div id="prefs-reset-btn" class="diagnostics-area-button enabled">RSET</div>
+            <div id="prefs-close-btn" class="diagnostics-area-button enabled">CLOSE</div>
+          </div>
+        </div>
+        <div class="side-panel-content mx-auto ml-3 mb-20 w-11/12">
+          <label class="form-control">
+            <div class="label">
+              <span class="label-text text-sm font-['Haffer'] ml-1">Main Prompt</span>
+            </div>
+            <textarea id="prefs-main-prompt" type="text" placeholder="Main Prompt" class="text-pretty w-full h-[200px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
+          </label>
+          <label class="form-control">
+            <div class="label">
+              <span class="label-text text-sm font-['Haffer'] ml-1">Response Limit</span>
+            </div>
+            <textarea id="prefs-response-limit" type="text" placeholder="Response Limit" class="text-pretty w-full h-[100px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
+          </label>
+          <label class="form-control">
+            <div class="label">
+              <span class="label-text text-sm font-['Haffer'] ml-1">Final Preamble</span>
+            </div>
+            <textarea id="prefs-final-preamble" type="text" placeholder="Final Preamble" class="text-pretty w-full h-[100px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
+          </label>
+          <label class="form-control">
+            <div class="label">
+              <span class="label-text text-sm font-['Haffer'] ml-1">Prose Style</span>
+            </div>
+            <textarea id="prefs-prose-style" type="text" placeholder="Prose Style" class="text-pretty w-full h-[24px] text-xs font-['ESKlarheitKurrentMono'] textarea textarea-primary overscroll-none"></textarea>
+          </label>
+          
+          <!-- Daisy toggle doesn't work maybe beta issues? So this is my own -->
+          <div class="my-4">
+            <label class="form-control toggle-switch">
+              <div class="label">
+                <span class="label-text text-sm font-['Haffer'] ml-1">RAG Shuffle?</span>
+              </div>
+              <input id="prefs-shuffle-similars" type="checkbox" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          
+          <label class="form-control my-4 block">
+            <div class="label">
+              <span class="label-text text-sm font-['Haffer'] ml-1">Similarity Threshold</span>
+            </div>
+            <div class="grid grid-cols-12 gap-2">
+              <div class="col-span-9">
+                <input id="prefs-similarity-treashold" type="range" min="50" max="100" value="82" class="range" step="1" />
+              </div>
+              <div class="col-span-3">
+                <span id="prefs-similarity-treashold-value" class="ghost-text">.82</span>
+              </div>
+            </div> 
+          </label>
+          
+          
+          
+          <label class="form-control my-4 block">
+            <div class="label">
+              <span class="label-text text-sm font-['Haffer'] ml-1">Similarity Count (RAG Results To Use)</span>
+            </div>
+            
+            <div class="grid grid-cols-12 gap-2">
+              <div class="col-span-9">
+                <input id="prefs-similarity-count" type="range" min="0" max="10" value="3" class="range mb-3" step="1" />
+              </div>
+              <div class="col-span-3">
+                <span id="prefs-similarity-count-value" class="ghost-text">3</span>
+              </div>
+            </div>
+          </label>
+          
+          <label class="form-control my-4 block">
+            <div class="label">
+              <span class="label-text text-sm font-['Haffer'] ml-1">Temperature</span>
+            </div>
+            
+            <div class="grid grid-cols-12 gap-2">
+              <div class="col-span-9">
+                <input id="prefs-temperature" type="range" min="0" max="10" value="7" class="range mb-3" step="1" />
+              </div>
+              <div class="col-span-3">
+                <span id="prefs-temperature-value" class="ghost-text">0.7</span>
+              </div>
+            </div>
+          </label>
+          
+          <!-- MAX OUTPUT TOKENS-->
+          <label class="form-control my-4 block">
+            <div class="label">
+              <span class="label-text text-sm font-['Haffer'] ml-1">Max Output Tokens</span>
+            </div>
+            <div class="grid grid-cols-12 gap-2">
+              <div class="col-span-9">
+                <input id="prefs-max-output-tokens" type="range" min="50" max="800" value="100" class="range mb-3" step="25" />
+              </div>
+              <div class="col-span-3">
+                <span id="prefs-max-output-tokens-value" class="ghost-text">100</span>
+              </div>
+            </div>
+          </label>
+          
+          <!-- MAX HISTORY ITEMS -->
+          <label class="form-control my-4 block">
+            <div class="label">
+              <span class="label-text text-sm font-['Haffer'] ml-1">Max History Items</span>
+            </div>
+            <div class="grid grid-cols-12 gap-2">
+              <div class="col-span-9">
+                <input id="prefs-max-history-items" type="range" min="0" max="500" value="300" class="range mb-3" step="50" />
+              </div>
+              <div class="col-span-3">
+                <span id="prefs-max-history-items-value" class="ghost-text">300</span>
+              </div>
+            </div>
+          </label>
+          
+        </div>
+      </div>
+    </main>
+    
+  </body>
+  </html>

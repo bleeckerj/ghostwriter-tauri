@@ -38,16 +38,25 @@ let prefsLoadBtn;
 let prefsSaveBtn;
 let prefsResetBtn;
 
+
+
 let prefsMainPromptTextArea;
 let prefsResponseLimitTextArea;
 let prefsFinalPreambleTextArea;
 let prefsProseStyleTextArea;
-let prefsSimilarityThreasholdRange;
-let prefsSimilarityThreasholdValue;
-let prefsTemperatureRange;
+let prefsSimilarityThreshold;
+let prefsSimilarityThresholdValue;
+let prefsTemperature;
 let prefsTemperatureValue;
-let prefsSimilarityCountRange;
-let prefsMaxHistoryRange;
+let prefsSimilarityCount;
+let prefsSimilarityCountValue;
+
+let prefsMaxHistoryItems;
+let prefsMaxHistoryItemsValue;  
+
+let prefsMaxOutputTokens;
+let prefsMaxOutputTokensValue;
+let prefsShuffleSimilars;
 let closePreferencesBtnEl;
 
 async function greet() {
@@ -149,22 +158,6 @@ async function completionFromContext() {
   .then(([content, timing]) => {
     clearInterval(loadingInterval);
     greetMsgEl.textContent = 'Complete';
-    // // addSimpleLogEntry({
-    // //   id: Date.now(),
-    // //   timestamp: Date.now(),
-    // //   message: `Completion timing: 
-    // //     Embedding: ${timing.embedding_generation_ms}ms, 
-    // //     Similarity: ${timing.similarity_search_ms}ms, 
-    // //     Emanation: ${timing.openai_request_ms}ms, 
-    // //     Total: ${timing.total_ms}ms`,
-    // //   level: 'info'
-    // // });
-    // // console.log("Timing (ms):", {
-    //   "Embedding": timing.embedding_generation_ms,
-    //   "Similarity": timing.similarity_search_ms,
-    //   "Emanation": timing.openai_request_ms,
-    //   "Total": timing.total_ms
-    // });
     console.log("Completion content:", content);
     editor.chain()
     .focus()
@@ -203,6 +196,54 @@ async function completionFromContext() {
 
 window.addEventListener("DOMContentLoaded", async () => {
   //create();
+
+  // PREFERENCES PANEL
+  prefsMainPromptTextArea = document.querySelector("#prefs-main-prompt");
+  prefsMainPromptTextArea.addEventListener("dblclick", () => {
+    prefsMainPromptTextArea.select();
+  });
+  prefsResponseLimitTextArea = document.querySelector("#prefs-response-limit");
+  prefsResponseLimitTextArea.addEventListener("dblclick", () => {
+    prefsResponseLimitTextArea.select();
+  });
+  prefsFinalPreambleTextArea = document.querySelector("#prefs-final-preamble");
+  prefsFinalPreambleTextArea.addEventListener("dblclick", () => {
+    prefsFinalPreambleTextArea.select();
+  });
+  prefsProseStyleTextArea = document.querySelector("#prefs-prose-style");
+  prefsProseStyleTextArea.addEventListener("dblclick", () => {
+    prefsProseStyleTextArea.select();
+  });
+
+  prefsTemperature = document.querySelector("#prefs-temperature");
+  prefsTemperatureValue = document.querySelector("#prefs-temperature-value");
+  prefsTemperature.addEventListener("input", () => {
+    prefsTemperatureValue.textContent = (prefsTemperature.value / 10.0).toFixed(1);
+  });
+
+  prefsSimilarityThreshold = document.querySelector("#prefs-similarity-treashold");
+  prefsSimilarityThresholdValue = document.querySelector("#prefs-similarity-treashold-value");
+  
+  prefsShuffleSimilars = document.querySelector("#prefs-shuffle-similars");
+  prefsSimilarityCount = document.querySelector("#prefs-similarity-count");
+  prefsSimilarityCountValue = document.querySelector("#prefs-similarity-count-value");
+  prefsSimilarityCount.addEventListener("input", () => {
+    prefsSimilarityCountValue.textContent = prefsSimilarityCount.value;
+  });
+  
+  prefsMaxOutputTokens = document.querySelector("#prefs-max-output-tokens");
+  prefsMaxOutputTokensValue = document.querySelector("#prefs-max-output-tokens-value");
+  prefsMaxOutputTokens.addEventListener("input", () => {
+    prefsMaxOutputTokensValue.textContent = prefsMaxOutputTokens.value;
+  });
+
+  prefsMaxHistoryItems = document.querySelector("#prefs-max-history-items");
+  prefsMaxHistoryItemsValue = document.querySelector("#prefs-max-history-items-value");
+  prefsMaxHistoryItems.addEventListener("input", () => {
+    prefsMaxHistoryItemsValue.textContent = prefsMaxHistoryItems.value;
+  });
+
+
   greetInputEl = document.querySelector("#greet-input");
   greetMsgEl = document.querySelector("#greet-msg");
   //greetBtnEl = document.querySelector("#greet-btn");
@@ -226,23 +267,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
   panel = document.getElementById('side-panel');
 
-  // PREFERENCES PANEL
-  prefsMainPromptTextArea = document.querySelector("#prefs-main-prompt");
-  prefsMainPromptTextArea.addEventListener("dblclick", () => {
-    prefsMainPromptTextArea.select();
-  });
-  prefsResponseLimitTextArea = document.querySelector("#prefs-response-limit");
-  prefsResponseLimitTextArea.addEventListener("dblclick", () => {
-    prefsResponseLimitTextArea.select();
-  });
-  prefsFinalPreambleTextArea = document.querySelector("#prefs-final-preamble");
-  prefsFinalPreambleTextArea.addEventListener("dblclick", () => {
-    prefsFinalPreambleTextArea.select();
-  });
-  prefsProseStyleTextArea = document.querySelector("#prefs-prose-style");
-  prefsProseStyleTextArea.addEventListener("dblclick", () => {
-    prefsProseStyleTextArea.select();
-  });
+
 
   prefsLoadBtn = document.querySelector("#prefs-load-btn");
   prefsLoadBtn.addEventListener("click", () => {
@@ -274,17 +299,41 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   });
 
+    // Update the ghost text span when the range input value changes
+    prefsSimilarityThreshold.addEventListener("input", () => {
+      prefsSimilarityThresholdValue.textContent = (prefsSimilarityThreshold.value / 100).toFixed(2);
+    });
+  
+
   prefsSaveBtn = document.querySelector("#prefs-save-btn");
   prefsSaveBtn.addEventListener("click", () => {
-    console.log("what's this ->", prefsResponseLimitTextArea.value);
+    //console.log("what's this ->", prefsSimilarityThreshold.value);
+    const shuffleSimilarsValue = prefsShuffleSimilars.checked ? "true" : "false";
 
     invoke("update_preferences", {
       responselimit: prefsResponseLimitTextArea.value,
       mainprompt: prefsMainPromptTextArea.value,
       finalpreamble: prefsFinalPreambleTextArea.value, 
-      prosestyle: prefsProseStyleTextArea.value
+      prosestyle: prefsProseStyleTextArea.value,
+      similaritythreshold: prefsSimilarityThreshold.value,
+      shufflesimilars: shuffleSimilarsValue, 
+      similaritycount: prefsSimilarityCount.value,
+      maxhistory: prefsMaxHistoryItems.value,
+      maxtokens: prefsMaxOutputTokens.value,
+      temperature: prefsTemperature.value
     }).then((res) => {
       console.log('Preferences Saved:', res);
+      greetMsgEl.textContent = 'Preferences saved';
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'Preferences saved<br/>'+JSON.stringify(res, null, 2),
+        level: 'info'
+      });
+    }).catch((error) => {
+      console.error('Failed to save preferences:', error);
+      greetMsgEl.textContent = 'Failed to save preferences: '+error;
+      alert('Failed to save preferences:', error);
     });
     console.log("Saving preferences");
   });

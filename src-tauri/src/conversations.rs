@@ -14,15 +14,16 @@ impl Conversation {
         }
     }
 
-    pub fn add_exchange(&mut self, input: String, completion: String) {
+    pub fn add_exchange(&mut self, input: String, completion: String, max_exchanges: usize) {
         self.history.push((input, completion));
+        self.truncate_to_max_exchanges(max_exchanges);
         self.truncate_if_needed();
     }
 
     pub fn get_context(&self) -> String {
         self.history
             .iter()
-            .map(|(input, completion)| format!("Input: {}\nCompletion: {}\n", input, completion))
+            .map(|(input, completion)| format!("Input: {}\nResponse: {}\n", input, completion))
             .collect::<Vec<_>>()
             .join("\n")
     }
@@ -45,6 +46,13 @@ impl Conversation {
 
         if truncate_index < self.history.len() {
             self.history.drain(0..truncate_index);
+        }
+    }
+
+    fn truncate_to_max_exchanges(&mut self, max_exchanges: usize) {
+        if self.history.len() > max_exchanges {
+            let excess = self.history.len() - max_exchanges;
+            self.history.drain(0..excess);
         }
     }
 }

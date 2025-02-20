@@ -2001,6 +2001,7 @@ dependencies = [
  "pdf-extract",
  "pdfium-render",
  "pulldown-cmark",
+ "rand 0.8.5",
  "regex",
  "rusqlite",
  "serde",
