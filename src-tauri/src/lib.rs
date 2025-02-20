@@ -148,11 +148,11 @@ async fn update_preferences(
     preferences.final_preamble = finalpreamble;
     preferences.prose_style = prosestyle;
     preferences.similarity_threshold = similaritythreshold.parse::<f32>().unwrap() / 100.0;
-    preferences.shuffle_similars = shufflesimilars.parse::<bool>().unwrap();
-    preferences.similarity_count = similaritycount.parse::<usize>().unwrap();
-    preferences.max_history = maxhistory.parse::<usize>().unwrap();
-    preferences.max_tokens = maxtokens.parse::<usize>().unwrap();
-    preferences.temperature = temperature.parse::<f32>().unwrap();
+    preferences.shuffle_similars = shufflesimilars == "true";
+    preferences.similarity_count = similaritycount.parse::<usize>().unwrap_or(Preferences::SIMILARITY_COUNT_DEFAULT);
+    preferences.max_history = maxhistory.parse::<usize>().unwrap_or(Preferences::MAX_HISTORY_DEFAULT);
+    preferences.max_tokens = maxtokens.parse::<usize>().unwrap_or(Preferences::MAX_TOKENS_DEFAULT);
+    preferences.temperature = temperature.parse::<f32>().unwrap_or(Preferences::TEMPERATURE_DEFAULT);
     let prefs_clone = preferences.clone();
     // Attempt to save preferences and handle any errors
     if let Err(e) = preferences.save() {

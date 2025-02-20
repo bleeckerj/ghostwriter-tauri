@@ -329,12 +329,12 @@ button {
 }
 
 .simple-log-level-warn {
-  background-color: #eeff00;
+  background-color: #f8ff93;
   color: black;
 }
 
 .simple-log-level-error {
-  background-color:#ff1500;
+  background-color:#ac0e00;
   color: white;
   @apply font-bold;
 }

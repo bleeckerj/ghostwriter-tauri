@@ -152,10 +152,25 @@ use std::sync::Arc;
         }
         MENU_CANON_NEW => {
             // Handle new canon
+            let app_handle = app.clone();
+            let simple_log_data = SimpleLog {
+                message: format!("{}", "New Canon feature not yet implemented, sadly.."),
+                level: "info".to_string(),
+                timestamp: chrono::Local::now().to_rfc3339().to_string(),
+                id: None,
+            };
+            let _ = app_handle.emit("simple-log-message", simple_log_data);
         }
         MENU_CANON_LOAD => {
             // Handle load canon
-            println!("Load canon");
+            let app_handle = app.clone();
+            let simple_log_data = SimpleLog {
+                message: format!("{}", "Load Canon feature not yet implemented, sadly.."),
+                level: "info".to_string(),
+                timestamp: chrono::Local::now().to_rfc3339().to_string(),
+                id: None,
+            };
+            let _ = app_handle.emit("simple-log-message", simple_log_data);
         }
         MENU_CANON_INGEST => {
             // Handle ingest canon

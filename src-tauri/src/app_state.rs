@@ -39,7 +39,7 @@ impl AppState {
             logger: Arc::new(Mutex::new(logger)),
             doc_store: Arc::new(doc_store),
             embedding_generator: Arc::new(embedding_generator),
-            conversation: Mutex::new(Conversation::new(16000)),
+            conversation: Mutex::new(Conversation::new(32000)),
             buffer: Mutex::new(String::new()),
             api_key: Mutex::new(None),
             preferences: Mutex::new(Preferences::default()), // Start with default preferences
