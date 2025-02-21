@@ -23,7 +23,7 @@ use serde_json::json;
 use std::sync::Arc;
 
  // Constants for menu IDs
- pub const MENU_FILE_NEW: &str = "file-new";
+ pub const MENU_FILE_SAVE: &str = "file-save";
  pub const MENU_FILE_QUIT: &str = "file-quit";
  
  // Canon menu IDs 
@@ -44,9 +44,9 @@ use std::sync::Arc;
  }
  
  pub fn build_file_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
-    let new_item = MenuItemBuilder::new("New")
-        .id(MENU_FILE_NEW)
-        .accelerator("CmdOrControl+N")
+    let new_item = MenuItemBuilder::new("Save")
+        .id(MENU_FILE_SAVE)
+        .accelerator("CmdOrControl+S")
         .build(app)?;
  
     SubmenuBuilder::new(app, "File")
@@ -99,8 +99,17 @@ use std::sync::Arc;
     let app_state = app.state::<AppState>();
 
     match event.id.0.as_str() {
-        MENU_FILE_NEW => {
+        MENU_FILE_SAVE => {
             println!("New file");
+            app.emit("save-file-dialog", json!({
+                "defautPath": "new_file.txt",
+                "filters": [
+                    {
+                        "name": "Text Files",
+                        "extensions": ["txt", "md", "mdx"]
+                    }
+                ]}
+            ));
         }
 
         MENU_FILE_QUIT => {

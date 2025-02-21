@@ -12,7 +12,7 @@ import { InlineActionItem } from './extensions/InlineActionItem';
 import { PluginKey } from 'prosemirror-state';
 //import {Menu, Submenu} from '@tauri-apps/api/menu'
 
-import { open, confirm } from '@tauri-apps/plugin-dialog';
+import { open, confirm, prefsSaveBtn } from '@tauri-apps/plugin-dialog';
 import { getCurrentWebviewWindow, WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { list } from 'postcss';
 
@@ -169,7 +169,7 @@ async function completionFromContext() {
   invoke("completion_from_context", { input: editor.getText() })
   .then(([content, timing]) => {
     clearInterval(loadingInterval);
-
+    
     greetMsgEl.textContent = 'Complete';
     console.log("Completion content:", content);
     editor.chain()
@@ -456,7 +456,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       prefsMaxOutputTokens.value = res.max_output_tokens;
       prefsTemperature.value = res.temperature;
       prefsTemperatureValue.textContent = res.temperature;
-    
+      
       panel.classList.toggle('open');
       panelToggleBtn.classList.toggle('open');
     });
@@ -498,10 +498,49 @@ window.addEventListener("DOMContentLoaded", async () => {
   let unlistenProgressIndicatorLoadFn;
   let unlistenOpenFileDialogForIngestFn;
   let unlistenCanonListFn;
+  let unlistenFileSaveDialogFn;
   let unlistenPrefsLoadFn;
   let unlistenPrefsSaveFn;
   let unlistenPrefsResetFn;
   
+  try {
+    unlistenFileSaveDialogFn = await listen('file-save-dialog', (event) => {
+      console.log('Received file save event:', event);
+      save({
+        filters: [{
+          name: 'Text',
+          extensions: ['txt', 'md', 'mdx']
+        }]
+      }).then((result) => {
+        console.log('File save dialog result:', result);
+        editor.getText().then((content) => {
+          invoke("save_to_file", {
+            file_path: result,
+            content: content
+          }).then((res) => {
+            console.log('File saved:', res);
+            addSimpleLogEntry({
+              id: Date.now(),
+              timestamp: Date.now(),
+              message: 'File saved: '+res,
+              level: 'info'
+            });
+          }).catch((error) => {
+            addSimpleLogEntry({
+              id: Date.now(),
+              timestamp: Date.now(),
+              message: 'Failed to save file: '+error,
+              level: 'error'
+            });
+          });
+        });
+      });
+    });
+  } catch (error) {
+    console.error('Failed to setup event listener:', error);
+  }
+
+    
   try {
     unlistenSimpleLogMessageFn = await listen('simple-log-message', (event) => {
       console.log('Received event:', event);

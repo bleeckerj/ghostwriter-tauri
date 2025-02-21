@@ -87,6 +87,31 @@ impl fmt::Display for CompletionTiming {
 }
 
 #[tauri::command]
+async fn save_to_file(
+    app_handle: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    file_path: String,
+    content: String,
+) -> Result<(), String> {
+    let path = PathBuf::from(file_path);
+    let result = tokio::fs::write(&path, content).await;
+    match result {
+        Ok(_) => {
+            let message = format!("Saved to file: {}", path.to_string_lossy());
+            let new_logger = NewLogger::new(app_handle.clone());
+            new_logger.simple_log_message(message.clone(), "".to_string(), "info".to_string());
+            Ok(())
+        }
+        Err(e) => {
+            let message = format!("Failed to save to file: {}", e);
+            let new_logger = NewLogger::new(app_handle.clone());
+            new_logger.simple_log_message(message.clone(), "".to_string(), "error".to_string());
+            Err(message)
+        }
+    }
+}
+
+#[tauri::command]
 async fn save_api_key(
     app_handle: tauri::AppHandle, 
     state: tauri::State<'_, AppState>, 
@@ -875,6 +900,7 @@ async fn search_similarity(
                     update_preferences,
                     reset_preferences,
                     prefs_file_path,
+                    save_to_file,
                     ])
                     .run(tauri::generate_context!())
                     .expect("error while running tauri application");
