@@ -151,7 +151,7 @@ async fn update_preferences(
     preferences.shuffle_similars = shufflesimilars == "true";
     preferences.similarity_count = similaritycount.parse::<usize>().unwrap_or(Preferences::SIMILARITY_COUNT_DEFAULT);
     preferences.max_history = maxhistory.parse::<usize>().unwrap_or(Preferences::MAX_HISTORY_DEFAULT);
-    preferences.max_tokens = maxtokens.parse::<usize>().unwrap_or(Preferences::MAX_TOKENS_DEFAULT);
+    preferences.max_output_tokens = maxtokens.parse::<u32>().unwrap_or(Preferences::MAX_OUTPUT_TOKENS_DEFAULT);
     preferences.temperature = temperature.parse::<f32>().unwrap_or(Preferences::TEMPERATURE_DEFAULT);
     let prefs_clone = preferences.clone();
     // Attempt to save preferences and handle any errors
@@ -221,7 +221,7 @@ async fn completion_from_context(
 ) -> Result<(String, CompletionTiming), String> {
     
     let preferences = state.preferences.lock().await;
-    let max_tokens = preferences.max_tokens;
+    let max_tokens: u32 = preferences.max_output_tokens;
     let temperature = preferences.temperature;
     let shuffle_similars = preferences.shuffle_similars;
     let similarity_count = preferences.similarity_count;
@@ -333,8 +333,8 @@ let user_message = ChatCompletionRequestMessage::User(
 let request = CreateChatCompletionRequestArgs::default()
 .model("chatgpt-4o-latest")
 .messages(vec![system_message, user_message])
-.temperature(0.7)
-.max_completion_tokens(100_u16)
+.temperature(temperature)
+.max_completion_tokens(max_tokens as u32)
 .n(1)
 .build()
 .map_err(|e| e.to_string())?;
@@ -458,7 +458,8 @@ async fn search_similarity(
     limit: Option<usize>,  
 ) -> Result<Vec<SearchResult>, String> {  // Changed return type
     let limit = limit.unwrap_or(3);
-    
+    let preferences = state.preferences.lock().await;
+
     let embedding = state
     .embedding_generator
     .generate_embedding(&query)
@@ -471,9 +472,9 @@ async fn search_similarity(
     // .doc_store
     // .lock()
     // .map_err(|e| format!("Failed to acquire doc store lock: {}", e))?;
-    
+    let similarity_threshold = preferences.similarity_threshold;
     let results = state.doc_store
-    .search(&embedding, limit, 0.82)
+    .search(&embedding, limit, similarity_threshold)
     .await // ✅ Now correctly awaiting the async function
     .map_err(|e| format!("Search failed: {}", e))?;
     

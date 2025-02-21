@@ -12,7 +12,7 @@ pub struct Preferences {
     pub final_preamble: String,
     pub prose_style: String,
     pub similarity_threshold: f32,
-    pub max_tokens: usize,
+    pub max_output_tokens: u32,
     pub temperature: f32,
     pub shuffle_similars: bool,
     pub similarity_count: usize,
@@ -24,7 +24,7 @@ pub struct Preferences {
 // ✅ Define constant defaults
 impl Preferences {
     pub const SIMILARITY_THRESHOLD_DEFAULT: f32 = 0.83;
-    pub const MAX_TOKENS_DEFAULT: usize = 100;
+    pub const MAX_OUTPUT_TOKENS_DEFAULT: u32 = 100;
     pub const TEMPERATURE_DEFAULT: f32 = 0.7;
     pub const SHUFFLE_SIMILARS_DEFAULT: bool = false;
     pub const SIMILARITY_COUNT_DEFAULT: usize = 3;
@@ -74,7 +74,7 @@ impl Preferences {
         self.final_preamble = Self::DEFAULT_FINAL_PREAMBLE.to_string();
         self.prose_style = Self::DEFAULT_PROSE_STYLE.to_string();
         self.similarity_threshold = Self::SIMILARITY_THRESHOLD_DEFAULT;
-        self.max_tokens = Self::MAX_TOKENS_DEFAULT;
+        self.max_output_tokens = Self::MAX_OUTPUT_TOKENS_DEFAULT;
         self.temperature = Self::TEMPERATURE_DEFAULT;
         self.shuffle_similars = Self::SHUFFLE_SIMILARS_DEFAULT;
         self.similarity_count = Self::SIMILARITY_COUNT_DEFAULT;
@@ -98,8 +98,8 @@ impl Preferences {
         if self.similarity_threshold == 0.0 {
             self.similarity_threshold = Self::SIMILARITY_THRESHOLD_DEFAULT;
         }
-        if self.max_tokens == 0 {
-            self.max_tokens = Self::MAX_TOKENS_DEFAULT;
+        if self.max_output_tokens == 0 {
+            self.max_output_tokens = Self::MAX_OUTPUT_TOKENS_DEFAULT;
         }
         if self.temperature == 0.0 {
             self.temperature = Self::TEMPERATURE_DEFAULT;

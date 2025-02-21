@@ -293,7 +293,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   prefsTemperature = document.querySelector("#prefs-temperature");
   prefsTemperatureValue = document.querySelector("#prefs-temperature-value");
   prefsTemperature.addEventListener("input", () => {
-    prefsTemperatureValue.textContent = (prefsTemperature.value / 10.0).toFixed(1);
+    prefsTemperatureValue.textContent = (prefsTemperature.value);
   });
   
   prefsSimilarityThreshold = document.querySelector("#prefs-similarity-treashold");
@@ -422,6 +422,17 @@ window.addEventListener("DOMContentLoaded", async () => {
       prefsResponseLimitTextArea.value = res.response_limit;
       prefsFinalPreambleTextArea.value = res.final_preamble;
       prefsProseStyleTextArea.value = res.prose_style;
+      prefsMaxHistoryItems.value = res.max_history;
+      prefsMaxHistoryItemsValue.textContent = res.max_history;
+      prefsMaxOutputTokens.value = res.max_output_tokens;
+      prefsMaxOutputTokensValue.textContent = res.max_output_tokens;
+      prefsTemperature.value = res.temperature;
+      prefsTemperatureValue.textContent = res.temperature;
+      prefsShuffleSimilars.checked = res.shuffle_similars;
+      prefsSimilarityThreshold.value = res.similarity_threshold * 100;
+      prefsSimilarityThresholdValue.textContent = res.similarity_threshold;
+      prefsSimilarityCount.value = res.similarity_count;
+      prefsSimilarityCountValue.textContent = res.similarity_count;
     });
   });
   
@@ -438,11 +449,14 @@ window.addEventListener("DOMContentLoaded", async () => {
       prefsFinalPreambleTextArea.textContent = res.final_preamble;
       prefsProseStyleTextArea.textContent = res.prose_style;
       prefsShuffleSimilars.checked = res.shuffle_similars;
-      prefsSimilarityThreshold.value = res.similarity_threshold;
+      prefsSimilarityThreshold.value = res.similarity_threshold * 100;
       prefsSimilarityCount.value = res.similarity_count;
-      prefsMaxHistoryItems.value = res.max_history_items;
+      prefsSimilarityCountValue.textContent = res.similarity_count;
+      prefsMaxHistoryItems.value = res.max_history;
       prefsMaxOutputTokens.value = res.max_output_tokens;
       prefsTemperature.value = res.temperature;
+      prefsTemperatureValue.textContent = res.temperature;
+    
       panel.classList.toggle('open');
       panelToggleBtn.classList.toggle('open');
     });

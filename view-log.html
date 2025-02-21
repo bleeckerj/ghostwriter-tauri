@@ -18,7 +18,15 @@
     <script>
         async function loadJson() {
             try {
-                const response = await fetch("log.json"); // Fetch from webroot
+                const response = await fetch("log.json").then((response) => {
+                    if (!response.ok) {
+                        alert("Failed to load JSON");
+                        throw new Error("Failed to load JSON");
+                    }
+                    console.log("JSON loaded successfully");
+                    console.log(response);
+                    return response;
+                });
                 const data = await response.json();
 
                 const container = document.getElementById("jsoneditor");

@@ -185,7 +185,7 @@ impl DocumentStore {
              FROM documents d 
              JOIN embeddings e ON d.id = e.doc_id"
         )?;  // Use ? directly for rusqlite::Error
-        
+        println!("************************ {}", similarity_threshold);
         let mut similarities = Vec::new();
         
         let rows = stmt.query_map([], |row| {
@@ -212,20 +212,20 @@ impl DocumentStore {
         }
         
         // Log the similarities before filtering
-        //println!("Similarities before filtering: {:?}", similarities.iter().map(|(doc_id, name, _, _, similarity)| (doc_id, name, similarity)).collect::<Vec<_>>());
-        //println!("Similarity threshold: {}", similarity_threshold);
+        println!("Similarities before filtering: {:?}", similarities.iter().map(|(doc_id, name, _, _, similarity)| (doc_id, name, similarity)).collect::<Vec<_>>());
+        println!("Similarity threshold: {}", similarity_threshold);
         
         // Filter by min_score and sort by similarity score in descending order
         similarities.retain(|&(doc_id, ref name, _, _, similarity)| {
             let retain = similarity >= similarity_threshold;
-            if retain {
-                println!("Filtered in: doc_id = {}, name = {}, similarity = {}", doc_id, name, similarity);
-            }
+            // if retain {
+            //     println!("Filtered in: doc_id = {}, name = {}, similarity = {}", doc_id, name, similarity);
+            // }
             retain
         });
         
         // Log the similarities after filtering
-        println!("Similarities after filtering: {:?}", similarities.iter().map(|(_, name, _, _, _)| name).collect::<Vec<_>>());
+        //println!("Similarities after filtering: {:?}", similarities.iter().map(|(doc_id, name, _, _, similarity)| (doc_id, name, similarity)).collect::<Vec<_>>());
         
         similarities.sort_by(|a, b| {
             b.4.partial_cmp(&a.4)  // Changed from .3 to .4 to access similarity
@@ -236,16 +236,26 @@ impl DocumentStore {
         let mut unique_results = Vec::new();
         let mut seen_doc_ids = std::collections::HashSet::new();
         
-        for result in similarities {
+        for result in &similarities {
             if seen_doc_ids.len() >= similar_docs_count {
                 break;
             }
             if seen_doc_ids.insert(result.0) {
-                unique_results.push(result);
+                unique_results.push(result.clone());
             }
         }
         
-        println!("Similarities: {:?}", unique_results.len());
+        // If we have fewer than similar_docs_count unique results, add more entries from the remaining items
+        if unique_results.len() < similar_docs_count {
+            for result in &similarities {
+                if unique_results.len() >= similar_docs_count {
+                    break;
+                }
+                unique_results.push(result.clone());
+            }
+        }
+        
+        println!("Final results: {:?}", unique_results.iter().map(|(doc_id, name, _, _, similarity)| (doc_id, name, similarity)).collect::<Vec<_>>());
         Ok(unique_results)
     }
     
