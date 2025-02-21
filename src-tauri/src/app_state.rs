@@ -23,7 +23,8 @@ pub struct AppState {
     pub buffer: Mutex<String>,
     pub logger: Arc<Mutex<Logger>>,  
     pub api_key: Mutex<Option<String>>, 
-    pub preferences: Mutex<Preferences>,  // Store preferences in memory
+    pub preferences: Mutex<Preferences>, 
+    pub app_handle: Option<AppHandle>,
 }
 
 impl AppState {
@@ -43,6 +44,7 @@ impl AppState {
             buffer: Mutex::new(String::new()),
             api_key: Mutex::new(None),
             preferences: Mutex::new(Preferences::default()), // Start with default preferences
+            app_handle: None,
         };
         Ok(app_state)
     }

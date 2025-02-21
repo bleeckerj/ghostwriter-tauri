@@ -83,7 +83,7 @@ impl DocumentStore {
         .file_name()
         .map(|name| name.to_string_lossy().to_string())
         .unwrap_or_else(|| "UnknownDB".to_string());  // ✅ Get database name directly
-
+        
         // Create tables if they don't exist
         conn.execute(
             "CREATE TABLE IF NOT EXISTS documents 
@@ -177,7 +177,7 @@ impl DocumentStore {
         &self,
         query_embedding: &[f32],
         similar_docs_count: usize,
-        min_score: f32,
+        similarity_threshold: f32,
     ) -> Result<Vec<(i64, String, usize, String, f32)>, Box<dyn std::error::Error>> {
         let conn = self.conn.lock().await;
         let mut stmt = conn.prepare(
@@ -211,8 +211,22 @@ impl DocumentStore {
             similarities.push(row?);
         }
         
+        // Log the similarities before filtering
+        //println!("Similarities before filtering: {:?}", similarities.iter().map(|(doc_id, name, _, _, similarity)| (doc_id, name, similarity)).collect::<Vec<_>>());
+        //println!("Similarity threshold: {}", similarity_threshold);
+        
         // Filter by min_score and sort by similarity score in descending order
-        similarities.retain(|&(_, _, _, _, similarity)| similarity >= min_score);
+        similarities.retain(|&(doc_id, ref name, _, _, similarity)| {
+            let retain = similarity >= similarity_threshold;
+            if retain {
+                println!("Filtered in: doc_id = {}, name = {}, similarity = {}", doc_id, name, similarity);
+            }
+            retain
+        });
+        
+        // Log the similarities after filtering
+        println!("Similarities after filtering: {:?}", similarities.iter().map(|(_, name, _, _, _)| name).collect::<Vec<_>>());
+        
         similarities.sort_by(|a, b| {
             b.4.partial_cmp(&a.4)  // Changed from .3 to .4 to access similarity
             .unwrap_or(std::cmp::Ordering::Equal)
@@ -387,7 +401,7 @@ impl DocumentStore {
     pub fn get_database_path(&self) -> &str {
         &self.canon_path  // ✅ Already stored, just return it
     }
-
+    
     pub fn get_database_name(&self) -> &str {
         &self.canon_name  // ✅ Already stored, just return it
     }
@@ -514,7 +528,7 @@ impl DocumentStore {
         .cloned()
     }
     
-
+    
     
     pub async fn test_async_process(&self) -> Result<(), Box<dyn std::error::Error>> {
         for i in 1..=10 {

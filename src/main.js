@@ -147,16 +147,29 @@ async function searchSimilarity() {
 
 async function completionFromContext() {
   let dots = 0;
+  let wasDisabled = false;
+  
   const loadingInterval = setInterval(() => {
-    dots = (dots + 1) % 4;
+    dots = (dots + 1) % 8;
     greetMsgEl.textContent = `Emanating${'.'.repeat(dots)}`;
   }, 250);
   
-  
+  // disable the nudge charm while we're emanating...
+  let actionItem = editor.extensionManager.extensions.find(extension => extension.name === 'inlineActionItem');
+  if (actionItem) {
+    if (actionItem.options.disabled === false) {
+      wasDisabled = false;
+      // Disable the extension temporarily..to avoid it appearing before emanation concludes..
+      actionItem.options.disabled = true;
+    } else {
+      wasDisabled = true;
+    }
+  }  
   
   invoke("completion_from_context", { input: editor.getText() })
   .then(([content, timing]) => {
     clearInterval(loadingInterval);
+
     greetMsgEl.textContent = 'Complete';
     console.log("Completion content:", content);
     editor.chain()
@@ -186,6 +199,9 @@ async function completionFromContext() {
         text: ' '
       }
     ]).run();
+    if (wasDisabled === false) {
+      actionItem.options.disabled = false;
+    }
   })
   .catch((err) => {
     clearInterval(loadingInterval);
@@ -196,7 +212,66 @@ async function completionFromContext() {
 
 window.addEventListener("DOMContentLoaded", async () => {
   //create();
-
+  
+  let actionItem = editor.extensionManager.extensions.find(extension => extension.name === 'inlineActionItem');
+  let nudgeButton = document.querySelector("#nudge-inline-action-item");
+  if (actionItem) {
+    const disabledOption = actionItem.options.disabled;
+    if (disabledOption) {
+      nudgeButton.classList.add("button-out"); // disabled is true (deactivated)
+    } else {
+      nudgeButton.classList.add("button-in"); // disabled is false (activated)
+    }
+  } else {
+    console.error("InlineActionItem extension not found");
+    addSimpleLogEntry({
+      id: "",
+      timestamp: Date.now(),
+      message: 'InlineActionItem extension not found',
+      level: 'error'
+    });
+  }
+  nudgeButton.addEventListener("click", () => {
+    // Access the InlineActionItem extension
+    let actionItem = editor.extensionManager.extensions.find(extension => extension.name === 'inlineActionItem');
+    if (actionItem) {
+      const disabledOption = actionItem.options.disabled;
+      if (disabledOption) {
+        // Enable the extension
+        actionItem.options.disabled = false;
+        nudgeButton.classList.remove("button-out");
+        nudgeButton.classList.add("button-in");
+        nudgeButton.classList.add("enabled");
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date.now(),
+          message: 'InlineActionItem extension disabled? '+actionItem.options.disabled,
+          level: 'info'
+        });
+      } else {
+        // Disable the extension
+        actionItem.options.disabled = true;
+        nudgeButton.classList.remove("button-in");
+        nudgeButton.classList.add("button-out");
+        nudgeButton.classList.add("enabled");
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date.now(),
+          message: 'InlineActionItem extension disabled? '+actionItem.options.disabled,
+          level: 'info'
+        });
+      }
+    } else {
+      console.error("InlineActionItem extension not found");
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'InlineActionItem extension not found',
+        level: 'error'
+      });
+    }
+  });    
+  
   // PREFERENCES PANEL
   prefsMainPromptTextArea = document.querySelector("#prefs-main-prompt");
   prefsMainPromptTextArea.addEventListener("dblclick", () => {
@@ -214,17 +289,18 @@ window.addEventListener("DOMContentLoaded", async () => {
   prefsProseStyleTextArea.addEventListener("dblclick", () => {
     prefsProseStyleTextArea.select();
   });
-
+  
   prefsTemperature = document.querySelector("#prefs-temperature");
   prefsTemperatureValue = document.querySelector("#prefs-temperature-value");
   prefsTemperature.addEventListener("input", () => {
     prefsTemperatureValue.textContent = (prefsTemperature.value / 10.0).toFixed(1);
   });
-
+  
   prefsSimilarityThreshold = document.querySelector("#prefs-similarity-treashold");
   prefsSimilarityThresholdValue = document.querySelector("#prefs-similarity-treashold-value");
   
   prefsShuffleSimilars = document.querySelector("#prefs-shuffle-similars");
+  
   prefsSimilarityCount = document.querySelector("#prefs-similarity-count");
   prefsSimilarityCountValue = document.querySelector("#prefs-similarity-count-value");
   prefsSimilarityCount.addEventListener("input", () => {
@@ -236,14 +312,14 @@ window.addEventListener("DOMContentLoaded", async () => {
   prefsMaxOutputTokens.addEventListener("input", () => {
     prefsMaxOutputTokensValue.textContent = prefsMaxOutputTokens.value;
   });
-
+  
   prefsMaxHistoryItems = document.querySelector("#prefs-max-history-items");
   prefsMaxHistoryItemsValue = document.querySelector("#prefs-max-history-items-value");
   prefsMaxHistoryItems.addEventListener("input", () => {
     prefsMaxHistoryItemsValue.textContent = prefsMaxHistoryItems.value;
   });
-
-
+  
+  
   greetInputEl = document.querySelector("#greet-input");
   greetMsgEl = document.querySelector("#greet-msg");
   //greetBtnEl = document.querySelector("#greet-btn");
@@ -266,9 +342,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     panel.classList.remove('open');
   });
   panel = document.getElementById('side-panel');
-
-
-
+  
+  
+  
   prefsLoadBtn = document.querySelector("#prefs-load-btn");
   prefsLoadBtn.addEventListener("click", () => {
     invoke("load_preferences").then((res) => {
@@ -285,7 +361,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       prefsFinalPreambleTextArea.value = res.final_preamble;
       prefsProseStyleTextArea.value = res.prose_style;
     });
-
+    
     invoke("prefs_file_path").then((res) => { 
       const resJson = JSON.stringify(res, null, 2);
       console.log("prefs file path", res);
@@ -296,20 +372,20 @@ window.addEventListener("DOMContentLoaded", async () => {
         level: "info"
       });
     });
-
+    
   });
-
-    // Update the ghost text span when the range input value changes
-    prefsSimilarityThreshold.addEventListener("input", () => {
-      prefsSimilarityThresholdValue.textContent = (prefsSimilarityThreshold.value / 100).toFixed(2);
-    });
   
-
+  // Update the ghost text span when the range input value changes
+  prefsSimilarityThreshold.addEventListener("input", () => {
+    prefsSimilarityThresholdValue.textContent = (prefsSimilarityThreshold.value / 100).toFixed(2);
+  });
+  
+  
   prefsSaveBtn = document.querySelector("#prefs-save-btn");
   prefsSaveBtn.addEventListener("click", () => {
     //console.log("what's this ->", prefsSimilarityThreshold.value);
     const shuffleSimilarsValue = prefsShuffleSimilars.checked ? "true" : "false";
-
+    
     invoke("update_preferences", {
       responselimit: prefsResponseLimitTextArea.value,
       mainprompt: prefsMainPromptTextArea.value,
@@ -337,7 +413,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
     console.log("Saving preferences");
   });
-
+  
   prefsResetBtn = document.querySelector("#prefs-reset-btn");
   prefsResetBtn.addEventListener("click", () => {
     invoke("reset_preferences").then((res) => {
@@ -349,7 +425,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
   });
   
-
+  
   panelToggleBtn = document.getElementById('panel-toggle-btn');
   
   panelToggleBtn.addEventListener('click', () => {
@@ -361,12 +437,16 @@ window.addEventListener("DOMContentLoaded", async () => {
       prefsResponseLimitTextArea.textContent = res.response_limit;
       prefsFinalPreambleTextArea.textContent = res.final_preamble;
       prefsProseStyleTextArea.textContent = res.prose_style;
-
-      
+      prefsShuffleSimilars.checked = res.shuffle_similars;
+      prefsSimilarityThreshold.value = res.similarity_threshold;
+      prefsSimilarityCount.value = res.similarity_count;
+      prefsMaxHistoryItems.value = res.max_history_items;
+      prefsMaxOutputTokens.value = res.max_output_tokens;
+      prefsTemperature.value = res.temperature;
       panel.classList.toggle('open');
       panelToggleBtn.classList.toggle('open');
     });
-
+    
   });
   
   openLogBtnEl = document.querySelector("#open-log-btn");
@@ -394,9 +474,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
   });
   
-
-
-
+  
+  
+  
   // Add Tauri event listener here
   let unlistenSimpleLogMessageFn;
   let unlistenRichLogMessageFn;
@@ -407,7 +487,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   let unlistenPrefsLoadFn;
   let unlistenPrefsSaveFn;
   let unlistenPrefsResetFn;
-
+  
   try {
     unlistenSimpleLogMessageFn = await listen('simple-log-message', (event) => {
       console.log('Received event:', event);
@@ -537,7 +617,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   invoke("load_preferences").then((res) => {
     console.log('Preferences Loaded:', res);
   });
-
+  
   invoke("simple_log_message", { message: 'Ghostwriter Up.', id: "tracker", level: "info" }).then((res) => {
     console.log('simple_log_emissions', res);
   });
@@ -697,10 +777,10 @@ function addSimpleLogEntry(entry) {
 
 function formatTimestamp(timestamp) {
   const date = new Date(timestamp); // Ensure timestamp is a Date object
-
+  
   const formatted = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}-${String(date.getFullYear()).slice(-2)} ` +
-                    `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}:${String(date.getMilliseconds()).padStart(3, '0')}`;
-
+  `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}:${String(date.getMilliseconds()).padStart(3, '0')}`;
+  
   return formatted;
 }
 

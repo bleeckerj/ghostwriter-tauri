@@ -41,6 +41,7 @@
           <span id="incant-btn" class="diagnostics-area-button enabled">INCNT</span>
           <span id="panel-toggle-btn" class="diagnostics-area-button enabled">PREFS</span>
           <span id="similarity-search-btn" class="diagnostics-area-button enabled">SSRCH</span>
+          <span id="nudge-inline-action-item" class="diagnostics-area-button enabled">NUDGE</span>
           <span id="open-log-btn" class="diagnostics-area-button enabled">LOGJ</span>
         </div>
         <div id="diagnostics-editor" class="diagnostics-content bg-blue-700 h-full bg-2 rounded-sm">
@@ -104,7 +105,7 @@
             </div>
             <div class="grid grid-cols-12 gap-2">
               <div class="col-span-9">
-                <input id="prefs-similarity-treashold" type="range" min="50" max="100" value="82" class="range" step="1" />
+                <input id="prefs-similarity-treashold" type="range" min=".5" max="1.0" value=".82" class="range" step=".01" />
               </div>
               <div class="col-span-3">
                 <span id="prefs-similarity-treashold-value" class="ghost-text">.82</span>
@@ -136,7 +137,7 @@
             
             <div class="grid grid-cols-12 gap-2">
               <div class="col-span-9">
-                <input id="prefs-temperature" type="range" min="0" max="10" value="7" class="range mb-3" step="1" />
+                <input id="prefs-temperature" type="range" min="0" max="1.0" value=".7" class="range mb-3" step=".1" />
               </div>
               <div class="col-span-3">
                 <span id="prefs-temperature-value" class="ghost-text">0.7</span>

@@ -4,6 +4,16 @@ import { Plugin, PluginKey } from 'prosemirror-state'
 export const InlineActionItem = Node.create({
   name: 'inlineActionItem',
 
+
+  setOptions() {
+    this.options = {
+      ...this.options,
+      ...options,
+    }
+    this.editor.view.dispatch(this.editor.view.state.tr.setMeta('update', true))
+
+  },
+
   addOptions() {
     return {
       disabled: false,
