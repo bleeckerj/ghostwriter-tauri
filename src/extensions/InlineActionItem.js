@@ -11,13 +11,12 @@ export const InlineActionItem = Node.create({
       ...options,
     }
     this.editor.view.dispatch(this.editor.view.state.tr.setMeta('update', true))
-
   },
 
   addOptions() {
     return {
-      disabled: false,
-      timeout: 10000,
+      disabled: true,
+      timeout: 5000,
       onClick: () => null,
     }
   },
@@ -103,12 +102,12 @@ export const InlineActionItem = Node.create({
               }
               
               // Check the options.disabled flag directly
-              if (options.disabled || waitingForTyping) return
+              if (options.disabled || waitingForTyping) return false;
               
               const { selection } = view.state
-              if (!view.state.doc.textContent.trim().length) return
+              if (!view.state.doc.textContent.trim().length) return false;
 
-              if (prevState && selection.eq(prevState.selection)) return
+              if (prevState && selection.eq(prevState.selection)) return false;
 
               // Check for existing button
               let buttonExists = false
@@ -119,8 +118,10 @@ export const InlineActionItem = Node.create({
                 }
               })
               
-              if (!buttonExists) {
+              if (!buttonExists && options.disabled === false) {
                 timeout = setTimeout(() => {
+                  // Check the options.disabled flag again because it might have changed
+                  if (options.disabled === true) return false;
                   const node = view.state.schema.nodes.inlineActionItem.create()
                   const tr = view.state.tr.insert(selection.from, node)
                   view.dispatch(tr)

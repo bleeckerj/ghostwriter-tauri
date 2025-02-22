@@ -27,7 +27,6 @@ use serde_json::json;
 use tokio::runtime::Handle;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
-
 pub struct Document {
     pub id: usize,
     //pub content: String,
@@ -58,7 +57,7 @@ pub struct DocumentInfo {
     pub file_path: String,
     pub created_at: String,
 }
-
+#[derive(Clone)]
 pub struct DocumentStore {
     conn: Arc<Mutex<Connection>>, // Change to tokio Mutex
     ingestors: Vec<Arc<Box<dyn DocumentIngestor>>>,
@@ -74,15 +73,52 @@ impl DocumentStore {
         store_path: PathBuf,
         embedding_generator: Arc<EmbeddingGenerator>
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        std::fs::create_dir_all(& store_path)?;
+        let (conn, canon_path, canon_name, next_id) = Self::initialize_database(&store_path)?;
+
+        let mut doc_store = DocumentStore { 
+            conn: Arc::new(Mutex::new(conn)),
+            ingestors: Vec::new(),
+            next_id,
+            embedding_generator,
+            canon_path,
+            canon_name,
+        };
+        
+        doc_store.register_ingestor(Box::new(MdxIngestor));
+        doc_store.register_ingestor(Box::new(PdfIngestor));
+        doc_store.register_ingestor(Box::new(MarkdownIngestor));
+        doc_store.register_ingestor(Box::new(EpubIngestor));
+        doc_store.register_ingestor(Box::new(TextIngestor));
+        
+        Ok(doc_store)
+    }
+    
+    pub async fn set_database_path(
+        &mut self,
+        store_path: PathBuf,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let (conn, canon_path, canon_name, next_id) = Self::initialize_database(&store_path)?;
+
+        self.conn = Arc::new(Mutex::new(conn));
+        self.next_id = next_id;
+        self.canon_path = canon_path;
+        self.canon_name = canon_name;
+        
+        Ok(())
+    }
+
+    fn initialize_database(
+        store_path: &PathBuf,
+    ) -> Result<(Connection, String, String, usize), Box<dyn std::error::Error>> {
+        std::fs::create_dir_all(store_path)?;
         let db_path = store_path.join("documents.db");
         
         let conn = Connection::open(&db_path)?;
         let canon_path = db_path.to_string_lossy().to_string();
         let canon_name = Path::new(&canon_path)
-        .file_name()
-        .map(|name| name.to_string_lossy().to_string())
-        .unwrap_or_else(|| "UnknownDB".to_string());  // ✅ Get database name directly
+            .file_name()
+            .map(|name| name.to_string_lossy().to_string())
+            .unwrap_or_else(|| "UnknownDB".to_string());
         
         // Create tables if they don't exist
         conn.execute(
@@ -124,32 +160,16 @@ impl DocumentStore {
         
         // Get the highest ID for our next_id counter
         let next_id: usize = conn
-        .query_row(
-            "SELECT COALESCE(MAX(id) + 1, 0) FROM documents",
-            [],
-            |row| row.get(0),
-        )
-        .unwrap_or(0);
+            .query_row(
+                "SELECT COALESCE(MAX(id) + 1, 0) FROM documents",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
         
-        let mut doc_store = DocumentStore { 
-            conn: Arc::new(Mutex::new(conn)),
-            ingestors: Vec::new(),
-            next_id,
-            embedding_generator,
-            canon_path : canon_path.clone(),
-            canon_name: "".to_string(),
-        };
-        
-        doc_store.register_ingestor(Box::new(MdxIngestor));
-        doc_store.register_ingestor(Box::new(PdfIngestor));
-        doc_store.register_ingestor(Box::new(MarkdownIngestor));
-        doc_store.register_ingestor(Box::new(EpubIngestor));
-        doc_store.register_ingestor(Box::new(TextIngestor));
-        
-        
-        Ok(doc_store)
+        Ok((conn, canon_path, canon_name, next_id))
     }
-    
+
     pub async fn add_document(
         &mut self,
         mut document: Document,

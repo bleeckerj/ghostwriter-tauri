@@ -17,7 +17,7 @@ use crate::preferences::Preferences;
 
 
 pub struct AppState {
-    pub doc_store: Arc<DocumentStore>,
+    pub doc_store: Arc<Mutex<DocumentStore>>,
     pub embedding_generator: Arc<EmbeddingGenerator>,
     pub conversation: Mutex<Conversation>,
     pub buffer: Mutex<String>,
@@ -38,7 +38,7 @@ impl AppState {
         // Create AppState first without preferences
         let app_state = Self {
             logger: Arc::new(Mutex::new(logger)),
-            doc_store: Arc::new(doc_store),
+            doc_store: Arc::new(Mutex::new(doc_store)),
             embedding_generator: Arc::new(embedding_generator),
             conversation: Mutex::new(Conversation::new(32000)),
             buffer: Mutex::new(String::new()),
