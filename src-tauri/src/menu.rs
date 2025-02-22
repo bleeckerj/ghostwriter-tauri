@@ -13,6 +13,12 @@ use tauri::{
         Menu,
     }
 };
+
+use std::{path, sync::Arc};
+use tokio::sync::Mutex;
+
+use crate::DocumentStore;
+use chrono::Local;
 use crate::NewLogger;
 use crate::SimpleLog;
 use crate::AppState;
@@ -20,7 +26,7 @@ use tauri_plugin_dialog::{DialogExt, Dialog, FileDialogBuilder};
 use std::path::{Path, PathBuf};
 use tauri::Emitter;
 use serde_json::json;
-use std::sync::Arc;
+use tauri_plugin_dialog::FilePath;
 
 // Constants for menu IDs
 pub const MENU_FILE_NEW: &str = "file-new";
@@ -96,11 +102,21 @@ pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
 }
 
 pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
-    let app_state = app.state::<AppState>();
-    
+    // Clone the AppHandle to avoid lifetime issues
+    // Clone the Arc<AppState> to safely pass it to async contexts
+    let app_state: Arc<AppState> = Arc::clone(&app.state());
+    // let app_handle_clone = app.clone();
+
     match event.id.0.as_str() {
         MENU_FILE_NEW => {
-            println!("New file");
+            // println!("New file");
+            // let simple_log_data = SimpleLog {
+            //     message: format!("{}", "New file feature not yet implemented, sadly.."),
+            //     level: "info".to_string(),
+            //     timestamp: chrono::Local::now().to_rfc3339().to_string(),
+            //     id: None,
+            // };
+            // let _ = app_handle_clone.emit("simple-log-message", simple_log_data);
         }
         
         MENU_FILE_QUIT => {
@@ -163,17 +179,29 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
             let _ = app_handle.emit("simple-log-message", simple_log_data);
         }
         MENU_CANON_LOAD => {
-            let app_handle = app.clone();
-            let dialog = app_handle.dialog().clone();
-            FileDialogBuilder::new(dialog)
-            .set_title("Select a File")
-            .pick_file(move |file_path| {
-                if let Some(path) = file_path {
-                    println!("Selected file: {:?}", path);
-                } else {
-                    println!("No file selected.");
-                }
-            });
+            print!("Load canon");
+            // Avoid creating an intermediate 'dialog' variable
+            // let app_handle = app.clone();
+            // let dialog = app_handle.dialog().clone();
+            // FileDialogBuilder::new(dialog)
+            //     .set_title("Select a File")
+            //     .pick_file(move |file_path| {
+            //         if let Some(file_path) = file_path {
+            //             let file_path_str = match file_path {
+            //                 FilePath::Path(path_buf) => path_buf.to_string_lossy().to_string(),
+            //                 FilePath::Url(url) => url.to_string(),
+            //             };
+
+            //             let doc_store = Arc::clone(&app_state.doc_store);
+            //             let app_handle = app_handle.clone();
+
+            //             tokio::spawn(async move {
+            //                 set_database_path_async(doc_store, file_path_str, app_handle).await;
+            //             });
+            //         } else {
+            //             println!("No file selected.");
+            //         }
+            //     });
         }
         MENU_CANON_INGEST => {
             // Handle ingest canon
@@ -181,5 +209,35 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
             app.emit("open-file-dialog-for-ingest", ());
         }
         _ => {}
+    }
+}
+
+async fn set_database_path_async<R: Runtime>(
+    doc_store: Arc<Mutex<DocumentStore>>,
+    file_path: String,
+    app_handle: AppHandle<R>,
+) {
+    let mut store = doc_store.lock().await; // ✅ Correct async lock
+    let path = file_path.clone();
+    let path_buf = PathBuf::from(file_path);
+    match store.set_database_path(path_buf).await {
+        Ok(_) => {
+            let simple_log_data = SimpleLog {
+                message: format!("New database path set: {}", path),
+                level: "info".to_string(),
+                timestamp: chrono::Local::now().to_rfc3339().to_string(),
+                id: None,
+            };
+            let _ = app_handle.emit("simple-log-message", simple_log_data);
+        }
+        Err(e) => {
+            let simple_log_data = SimpleLog {
+                message: format!("Error setting database path: {}", e),
+                level: "error".to_string(),
+                timestamp: chrono::Local::now().to_rfc3339().to_string(),
+                id: None,
+            };
+            let _ = app_handle.emit("simple-log-message", simple_log_data);
+        }
     }
 }
