@@ -130,15 +130,13 @@ async fn update_preferences(
     finalpreamble: String,
     prosestyle: String,
     similaritythreshold: String,
-    shufflesimilars: String,
+    shufflesimilars: bool,
     similaritycount: String,
     maxhistory: String,
     maxtokens: String,
     temperature: String,
 ) -> Result<(Preferences), String> {
     
-    println!("Hello");
-    println!("");
     println!("update_preferences called with: {}, {}, {}, {} {} {} {} {} {} {}",
     responselimit, mainprompt, finalpreamble, prosestyle, similaritythreshold, shufflesimilars, similaritycount, maxhistory, maxtokens, temperature);
     
@@ -148,7 +146,7 @@ async fn update_preferences(
     preferences.final_preamble = finalpreamble;
     preferences.prose_style = prosestyle;
     preferences.similarity_threshold = similaritythreshold.parse::<f32>().unwrap() / 100.0;
-    preferences.shuffle_similars = shufflesimilars == "true";
+    preferences.shuffle_similars = shufflesimilars == true;
     preferences.similarity_count = similaritycount.parse::<usize>().unwrap_or(Preferences::SIMILARITY_COUNT_DEFAULT);
     preferences.max_history = maxhistory.parse::<usize>().unwrap_or(Preferences::MAX_HISTORY_DEFAULT);
     preferences.max_output_tokens = maxtokens.parse::<u32>().unwrap_or(Preferences::MAX_OUTPUT_TOKENS_DEFAULT);
@@ -161,7 +159,9 @@ async fn update_preferences(
         new_logger.simple_log_message(error_message.clone(), "preferences".to_string(), "error".to_string());
         return Err(error_message);
     }
-    
+    let debug_message = format!("Preferences updated: {:?}", preferences);
+    let new_logger = NewLogger::new(app_handle.clone());
+    new_logger.simple_log_message(debug_message.clone(), "preferences".to_string(), "debug".to_string());
     Ok((prefs_clone))
 }
 
@@ -420,6 +420,7 @@ if let Some(choice) = response.choices.first() {
                 vector_search_results_for_log: vector_search_results_for_log,
                 canon_name: database_name,
                 canon_path: database_path,
+                preferences: preferences.clone(),
                 
             }
         };
@@ -846,12 +847,16 @@ async fn search_similarity(
             let b_embedding_generator = EmbeddingGenerator::new(client);
             let path = PathBuf::from("./resources/ghostwriter-selectric/vector_store/");
             
-            println!("Initializing Do cumentStore with path: {:?}", path);
+            println!("Initializing DocumentStore with path: {:?}", path);
             
             let doc_store = DocumentStore::new(path.clone(), std::sync::Arc::new(a_embedding_generator)).expect(&format!(
                 "Failed to initialize document store at path: {:?}",
                 path
             ));
+            
+            let store_name = doc_store.get_database_name().to_string();
+            let store_path = doc_store.get_database_path().to_string();
+
             println!("DocumentStore successfully initialized.");
             let app_state = AppState::new(
                 doc_store,
@@ -864,7 +869,7 @@ async fn search_similarity(
             .manage(app_state)
             .menu(|window| menu::build_menu(&window.app_handle()))
             .on_menu_event(|app, event| menu::handle_menu_event(app, event))
-            .setup(|app| {
+            .setup(move |app| {
                 let app_handle = app.handle();
                 
                 // ✅ Check the API_KEY_MISSING flag and open API Key entry window if needed
@@ -875,41 +880,41 @@ async fn search_similarity(
                     "Ghostwriter Is Up.".to_string(),
                     "start".to_string(),
                     "info".to_string());
-                    new_logger.rich_log_message(
-                        "Ghostwriter Is Up.".to_string(),
-                        "Ghostwriter is up and running.".to_string(),
-                        "info".to_string()
-                    );
-                    // app_state.update_logger_path(app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy().to_string()).expect("Failed to update logger path");
-                    println!("{}", app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy());
-                    
-                    app.manage(new_logger.clone());
-                    // Load .env file
-                    dotenv::dotenv().ok();
-                    Ok(())
-                })
-                .plugin(tauri_plugin_clipboard_manager::init())
-                .plugin(tauri_plugin_dialog::init())
-                .plugin(tauri_plugin_opener::init())
-                .invoke_handler(tauri::generate_handler![
-                    greet,
-                    completion_from_context,
-                    search_similarity,
-                    ingestion_from_file_dialog,
-                    test_log_emissions,
-                    simple_log_message,
-                    rich_log_message,
-                    delete_canon_entry,
-                    save_api_key,
-                    list_canon_docs,
-                    load_preferences,
-                    update_preferences,
-                    reset_preferences,
-                    prefs_file_path,
-                    ])
-                    .run(tauri::generate_context!())
-                    .expect("error while running tauri application");
-                    
-                    
-                    
-                }
+                new_logger.simple_log_message(
+                    format!("Canon file is {} at {}", store_name, store_path),
+                    "start".to_string(),
+                    "info".to_string());
+                
+                // app_state.update_logger_path(app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy().to_string()).expect("Failed to update logger path");
+                println!("{}", app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy());
+                
+                app.manage(new_logger.clone());
+                // Load .env file
+                dotenv::dotenv().ok();
+                Ok(())
+            })
+            .plugin(tauri_plugin_clipboard_manager::init())
+            .plugin(tauri_plugin_dialog::init())
+            .plugin(tauri_plugin_opener::init())
+            .invoke_handler(tauri::generate_handler![
+                greet,
+                completion_from_context,
+                search_similarity,
+                ingestion_from_file_dialog,
+                test_log_emissions,
+                simple_log_message,
+                rich_log_message,
+                delete_canon_entry,
+                save_api_key,
+                list_canon_docs,
+                load_preferences,
+                update_preferences,
+                reset_preferences,
+                prefs_file_path,
+                ])
+                .run(tauri::generate_context!())
+                .expect("error while running tauri application");
+                
+                
+                
+            }

@@ -159,7 +159,7 @@ async function completionFromContext() {
   if (actionItem) {
     if (actionItem.options.disabled === false) {
       wasDisabled = false;
-
+      
       // Disable the extension temporarily..to avoid it appearing before emanation concludes..
       actionItem.options.disabled = true;
       addSimpleLogEntry({
@@ -182,7 +182,7 @@ async function completionFromContext() {
   invoke("completion_from_context", { input: editor.getText() })
   .then(([content, timing]) => {
     clearInterval(loadingInterval);
-
+    
     greetMsgEl.textContent = 'Emanation Complete';
     //console.log("Completion content:", content);
     editor.chain()
@@ -406,8 +406,15 @@ window.addEventListener("DOMContentLoaded", async () => {
   prefsSaveBtn = document.querySelector("#prefs-save-btn");
   prefsSaveBtn.addEventListener("click", () => {
     //console.log("what's this ->", prefsSimilarityThreshold.value);
-    const shuffleSimilarsValue = prefsShuffleSimilars.checked ? "true" : "false";
+    // Convert the string "true"/"false" to an actual boolean
+    const shuffleSimilarsValue = prefsShuffleSimilars.checked;
     
+    addSimpleLogEntry({
+      id: "",
+      timestamp: Date.now(),
+      message: 'shuffleSimilarsValue is '+shuffleSimilarsValue,
+      level: 'debug'
+    });
     invoke("update_preferences", {
       responselimit: prefsResponseLimitTextArea.value,
       mainprompt: prefsMainPromptTextArea.value,
@@ -426,7 +433,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         id: "",
         timestamp: Date.now(),
         message: 'Preferences saved<br/>'+JSON.stringify(res, null, 2),
-        level: 'info'
+        level: 'debug'
       });
     }).catch((error) => {
       console.error('Failed to save preferences:', error);
@@ -466,19 +473,27 @@ window.addEventListener("DOMContentLoaded", async () => {
     // console.log('Panel before:', panel.classList.contains('open')); 
     invoke("load_preferences").then((res) => {
       console.log('Preferences Loaded:', res);
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'Preferences loaded<br/>'+JSON.stringify(res, null, 2),
+        level: 'info'
+      });
       prefsMainPromptTextArea.textContent = res.main_prompt;
       prefsResponseLimitTextArea.textContent = res.response_limit;
       prefsFinalPreambleTextArea.textContent = res.final_preamble;
       prefsProseStyleTextArea.textContent = res.prose_style;
       prefsShuffleSimilars.checked = res.shuffle_similars;
       prefsSimilarityThreshold.value = res.similarity_threshold * 100;
+      prefsSimilarityThreshold.textContent = res.similarity_threshold;
+      prefsSimilarityThresholdValue.textContent = res.similarity_threshold;
       prefsSimilarityCount.value = res.similarity_count;
       prefsSimilarityCountValue.textContent = res.similarity_count;
       prefsMaxHistoryItems.value = res.max_history;
       prefsMaxOutputTokens.value = res.max_output_tokens;
       prefsTemperature.value = res.temperature;
       prefsTemperatureValue.textContent = res.temperature;
-    
+      
       panel.classList.toggle('open');
       panelToggleBtn.classList.toggle('open');
     });

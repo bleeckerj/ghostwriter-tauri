@@ -3,7 +3,11 @@ use confy;
 use tauri::App;
 use crate::logger::{Completion, CompletionLogEntry, Logger, VectorSearchResult};
 use crate::app_state::AppState;
+use crate::SimpleLog;
 use tauri::AppHandle;
+use tauri::Emitter;
+use serde_json::json;
+use chrono::Local;
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct Preferences {
@@ -42,7 +46,48 @@ impl Preferences {
     pub fn load_with_defaults(app_state: &AppState, app_handle: AppHandle) -> Self {
         let mut prefs: Preferences = match confy::load("ghostwriter", "preferences") {
             Ok(loaded_prefs) => {
-                println!("Loaded preferences: {:?}", loaded_prefs);
+                
+                let prefs_path = Preferences::prefs_file_path();
+
+                app_handle.emit("simple-log-message", json!({
+                    "message": format!("Preferences loaded from {}", prefs_path),
+                    "timestamp": chrono::Local::now().to_rfc3339(),
+                    "level": "debug"
+                }));
+                // println!("Loaded preferences: {:?}", loaded_prefs);
+                loaded_prefs
+            },
+            Err(e) => {
+                println!("Error loading preferences: {:?}", e);
+                app_handle.emit("simple-log-message", json!({
+                    "message": format!("Error loading preferences: {:?}", e),
+                    "timestamp": chrono::Local::now().to_rfc3339(),
+                    "level": "error"
+                }));
+                Preferences::default()
+            }
+        };
+        prefs.apply_defaults();
+        app_handle.emit("simple-log-message", json!({
+            "message": format!("Preferences loaded and defaults applied: {:?}", prefs),
+            "timestamp": chrono::Local::now().to_rfc3339(),
+            "level": "debug"
+        }));
+        prefs
+    }
+
+    pub fn load(app_state: &AppState, app_handle: AppHandle) -> Self {
+        let mut prefs: Preferences = match confy::load("ghostwriter", "preferences") {
+            Ok(loaded_prefs) => {
+                
+                let prefs_path = Preferences::prefs_file_path();
+
+                app_handle.emit("simple-log-message", json!({
+                    "message": format!("Preferences loaded from {}", prefs_path),
+                    "timestamp": chrono::Local::now().to_rfc3339(),
+                    "level": "debug"
+                }));
+                //println!("Loaded preferences: {:?}", loaded_prefs);
                 loaded_prefs
             },
             Err(e) => {
@@ -50,7 +95,11 @@ impl Preferences {
                 Preferences::default()
             }
         };
-        prefs.apply_defaults();
+        app_handle.emit("simple-log-message", json!({
+            "message": format!("Preferences loaded: {:?}", prefs),
+            "timestamp": chrono::Local::now().to_rfc3339(),
+            "level": "info"
+        }));
         prefs
     }
 
@@ -110,6 +159,9 @@ impl Preferences {
         if self.max_history == 0 {
             self.max_history = Self::MAX_HISTORY_DEFAULT;
         }
-        self.shuffle_similars = Self::SHUFFLE_SIMILARS_DEFAULT;
+        if !self.shuffle_similars {
+            self.shuffle_similars = Self::SHUFFLE_SIMILARS_DEFAULT;
+        }
+        //self.shuffle_similars = Self::SHUFFLE_SIMILARS_DEFAULT;
     }
 }

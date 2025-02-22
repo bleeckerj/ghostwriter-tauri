@@ -8,6 +8,7 @@ use std::io::Write;
 use std::io::{self, BufReader, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use chrono::Local;
+use crate::preferences::Preferences;
 
 const MAX_ENTRIES: usize = 3;
 

@@ -507,11 +507,11 @@ impl DocumentStore {
         embedding_generator: &EmbeddingGenerator,
         app_handle: tauri::AppHandle,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        println!("app_handle: {:?}", app_handle);
+        //println!("app_handle: {:?}", app_handle);
         // Chunk the content
         let chunks = self.embedding_generator.chunk_text(&content, 2048, 0); // adjust size/overlap as needed
         // Emit progress update
-        println!("Processing {} chunks", chunks.len());
+        //println!("Processing {} chunks", chunks.len());
         app_handle.emit("progress-indicator-load", json!({
             "progress_id": format!("embedding_doc_id_{}",doc_id),
             "current_step": 0,
