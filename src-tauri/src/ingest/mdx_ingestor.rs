@@ -9,6 +9,7 @@ use gray_matter::{Matter, engine::YAML, Pod};
 
 use super::document_ingestor::{DocumentIngestor, IngestedDocument, DocumentMetadata, IngestError};
 
+#[derive(Debug)]
 pub struct MdxIngestor;
 
 /// Macro to safely extract nested values from `Pod` within a `HashMap<String, Pod>`

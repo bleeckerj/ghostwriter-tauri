@@ -229,7 +229,7 @@ async fn completion_from_context(
     let max_history = preferences.max_history;
     let similarity_threshold = preferences.similarity_threshold;
     let mut new_logger = NewLogger::new(app_handle.clone());
-
+    
     let start_total = Instant::now();
     
     // Time embedding generation
@@ -249,13 +249,13 @@ async fn completion_from_context(
     // similar docs get the top 4, which may all be from the same source
     // fence this off so we can release the lock on the store
     {
-       let store = state.doc_store.lock().await;
-       similar_docs = store.search(&embedding, similarity_count, similarity_threshold).await.map_err(|e| e.to_string())?;
+        let store = state.doc_store.lock().await;
+        similar_docs = store.search(&embedding, similarity_count, similarity_threshold).await.map_err(|e| e.to_string())?;
         database_name = (store.get_database_name().to_string()); // Just convert &str to String
         database_path = store.get_database_path().to_string(); // Just convert &str to String
     }
     // lock on store should be released by now
-
+    
     let search_duration = start_search.elapsed();
     
     // Shuffle similar_docs if shuffle_similars is true
@@ -432,12 +432,30 @@ if let Some(choice) = response.choices.first() {
             "info".to_string()
         );
         
-        state
-        .logger
-        .lock()
-        .await
-        .log_completion(entry)
-        .map_err(|e| e.to_string())?;
+        // state
+        // .logger
+        // .lock()
+        // .await
+        // .log_completion(entry)
+        // .map_err(|e| e.to_string())?;
+        // Instead of directly failing if logging fails, log the error and continue
+        match state.logger.lock().await.log_completion(entry) {
+            Ok(_) => {
+                new_logger.simple_log_message(
+                    "Successfully logged completion".to_string(),
+                    "completion_log".to_string(),
+                    "debug".to_string()
+                );
+            },
+            Err(e) => {
+                new_logger.simple_log_message(
+                    format!("Failed to log completion: {}", e),
+                    "completion_log".to_string(),
+                    "error".to_string()
+                );
+                // Continue execution despite logging failure
+            }
+        };
         
         let mut conversation = state.conversation.lock().await;
         
@@ -469,7 +487,7 @@ async fn search_similarity(
 ) -> Result<Vec<SearchResult>, String> {  // Changed return type
     let limit = limit.unwrap_or(3);
     let preferences = state.preferences.lock().await;
-
+    
     let embedding = state
     .embedding_generator
     .generate_embedding(&query)

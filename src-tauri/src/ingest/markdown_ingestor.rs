@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use tokio::fs::metadata;
 
+#[derive(Debug)]
 pub struct MarkdownIngestor;
 
 #[async_trait]

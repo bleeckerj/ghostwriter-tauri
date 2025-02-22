@@ -227,7 +227,7 @@ async function completionFromContext() {
   })
   .catch((err) => {
     clearInterval(loadingInterval);
-    greetMsgEl.textContent = 'Error occurred';
+    greetMsgEl.textContent = 'Error occurred '+err;
     console.error(err);
   });
 }
@@ -752,7 +752,7 @@ const editor = new Editor({
           greetMsgEl.textContent = 'Completed';
         } catch (error) {
           console.error('Action failed:', error);
-          greetMsgEl.textContent = 'Error occurred';
+          greetMsgEl.textContent = 'Error occurred '+error;
           
           // Make sure to re-enable even on error
           const pluginKey = new PluginKey('inlineActionItem');

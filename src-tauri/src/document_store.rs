@@ -222,7 +222,7 @@ impl DocumentStore {
              FROM documents d 
              JOIN embeddings e ON d.id = e.doc_id"
         )?;  // Use ? directly for rusqlite::Error
-        println!("************************ {}", similarity_threshold);
+        //println!("************************ {}", similarity_threshold);
         let mut similarities = Vec::new();
         
         let rows = stmt.query_map([], |row| {
@@ -249,8 +249,8 @@ impl DocumentStore {
         }
         
         // Log the similarities before filtering
-        println!("Similarities before filtering: {:?}", similarities.iter().map(|(doc_id, name, _, _, similarity)| (doc_id, name, similarity)).collect::<Vec<_>>());
-        println!("Similarity threshold: {}", similarity_threshold);
+        //println!("Similarities before filtering: {:?}", similarities.iter().map(|(doc_id, name, _, _, similarity)| (doc_id, name, similarity)).collect::<Vec<_>>());
+        //println!("Similarity threshold: {}", similarity_threshold);
         
         // Filter by min_score and sort by similarity score in descending order
         similarities.retain(|&(doc_id, ref name, _, _, similarity)| {
@@ -292,7 +292,7 @@ impl DocumentStore {
             }
         }
         
-        println!("Final results: {:?}", unique_results.iter().map(|(doc_id, name, _, _, similarity)| (doc_id, name, similarity)).collect::<Vec<_>>());
+        //println!("Final results: {:?}", unique_results.iter().map(|(doc_id, name, _, _, similarity)| (doc_id, name, similarity)).collect::<Vec<_>>());
         Ok(unique_results)
     }
     
@@ -342,7 +342,7 @@ impl DocumentStore {
         app_handle: tauri::AppHandle, // Add app_handle parameter
     ) -> Result<(), Box<dyn std::error::Error>> {
         let store = self.clone(); // Clone Arc to get a reference
-        println!("Processing document: {:?}", path);
+        //println!("Processing document: {:?}", path);
         
         // Find suitable ingestor
         let ingestor = match store.ingestors.iter().find(|i| i.can_handle(path)) {
@@ -356,12 +356,21 @@ impl DocumentStore {
                     "level": "error"
                 }))?;
                 println!("Ingestor not found");
+                app_handle.emit("simple-log-message", json!({
+                    "message": format!("No ingestor found for {}", path.to_string_lossy()),
+                    "timestamp": chrono::Local::now().to_rfc3339(),
+                    "level": "warn"
+                }))?;
                 return Err(Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, error_message)));
             }
         };
         
-        
-        println!("Ingestor found");
+        app_handle.emit("simple-message", json!({
+            "message": format!("Ingestor found: {:?}", ingestor),
+            "timestamp": chrono::Local::now().to_rfc3339(),
+            "level": "debug"
+        }))?;
+        //println!("Ingestor found");
         let ingested = ingestor.ingest_file(path).await?;
         //println!("Ingested document: {:?}", ingested);
         let document = Document {
