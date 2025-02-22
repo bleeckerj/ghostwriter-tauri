@@ -29,6 +29,7 @@ pub struct CompletionLogEntry {
     pub vector_search_results_for_log: Vec<VectorSearchResult>,
     pub canon_name: String,
     pub canon_path: String,
+    pub preferences: Preferences,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
