@@ -102,23 +102,14 @@ pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
 }
 
 pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
-    // Clone the AppHandle to avoid lifetime issues
-    // Clone the Arc<AppState> to safely pass it to async contexts
-    let app_state: Arc<AppState> = Arc::clone(&app.state());
-    // let app_handle_clone = app.clone();
+
+    let app_state = app.state::<AppState>();
 
     match event.id.0.as_str() {
         MENU_FILE_NEW => {
-            // println!("New file");
-            // let simple_log_data = SimpleLog {
-            //     message: format!("{}", "New file feature not yet implemented, sadly.."),
-            //     level: "info".to_string(),
-            //     timestamp: chrono::Local::now().to_rfc3339().to_string(),
-            //     id: None,
-            // };
-            // let _ = app_handle_clone.emit("simple-log-message", simple_log_data);
+            println!("New file");
         }
-        
+
         MENU_FILE_QUIT => {
             app.exit(0);
         }
@@ -179,29 +170,32 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
             let _ = app_handle.emit("simple-log-message", simple_log_data);
         }
         MENU_CANON_LOAD => {
-            print!("Load canon");
-            // Avoid creating an intermediate 'dialog' variable
-            // let app_handle = app.clone();
-            // let dialog = app_handle.dialog().clone();
-            // FileDialogBuilder::new(dialog)
-            //     .set_title("Select a File")
-            //     .pick_file(move |file_path| {
-            //         if let Some(file_path) = file_path {
-            //             let file_path_str = match file_path {
-            //                 FilePath::Path(path_buf) => path_buf.to_string_lossy().to_string(),
-            //                 FilePath::Url(url) => url.to_string(),
-            //             };
+            let app_handle = app.clone();
+            let dialog = app_handle.dialog().clone();
+            let doc_store: Arc<Mutex<DocumentStore>> = Arc::clone(&app_state.doc_store);
+            FileDialogBuilder::new(dialog)
+            .set_title("Select a File")
+            .pick_file(move |file_path| {
+                if let Some(path) = file_path {
+                    let path_as_string = path.to_string().clone();
+                    println!("Selected file: {:?}", path.clone());
+                    // let simple_log_data = SimpleLog {
+                    //     message: format!("Selected file: {:?}", path.clone()),
+                    //     level: "info".to_string(),
+                    //     timestamp: chrono::Local::now().to_rfc3339().to_string(),
+                    //     id: None,
+                    // };
+                    let path_buf = convert_file_path_to_path_buf(path);
+                    // tokio::spawn(async move {
+                    //     let mut store = doc_store.lock().await;
+                    //     store.set_database_path(path_buf.unwrap()).await;
+                    // });
+                    tauri::async_runtime::spawn(set_database_path_async(doc_store, path_as_string, app_handle.clone()));
 
-            //             let doc_store = Arc::clone(&app_state.doc_store);
-            //             let app_handle = app_handle.clone();
-
-            //             tokio::spawn(async move {
-            //                 set_database_path_async(doc_store, file_path_str, app_handle).await;
-            //             });
-            //         } else {
-            //             println!("No file selected.");
-            //         }
-            //     });
+                } else {
+                    println!("No file selected.");
+                }
+            });
         }
         MENU_CANON_INGEST => {
             // Handle ingest canon
@@ -210,7 +204,7 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
         }
         _ => {}
     }
-}
+ }
 
 async fn set_database_path_async<R: Runtime>(
     doc_store: Arc<Mutex<DocumentStore>>,
@@ -240,4 +234,8 @@ async fn set_database_path_async<R: Runtime>(
             let _ = app_handle.emit("simple-log-message", simple_log_data);
         }
     }
+}
+
+fn convert_file_path_to_path_buf(file_path: FilePath) -> Option<PathBuf> {
+    file_path.into_path().ok()
 }
