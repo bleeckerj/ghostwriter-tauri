@@ -73,7 +73,8 @@ impl DocumentStore {
         store_path: PathBuf,
         embedding_generator: Arc<EmbeddingGenerator>
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let (conn, canon_path, canon_name, next_id) = Self::initialize_database(&store_path)?;
+        let (conn, canon_path, canon_name, next_id) = 
+            Self::initialize_database(&store_path)?;
 
         let mut doc_store = DocumentStore { 
             conn: Arc::new(Mutex::new(conn)),
@@ -107,11 +108,27 @@ impl DocumentStore {
         Ok(())
     }
 
+    fn resolve_database_path(store_path: &PathBuf) -> PathBuf {
+        if store_path.is_file() {
+            // If it's a file, use it directly
+            store_path.to_path_buf()
+        } else {
+            // If it's a directory (or doesn't exist), append "documents.db"
+            store_path.join("documents.db")
+        }
+    }
+
     fn initialize_database(
         store_path: &PathBuf,
     ) -> Result<(Connection, String, String, usize), Box<dyn std::error::Error>> {
-        std::fs::create_dir_all(store_path)?;
-        let db_path = store_path.join("documents.db");
+        
+        if store_path.is_dir() || !store_path.exists() {
+            std::fs::create_dir_all(store_path)?;
+        }
+        
+        let db_path = Self::resolve_database_path(store_path);
+
+        //let db_path = store_path.join(db_name);
         
         let conn = Connection::open(&db_path)?;
         let canon_path = db_path.to_string_lossy().to_string();
