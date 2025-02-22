@@ -126,6 +126,7 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
                                 // Emit the JSON string
                                 // Send to the front end, basically.
                                 app_handle.emit("canon-list", json_string);
+                                drop(store);
                             }
                             Err(e) => {
                                 // Handle serialization error
@@ -174,7 +175,9 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
             let dialog = app_handle.dialog().clone();
             let doc_store: Arc<Mutex<DocumentStore>> = Arc::clone(&app_state.doc_store);
             FileDialogBuilder::new(dialog)
-            .set_title("Select a File")
+            .set_title("Select A Canon Database")
+            .set_can_create_directories(true)
+            .add_filter("Canon files", &[".canon", ".db"])
             .pick_file(move |file_path| {
                 if let Some(path) = file_path {
                     let path_as_string = path.to_string().clone();
@@ -217,7 +220,7 @@ async fn set_database_path_async<R: Runtime>(
     match store.set_database_path(path_buf).await {
         Ok(_) => {
             let simple_log_data = SimpleLog {
-                message: format!("New database path set: {}", path),
+                message: format!("New canon set: {}", path),
                 level: "info".to_string(),
                 timestamp: chrono::Local::now().to_rfc3339().to_string(),
                 id: None,
@@ -226,7 +229,7 @@ async fn set_database_path_async<R: Runtime>(
         }
         Err(e) => {
             let simple_log_data = SimpleLog {
-                message: format!("Error setting database path: {}", e),
+                message: format!("Error setting canon path: {}", e),
                 level: "error".to_string(),
                 timestamp: chrono::Local::now().to_rfc3339().to_string(),
                 id: None,

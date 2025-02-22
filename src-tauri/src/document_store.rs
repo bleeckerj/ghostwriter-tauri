@@ -113,8 +113,8 @@ impl DocumentStore {
             // If it's a file, use it directly
             store_path.to_path_buf()
         } else {
-            // If it's a directory (or doesn't exist), append "documents.db"
-            store_path.join("documents.db")
+            // If it's a directory (or doesn't exist), append "ghostwriter.canon"
+            store_path.join("ghostwriter.canon")
         }
     }
 

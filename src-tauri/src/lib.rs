@@ -243,11 +243,19 @@ async fn completion_from_context(
     
     // Time similarity search
     let start_search = Instant::now();
-    
+    let mut similar_docs: Vec<(i64, String, usize, String, f32)> = Vec::new();
+    let database_name: String;
+    let database_path: String;
     // similar docs get the top 4, which may all be from the same source
-    let store = state.doc_store.lock().await;
-    let mut similar_docs = store.search(&embedding, similarity_count, similarity_threshold).await.map_err(|e| e.to_string())?;
-    
+    // fence this off so we can release the lock on the store
+    {
+       let store = state.doc_store.lock().await;
+       similar_docs = store.search(&embedding, similarity_count, similarity_threshold).await.map_err(|e| e.to_string())?;
+        database_name = (store.get_database_name().to_string()); // Just convert &str to String
+        database_path = store.get_database_path().to_string(); // Just convert &str to String
+    }
+    // lock on store should be released by now
+
     let search_duration = start_search.elapsed();
     
     // Shuffle similar_docs if shuffle_similars is true
@@ -397,9 +405,9 @@ if let Some(choice) = response.choices.first() {
             openai_request_ms: openai_duration.as_millis(),
             total_ms: total_duration.as_millis(),
         };
-        let store = state.doc_store.lock().await;
-        let database_name = store.get_database_name().to_string(); // Just convert &str to String
-        let database_path = store.get_database_path().to_string(); // Just convert &str to String
+        // let store: tokio::sync::MutexGuard<'_, DocumentStore> = state.doc_store.lock().await;
+        // let database_name = store.get_database_name().to_string(); // Just convert &str to String
+        // let database_path = store.get_database_path().to_string(); // Just convert &str to String
         
         
         let entry = Completion {
@@ -410,8 +418,8 @@ if let Some(choice) = response.choices.first() {
                 system_prompt: system_content.clone(),
                 conversation_context: conversation_context.clone(),
                 vector_search_results_for_log: vector_search_results_for_log,
-                canon_name: database_name.clone(),
-                canon_path: database_path.clone(),
+                canon_name: database_name,
+                canon_path: database_path,
                 
             }
         };

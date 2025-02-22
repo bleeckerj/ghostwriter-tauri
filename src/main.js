@@ -183,7 +183,7 @@ async function completionFromContext() {
   .then(([content, timing]) => {
     clearInterval(loadingInterval);
 
-    greetMsgEl.textContent = 'Complete';
+    greetMsgEl.textContent = 'Emanation Complete';
     //console.log("Completion content:", content);
     editor.chain()
     .focus()
@@ -644,6 +644,11 @@ window.addEventListener("DOMContentLoaded", async () => {
           total_steps: event.payload.total_steps,
           meta: "Completed Ingestion"
         })
+        greetMsgEl.textContent = 'Ingestion Completed for '+event.payload.current_file+' with '+event.payload.total_steps+' chunks.';
+        window.timeout(() => {
+          greetMsgEl.textContent = 'Ingestion Completed';
+        }
+        , 5000);
       }
     });
   } catch (error) {
