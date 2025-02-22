@@ -159,10 +159,23 @@ async function completionFromContext() {
   if (actionItem) {
     if (actionItem.options.disabled === false) {
       wasDisabled = false;
+
       // Disable the extension temporarily..to avoid it appearing before emanation concludes..
       actionItem.options.disabled = true;
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'InlineActionItem extension disabled during emanation? '+actionItem.options.disabled,
+        level: 'debug'
+      });
     } else {
       wasDisabled = true;
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'InlineActionItem extension was already disabled: '+actionItem.options.disabled,
+        level: 'debug'
+      });
     }
   }  
   
@@ -171,7 +184,7 @@ async function completionFromContext() {
     clearInterval(loadingInterval);
     
     greetMsgEl.textContent = 'Complete';
-    console.log("Completion content:", content);
+    //console.log("Completion content:", content);
     editor.chain()
     .focus()
     .insertContent([
@@ -200,7 +213,16 @@ async function completionFromContext() {
       }
     ]).run();
     if (wasDisabled === false) {
-      actionItem.options.disabled = false;
+      setTimeout(() => {
+        actionItem.options.disabled = false;
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date.now(),
+          message: 'InlineActionItem extension re-enabled after completion and is now => '+actionItem.options.disabled,
+          level: 'debug'
+        });
+      }
+      , 5000);
     }
   })
   .catch((err) => {
@@ -745,7 +767,7 @@ const editor = new Editor({
     StarterKit,
     DynamicTextMark,
     InlineActionItem.configure({
-      disabled: false,                // Disables the feature
+      disabled: true,                // Disables the feature
       timeout: 3000,                 // Show button after 3 seconds
       onClick: async (view, pos, event) => {
         try {

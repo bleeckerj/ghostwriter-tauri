@@ -222,8 +222,9 @@ async fn ingestion_from_file_dialog(
     //let doc_store = state.doc_store.clone();
     //let embedding_generator = state.embedding_generator.clone();
     
-    let store = state.doc_store.clone();
-    store.process_document_async(&file_path_buf.as_path(), app_handle).await;
+    let store = state.doc_store.lock().await;
+    let store_arc = Arc::new(store.clone());
+    store_arc.process_document_async(&file_path_buf, app_handle).await;
     
     // tokio::spawn(async move {
     //     if let Err(err) = store.process_document_async(file_path_buf.as_path()).await {
@@ -269,7 +270,8 @@ async fn completion_from_context(
     let start_search = Instant::now();
     
     // similar docs get the top 4, which may all be from the same source
-    let mut similar_docs = state.doc_store.search(&embedding, similarity_count, similarity_threshold).await.map_err(|e| e.to_string())?;
+    let store = state.doc_store.lock().await;
+    let mut similar_docs = store.search(&embedding, similarity_count, similarity_threshold).await.map_err(|e| e.to_string())?;
     
     let search_duration = start_search.elapsed();
     
@@ -420,9 +422,9 @@ if let Some(choice) = response.choices.first() {
             openai_request_ms: openai_duration.as_millis(),
             total_ms: total_duration.as_millis(),
         };
-        
-        let database_name = state.doc_store.get_database_name().to_string(); // Just convert &str to String
-        let database_path = state.doc_store.get_database_path().to_string(); // Just convert &str to String
+        let store = state.doc_store.lock().await;
+        let database_name = store.get_database_name().to_string(); // Just convert &str to String
+        let database_path = store.get_database_path().to_string(); // Just convert &str to String
         
         
         let entry = Completion {
@@ -498,7 +500,8 @@ async fn search_similarity(
     // .lock()
     // .map_err(|e| format!("Failed to acquire doc store lock: {}", e))?;
     let similarity_threshold = preferences.similarity_threshold;
-    let results = state.doc_store
+    let store = state.doc_store.lock().await;
+    let results = store
     .search(&embedding, limit, similarity_threshold)
     .await // ✅ Now correctly awaiting the async function
     .map_err(|e| format!("Search failed: {}", e))?;
@@ -622,7 +625,8 @@ async fn search_similarity(
             };
             
             let doc_store = Arc::clone(&app_state.doc_store);
-            match doc_store.delete_document(doc_id_int).await {
+            let store = doc_store.lock().await;
+            match store.delete_document(doc_id_int).await {
                 Ok(_) => {
                     logger.simple_log_message(
                         "Deleted canon entry ".to_string(),
@@ -650,7 +654,8 @@ async fn search_similarity(
             app_handle: tauri::AppHandle,
         ) -> Result<String, String> {
             let doc_store = Arc::clone(&app_state.doc_store);
-            match doc_store.fetch_documents().await {
+            let store = doc_store.lock().await;
+            match store.fetch_documents().await {
                 Ok(listing) => {
                     let json_string = serde_json::to_string(&listing).map_err(|e| e.to_string())?;
                     app_handle.emit("canon-list", json_string).map_err(|e| e.to_string())?;
