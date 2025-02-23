@@ -14,6 +14,28 @@ use std::path::PathBuf;
 use tauri::Manager;
 use std::fs;
 use crate::preferences::Preferences;
+use tokio::task;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum AppError {
+    #[error("Invalid path: {0}")]
+    InvalidPath(String),
+    #[error("Logger creation error: {0}")]
+    LoggerCreationError(String),
+    #[error("IO error: {0}")]
+    IoError(#[from] std::io::Error),
+    #[error("JSON error: {0}")]
+    JsonError(#[from] serde_json::Error),
+    #[error("Join error: {0}")]
+    JoinError(String),
+}
+
+impl From<tokio::task::JoinError> for AppError {
+    fn from(e: tokio::task::JoinError) -> Self {
+        AppError::JoinError(e.to_string())
+    }
+}
 
 #[derive(Debug)]
 pub struct AppState {
@@ -68,11 +90,27 @@ impl AppState {
     //     println!("Logger path updated to: {:?}", current_path);
     //     Ok((path_str.to_string()))
     // }
-    pub async fn set_logger_path(&self, path: PathBuf) -> Result<String, Box<dyn std::error::Error>> {
-        let path_str = path.to_str().ok_or("Invalid path")?;
+    pub async fn set_logger_path(&self, path: PathBuf) -> Result<(), AppError> {
+        let path_str = path.clone().into_os_string().into_string().map_err(|_| AppError::InvalidPath("Invalid UTF-8 path".to_string()))?;
+    
         // Create new logger first to ensure it's valid
-        let new_logger = Logger::new(&path_str)?;
-        Ok((path_str.to_string()))
+        let new_logger = task::spawn_blocking(move || {
+            let logger_result = Logger::new(&path_str);
+            match logger_result {
+                Ok(logger) => Ok(logger),
+                Err(e) => {
+                    eprintln!("Failed to create logger: {}", e);
+                    Err(AppError::LoggerCreationError(e.to_string()))
+                }
+            }
+        }).await??;
+    
+        // Get lock and replace logger
+        let mut logger_guard = self.logger.lock().await;
+        *logger_guard = new_logger;
+    
+        println!("Logger path updated to: {:?}", path);
+        Ok(())
     }
 
     pub async fn get_logger_path(&self) -> String {
