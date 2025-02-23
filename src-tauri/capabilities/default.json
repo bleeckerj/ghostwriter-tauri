@@ -5,7 +5,23 @@
   "windows": [
     "main"
   ],
+  "webviews": [
+    "view-log-window-label"
+  ],
+  "remote": {
+    "urls": ["http://*:*", "https://*"]
+  },
   "permissions": [
+    {
+    "identifier": "fs:default",
+      "allow": [
+        { "path": "/tmp/*" },
+        { "path": "$APPLOCALDATA/*"},
+        { "path": "$APPLOG/*"},
+        { "path": "$APPROOT/*"}
+
+      ]
+    },
     "core:default",
     "opener:default",
     "dialog:default",
@@ -16,9 +32,9 @@
     "clipboard-manager:allow-write-image",
     "clipboard-manager:allow-write-text",
     "core:webview:allow-create-webview-window",
-    "core:webview:allow-get-all-webviews", 
+    "core:webview:allow-get-all-webviews",
     "core:webview:allow-print",
-    "core:window:default", 
+    "core:window:default",
     "core:window:allow-start-dragging",
     "core:window:allow-close",
     "core:window:allow-minimize",
@@ -63,6 +79,12 @@
     "core:menu:allow-set-as-help-menu-for-nsapp",
     "core:menu:allow-is-checked",
     "core:menu:allow-set-checked",
-    "core:menu:allow-set-icon"
+    "core:menu:allow-set-icon",
+    "fs:read-files",
+    "fs:write-files",
+    "fs:allow-applocaldata-read",
+    "fs:allow-applocaldata-write",
+    "fs:allow-applog-read",
+    "fs:allow-applog-write"
   ]
 }

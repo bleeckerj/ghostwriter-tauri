@@ -5,7 +5,7 @@ const { invoke } = window.__TAURI__.core;
 window.addEventListener("DOMContentLoaded", async () => {
     const logContents = await invoke('get_log_contents');
     //document.getElementById('log').textContent = logContents;
-    console.log(logContents);
+    //console.log(logContents);
     
     const container = document.getElementById("jsoneditor");
     const editor = new JSONEditor(container, { mode: "tree" });

@@ -938,7 +938,7 @@ async fn search_similarity(
             let app_state = AppState::new(
                 doc_store,
                 b_embedding_generator,
-                "./log.json"
+                "/tmp/gh-log.json"
             ).expect("Failed to create AppState");
             
             

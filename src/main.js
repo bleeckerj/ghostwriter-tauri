@@ -518,7 +518,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       console.log('Logger Path:', res);
       const logPath = res;
       const encodedLogPath = encodeURIComponent(logPath);
-      const webview = new WebviewWindow('unique-window-label', {
+      const webview = new WebviewWindow('view-log-window-label', {
         url: `view-log.html?logPath=${encodedLogPath}`, // URL to load
         title: 'Ghostwriter Log Viewer',
         width: 800,
