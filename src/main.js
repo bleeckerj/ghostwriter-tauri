@@ -520,7 +520,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       const encodedLogPath = encodeURIComponent(logPath);
       const webview = new WebviewWindow('unique-window-label', {
         url: `view-log.html?logPath=${encodedLogPath}`, // URL to load
-        title: 'log.json',
+        title: 'Ghostwriter Log Viewer',
         width: 800,
         height: 600,
         resizable: true,
@@ -536,6 +536,12 @@ window.addEventListener("DOMContentLoaded", async () => {
       webview.once('tauri://error', function (e) {
         // an error happened creating the webview
         console.log("woops", e)
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date.now(),
+          message: 'Error opening log viewer: '+JSON.stringify(e, null, 2)+". (Window is probably already open and buried behind other windows.)",
+          level: 'error'
+        });
       });
     });
   });

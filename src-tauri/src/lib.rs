@@ -208,6 +208,23 @@ async fn set_logger_app_data_path(
 }
 
 #[tauri::command]
+async fn get_log_contents(state: tauri::State<'_, AppState>) -> Result<Vec<Completion>, String> {
+    // Get the logger path from state
+    let logger = state.logger.lock().await;
+    let log_path = logger.get_logger_path();
+
+    // Read the file contents
+    let file = std::fs::File::open(log_path)
+        .map_err(|e| format!("Failed to open log file: {}", e))?;
+
+    // Parse JSON contents
+    let contents: Vec<Completion> = serde_json::from_reader(file)
+        .map_err(|e| format!("Failed to parse log contents: {}", e))?;
+
+    Ok(contents)
+}
+
+#[tauri::command]
 async fn ingestion_from_file_dialog(
     state: tauri::State<'_, AppState>,
     app_handle: tauri::AppHandle,
@@ -289,6 +306,12 @@ async fn completion_from_context(
         let mut rng = rand::thread_rng();
         similar_docs.shuffle(&mut rng);
     }
+
+    new_logger.simple_log_message(
+        format!("Found {} cosine similar documents ({})", similar_docs.len(), similarity_threshold),
+        "".to_string(),
+        "info".to_string()
+    );
     
     // Prepare the context for the LLM
     // This has all the document metadata..is that okay?
@@ -700,6 +723,35 @@ async fn search_similarity(
             } 
         }
         
+        #[derive(Serialize, Clone)]
+        struct CanonInfo {
+            name: String,
+            path: String,
+        }
+        #[tauri::command]
+        async fn get_canon_info(
+            logger: tauri::State<'_, NewLogger>,
+            app_state: tauri::State<'_, AppState>,
+            app_handle: tauri::AppHandle,
+            docid: String,
+        ) -> Result<CanonInfo, String> {
+            
+            
+            let doc_store = Arc::clone(&app_state.doc_store);
+            let store = doc_store.lock().await;
+            store.get_database_name();
+            store.get_database_path();
+            let unlocked_store = store.clone();
+            let result = format!("{:?}", unlocked_store);
+
+            let canon_info = CanonInfo {
+                name: store.get_database_name().to_string(),
+                path: store.get_database_path().to_string(),
+            };
+
+            Ok(canon_info)
+        }
+        
         
         #[derive(Serialize, Clone)]
         struct ProgressIndicator {
@@ -939,6 +991,8 @@ async fn search_similarity(
                 prefs_file_path,
                 get_logger_path,
                 set_logger_app_data_path,
+                get_log_contents,
+                get_canon_info,
                 ])
                 .run(tauri::generate_context!())
                 .expect("error while running tauri application");
