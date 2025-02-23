@@ -193,7 +193,7 @@ async fn set_logger_app_data_path(
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
     let mut app_data_path: PathBuf = app_handle.path()
-        .app_data_dir()
+        .app_log_dir()
         .unwrap_or_else(|_| {
             // Provide a default path if app_data_dir() returns None
             // This could be a fallback path in the user's home directory or a temporary directory
@@ -921,6 +921,7 @@ async fn search_similarity(
             .plugin(tauri_plugin_clipboard_manager::init())
             .plugin(tauri_plugin_dialog::init())
             .plugin(tauri_plugin_opener::init())
+            .plugin(tauri_plugin_fs::init())
             .invoke_handler(tauri::generate_handler![
                 greet,
                 completion_from_context,

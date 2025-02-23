@@ -13,9 +13,11 @@
 <body>
     <div class="text-[2em] font-['Haffer']">Ghostwriter JSON Log Viewer</div>
     <div id="jsoneditor"></div>
-
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.0/jsoneditor.min.js"></script>
     <script>
+        import { readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
+        
         async function loadJson() {
             try {
                 // Function to extract query parameters from the URL
@@ -23,18 +25,23 @@
                     const urlParams = new URLSearchParams(window.location.search);
                     return urlParams.get(name);
                 }
-    
+                
                 // Get the logPath from the query parameter
                 const logPath = 'wtf.json'//getQueryParam('logPath');
-    
+                
                 if (!logPath) {
                     alert("Log path not provided in URL.");
                     return;
                 }
-    
+                
                 // Decode the logPath
                 const decodedLogPath = decodeURIComponent(logPath);
-    
+                
+                const fileContent = await readTextFile('ghostwriter_log.json', {
+                    dir: BaseDirectory.AppLog, // or another base directory
+                });
+                console.log(fileContent);
+                
                 const response = await fetch(decodedLogPath).then((response) => {
                     if (!response.ok) {
                         alert("Failed to load JSON");
@@ -45,7 +52,7 @@
                     return response;
                 });
                 const data = await response.json();
-    
+                
                 const container = document.getElementById("jsoneditor");
                 const editor = new JSONEditor(container, { mode: "tree" });
                 editor.set(data);
@@ -53,7 +60,7 @@
                 console.error("Error loading JSON:", error);
             }
         }
-    
+        
         loadJson();
     </script>
 </body>
