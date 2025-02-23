@@ -18,7 +18,24 @@
     <script>
         async function loadJson() {
             try {
-                const response = await fetch("log.json").then((response) => {
+                // Function to extract query parameters from the URL
+                function getQueryParam(name) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    return urlParams.get(name);
+                }
+    
+                // Get the logPath from the query parameter
+                const logPath = getQueryParam('logPath');
+    
+                if (!logPath) {
+                    alert("Log path not provided in URL.");
+                    return;
+                }
+    
+                // Decode the logPath
+                const decodedLogPath = decodeURIComponent(logPath);
+    
+                const response = await fetch(decodedLogPath).then((response) => {
                     if (!response.ok) {
                         alert("Failed to load JSON");
                         throw new Error("Failed to load JSON");
@@ -28,7 +45,7 @@
                     return response;
                 });
                 const data = await response.json();
-
+    
                 const container = document.getElementById("jsoneditor");
                 const editor = new JSONEditor(container, { mode: "tree" });
                 editor.set(data);
@@ -36,7 +53,7 @@
                 console.error("Error loading JSON:", error);
             }
         }
-
+    
         loadJson();
     </script>
 </body>

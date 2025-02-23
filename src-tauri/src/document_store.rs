@@ -57,7 +57,7 @@ pub struct DocumentInfo {
     pub file_path: String,
     pub created_at: String,
 }
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct DocumentStore {
     conn: Arc<Mutex<Connection>>, // Change to tokio Mutex
     ingestors: Vec<Arc<Box<dyn DocumentIngestor>>>,

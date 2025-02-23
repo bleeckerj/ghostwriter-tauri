@@ -181,6 +181,31 @@ async fn prefs_file_path() -> Result<String, String> {
     Ok(Preferences::prefs_file_path())
 }
 
+#[tauri::command]
+async fn get_logger_path(state: tauri::State<'_, AppState>) -> Result<String, String> {
+    let logger = state.logger.lock().await;
+    Ok(logger.get_logger_path().to_str().unwrap().to_string())
+}
+
+#[tauri::command]
+async fn set_logger_app_data_path(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    let mut app_data_path: PathBuf = app_handle.path()
+        .app_data_dir()
+        .unwrap_or_else(|_| {
+            // Provide a default path if app_data_dir() returns None
+            // This could be a fallback path in the user's home directory or a temporary directory
+            std::env::temp_dir()
+        });
+    app_data_path.push("ghostwriter_log.json");
+
+    /// PROBLEMATIC
+    state.set_logger_path(app_data_path).await.map_err(|e| e.to_string());
+    Ok(())
+
+}
 
 #[tauri::command]
 async fn ingestion_from_file_dialog(
@@ -911,6 +936,8 @@ async fn search_similarity(
                 update_preferences,
                 reset_preferences,
                 prefs_file_path,
+                get_logger_path,
+                set_logger_app_data_path,
                 ])
                 .run(tauri::generate_context!())
                 .expect("error while running tauri application");

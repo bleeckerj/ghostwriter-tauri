@@ -3,7 +3,8 @@
 // src/embeddings.rs
 
 use async_openai::{config::OpenAIConfig, types::CreateEmbeddingRequestArgs, Client};
-#[derive(Clone)]
+
+#[derive(Debug, Clone)]
 pub struct EmbeddingGenerator {
     client: Client<OpenAIConfig>,
 }

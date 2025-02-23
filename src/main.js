@@ -234,7 +234,17 @@ async function completionFromContext() {
 
 window.addEventListener("DOMContentLoaded", async () => {
   //create();
-  
+    invoke("set_logger_app_data_path", {}).then((res) => {
+    console.log('Logger App Data Path:', res);
+    invoke("simple_log_message", { message: 'Logger App Data Path: '+res, id: "tracker", level: "info" }).then((res) => {
+    });
+    invoke("get_logger_path", {}).then((res) => {
+      console.log('Logger Path:', res);
+      invoke("simple_log_message", { message: 'JS Logger Path: '+res, id: "tracker", level: "debug" }).then((res) => {
+        //console.log('simple_log_emissions', res);
+      });
+    });
+  });
   let actionItem = editor.extensionManager.extensions.find(extension => extension.name === 'inlineActionItem');
   let nudgeButton = document.querySelector("#nudge-inline-action-item");
   if (actionItem) {
@@ -504,24 +514,29 @@ window.addEventListener("DOMContentLoaded", async () => {
   openLogBtnEl.addEventListener("click", () => {
     const currentWindow = getCurrentWebviewWindow()
     console.log(currentWindow);
-    const webview = new WebviewWindow('unique-window-label', {
-      url: 'view-log.html', // URL to load
-      title: 'log.json',
-      width: 800,
-      height: 600,
-      resizable: true,
-      fullscreen: false,
-      decorations: true, // window decorations (title bar, borders)
-      transparent: false,
-      center: true
-    })
-    webview.once('tauri://created', function () {
-      // webview successfully created
-      console.log("created");
-    });
-    webview.once('tauri://error', function (e) {
-      // an error happened creating the webview
-      console.log("woops", e)
+    invoke("get_logger_path", {}).then((res) => {
+      console.log('Logger Path:', res);
+      const logPath = res;
+      const encodedLogPath = encodeURIComponent(logPath);
+      const webview = new WebviewWindow('unique-window-label', {
+        url: `view-log.html?logPath=${encodedLogPath}`, // URL to load
+        title: 'log.json',
+        width: 800,
+        height: 600,
+        resizable: true,
+        fullscreen: false,
+        decorations: true, // window decorations (title bar, borders)
+        transparent: false,
+        center: true
+      })
+      webview.once('tauri://created', function () {
+        // webview successfully created
+        console.log("created");
+      });
+      webview.once('tauri://error', function (e) {
+        // an error happened creating the webview
+        console.log("woops", e)
+      });
     });
   });
   
@@ -677,6 +692,15 @@ window.addEventListener("DOMContentLoaded", async () => {
   invoke("simple_log_message", { message: 'Ghostwriter Up.', id: "tracker", level: "info" }).then((res) => {
     console.log('simple_log_emissions', res);
   });
+  
+  
+  invoke("get_canon_info", {}).then((res) => {
+    console.log('Canon Info:', res);
+    invoke("simple_log_message", { message: 'Canon Info: '+res, id: "tracker", level: "info" }).then((res) => {
+      //console.log('simple_log_emissions', res);
+    });
+  });
+  
   // invoke("rich_log_message", { message: 'Ghostwriter Up.', data: "no data", level: "info" }).then((res) => {
     //   console.log('rich_log_emissions', res);
   // });

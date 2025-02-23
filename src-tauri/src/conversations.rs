@@ -1,6 +1,8 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
 #![allow(unused)]
+
+#[derive(Debug, Clone)]
 pub struct Conversation {
     history: Vec<(String, String)>,
     max_chars: usize,

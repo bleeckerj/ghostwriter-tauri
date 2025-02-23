@@ -17,7 +17,7 @@ use tauri::{
 use std::{path, sync::Arc};
 use tokio::sync::Mutex;
 
-use crate::DocumentStore;
+use crate::{logger, DocumentStore};
 use chrono::Local;
 use crate::NewLogger;
 use crate::SimpleLog;

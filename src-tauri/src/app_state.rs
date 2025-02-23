@@ -15,7 +15,7 @@ use tauri::Manager;
 use std::fs;
 use crate::preferences::Preferences;
 
-
+#[derive(Debug)]
 pub struct AppState {
     pub doc_store: Arc<Mutex<DocumentStore>>,
     pub embedding_generator: Arc<EmbeddingGenerator>,
@@ -48,48 +48,84 @@ impl AppState {
         };
         Ok(app_state)
     }
+    
+    // pub async fn set_logger_path(&self, path: PathBuf) -> Result<String, Box<dyn std::error::Error>> {
+    //     let path_str = path.to_str().ok_or("Invalid path")?;
+    //         // .ok_or("Invalid path")?;
+    //     // Create new logger first to ensure it's valid
+    //     let new_logger = Logger::new(&path_str)?;
+        
+    //     // Get lock and replace logger
+    //     let mut logger_guard = self.logger.lock().await;
+    //     *logger_guard = new_logger;
+    //     println!("Logger is now set to: {:?}", logger_guard);
+    //     // Verify the change
+    //     let current_path = logger_guard.get_logger_path();
+    //     if current_path != path {
+    //         return Err("Logger path mismatch after setting".into());
+    //     }
+    
+    //     println!("Logger path updated to: {:?}", current_path);
+    //     Ok((path_str.to_string()))
+    // }
+    pub async fn set_logger_path(&self, path: PathBuf) -> Result<String, Box<dyn std::error::Error>> {
+        let path_str = path.to_str().ok_or("Invalid path")?;
+        // Create new logger first to ensure it's valid
+        let new_logger = Logger::new(&path_str)?;
+        Ok((path_str.to_string()))
+    }
 
-
+    pub async fn get_logger_path(&self) -> String {
+        let logger = self.logger.lock().await;
+        logger.get_logger_path().to_str().unwrap().to_string()
+    }
+    
+    // pub async fn set_logger(&self, logger: Logger) {
+    //     *self.logger.lock().await = logger;
+    //     println!("Logger set");
+    //     println!("Logger path: {:?}", self.get_logger_path().await);
+    // }
+    
     // ✅ Load API key from a file
     pub async fn load_api_key(&self, app_handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         let path = app_handle
-            .path()
-            .app_local_data_dir()
-            .unwrap_or_default()
-            .join("api_key.txt");
-
+        .path()
+        .app_local_data_dir()
+        .unwrap_or_default()
+        .join("api_key.txt");
+        
         if let Ok(contents) = fs::read_to_string(&path) {
             let mut api_key = self.api_key.lock().await;
             *api_key = Some(contents.trim().to_string());
             println!("Loaded API Key: {}", contents.trim());
         }
-
+        
         Ok(())
     }
-
+    
     // ✅ Save API key to a file
     pub async fn save_api_key(&self, _app_handle: &AppHandle, key: String) -> Result<(), Box<dyn std::error::Error>> {
         let env_path = ".env"; // ✅ Save to .env in the app's root directory
-
+        
         // ✅ Read existing .env contents (if any)
         let mut env_contents = fs::read_to_string(env_path).unwrap_or_else(|_| String::new());
-
+        
         // ✅ Remove any existing `OPENAI_API_KEY` entry
         env_contents = env_contents
-            .lines()
-            .filter(|line| !line.starts_with("OPENAI_API_KEY="))
-            .map(|line| format!("{}\n", line))
-            .collect();
-
+        .lines()
+        .filter(|line| !line.starts_with("OPENAI_API_KEY="))
+        .map(|line| format!("{}\n", line))
+        .collect();
+        
         // ✅ Append the new API key entry
         env_contents.push_str(&format!("OPENAI_API_KEY={}\n", key));
-
+        
         // ✅ Write back to .env
         fs::write(env_path, env_contents)?;
-
+        
         let mut api_key = self.api_key.lock().await; // ✅ Store it in-memory as well
         *api_key = Some(key);
-
+        
         println!("API Key saved to .env.");
         Ok(())
     }
