@@ -381,7 +381,6 @@ impl DocumentStore {
         app_handle: tauri::AppHandle, // Add app_handle parameter
     ) -> Result<(), Box<dyn std::error::Error>> {
         let store = self.clone(); // Clone Arc to get a reference
-        //println!("Processing document: {:?}", path);
         
         // Find suitable ingestor
         let ingestor = match store.ingestors.iter().find(|i| i.can_handle(path)) {
@@ -421,13 +420,16 @@ impl DocumentStore {
         };
         let doc_name = document.name.clone();
         println!("Document created: {:?}", document);
+        log::debug!("Document created: {:?}", document);
+
         let doc_id_result = {
-            let conn = store.conn.lock().await;  // ✅ Correctly locks the database connection
+            let conn = store.conn.lock().await;
             store.add_document_internal(&conn, document)
         };
         let doc_id = match doc_id_result {
             Ok(id) => {
                 println!("Document ID: {}", id);
+                log::debug!("Document ID: {}", id);
                 id
             }
             Err(e) => {
@@ -465,6 +467,12 @@ impl DocumentStore {
             }
             Err(e) => {
                 println!("Error processing embeddings: {:?}", e);
+                app_handle.emit("simple-message", json!({
+                    "message": format!("Ingestion & embedding complete: {}", file_name_clone),
+                    "timestamp": chrono::Local::now().to_rfc3339(),
+                    "level": "warn"
+                }));
+                log::warn!("Error processing embeddings: {:?}", e);
             }
         }
         

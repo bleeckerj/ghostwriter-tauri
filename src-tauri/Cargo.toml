@@ -51,3 +51,4 @@ confy = "0.6.1"
 rand = "0.8"
 tauri-plugin-fs = "2.2.0"
 syslog = "7.0.0"
+reqwest = { version = "0.12.12", features = ["json"] }

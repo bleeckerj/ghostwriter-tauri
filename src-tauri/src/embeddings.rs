@@ -3,24 +3,46 @@
 // src/embeddings.rs
 
 use async_openai::{config::OpenAIConfig, types::CreateEmbeddingRequestArgs, Client};
+use reqwest::header::AUTHORIZATION;
 
 #[derive(Debug, Clone)]
 pub struct EmbeddingGenerator {
     client: Client<OpenAIConfig>,
+    api_key_set: bool,
 }
 
 impl EmbeddingGenerator {
     // New constructor that takes a client
     pub fn new(client: Client<OpenAIConfig>) -> Self {
-        EmbeddingGenerator { client }
+        EmbeddingGenerator { client: client, api_key_set: false }
     }
 
+    pub fn new_with_api_key(api_key: &str) -> Self {
+        let config = OpenAIConfig::new()
+        .with_api_key(api_key.to_string());
+        let client = Client::with_config(config);
+        EmbeddingGenerator { client, api_key_set: true }
+    }
+    
     // Optional: Add a constructor that creates a client from an API key
     pub fn from_api_key(api_key: &str) -> Self {
         let config = OpenAIConfig::new()
-            .with_api_key(api_key.to_string());
+        .with_api_key(api_key.to_string());
         let client = Client::with_config(config);
-        EmbeddingGenerator { client }
+        EmbeddingGenerator { client, api_key_set: true }
+    }
+
+    pub fn set_api_key(&mut self, api_key: &str) {
+        let config = OpenAIConfig::new()
+        .with_api_key(api_key.to_string());
+        let client = Client::with_config(config);
+        self.client = client;
+        self.api_key_set = true;
+    }
+
+    pub fn has_api_key(&self) -> bool {
+        // Test if this is a default client (no API key) or configured client (with API key)
+        self.api_key_set
     }
 
     /// Chunks text into segments with optional overlap
@@ -32,11 +54,11 @@ impl EmbeddingGenerator {
         let mut chunks = Vec::new();
         let words: Vec<&str> = text.split_whitespace().collect();
         let mut i = 0;
-
+        
         while i < words.len() {
             let mut chunk = String::new();
             let mut j = i;
-
+            
             // Build chunk up to chunk_size
             while j < words.len() && (chunk.len() + words[j].len() + 1) <= chunk_size {
                 if !chunk.is_empty() {
@@ -45,9 +67,9 @@ impl EmbeddingGenerator {
                 chunk.push_str(words[j]);
                 j += 1;
             }
-
+            
             chunks.push(chunk);
-
+            
             // Move forward by chunk_size - overlap words for next iteration
             let advance = if j > i {
                 ((j - i) as f32 * (1.0 - (overlap as f32 / chunk_size as f32))) as usize
@@ -56,10 +78,10 @@ impl EmbeddingGenerator {
             };
             i += advance.max(1);
         }
-
+        
         chunks
     }
-
+    
     pub async fn generate_embeddings(
         &self,
         text: &str,
@@ -68,26 +90,26 @@ impl EmbeddingGenerator {
     ) -> Result<Vec<Vec<f32>>, Box<dyn std::error::Error>> {
         let chunks = self.chunk_text(text, chunk_size, overlap);
         let mut embeddings = Vec::new();
-
+        
         for chunk in chunks {
             let embedding = self.generate_embedding(&chunk).await?;
             embeddings.push(embedding);
         }
-
+        
         Ok(embeddings)
     }
-
+    
     pub async fn generate_embedding(
         &self,
         text: &str,
     ) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
         let request = CreateEmbeddingRequestArgs::default()
-            .model("text-embedding-ada-002")
-            .input(text.to_string())
-            .build()?;
-
+        .model("text-embedding-ada-002")
+        .input(text.to_string())
+        .build()?;
+        
         let response = self.client.embeddings().create(request).await?;
-
+        
         if let Some(embedding) = response.data.first() {
             Ok(embedding.embedding.clone())
         } else {
@@ -99,7 +121,7 @@ impl EmbeddingGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    
     #[test]
     fn test_chunk_text() {
         let generator = EmbeddingGenerator::from_api_key("dummy-key");
@@ -115,4 +137,13 @@ mod tests {
             assert!(chunks[1].starts_with(overlap_text));
         }
     }
+    #[test]
+    fn test_has_api_key() {
+        let generator_with_key = EmbeddingGenerator::from_api_key("dummy-key");
+        assert!(generator_with_key.has_api_key());
+
+        let generator_no_key = EmbeddingGenerator::new(Client::new());
+        assert!(!generator_no_key.has_api_key());
+    }
+
 }

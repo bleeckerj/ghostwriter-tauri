@@ -236,6 +236,8 @@ async fn ingestion_from_file_dialog(
 ) -> Result<String, String> {
     
     println!("Ingesting file: {}", file_path);
+    log::debug!("Ingesting file: {}", file_path);
+
     let file_path_buf = PathBuf::from(file_path);
     let file_name = file_path_buf.clone().as_path().file_name().unwrap().to_str().unwrap().to_string();
     
@@ -244,8 +246,8 @@ async fn ingestion_from_file_dialog(
     //let embedding_generator = state.embedding_generator.clone();
     
     let store = state.doc_store.lock().await;
-    let store_arc = Arc::new(store.clone());
-    store_arc.process_document_async(&file_path_buf, app_handle).await;
+    let store_clone = Arc::new(store.clone());
+    store_clone.process_document_async(&file_path_buf, app_handle).await;
     
     // tokio::spawn(async move {
     //     if let Err(err) = store.process_document_async(file_path_buf.as_path()).await {
@@ -932,10 +934,9 @@ async fn search_similarity(
             //     }
             // };
             
-            
-            let a_embedding_generator = EmbeddingGenerator::new(Client::new());
-            let b_embedding_generator = EmbeddingGenerator::new(Client::new());
-            let path = PathBuf::from("./resources/ghostwriter-selectric/vector_store/");
+            //let a_embedding_generator = EmbeddingGenerator::new(Client::new());
+            let b_embedding_generator = EmbeddingGenerator::new_with_api_key("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");
+            //let path = PathBuf::from("./resources/ghostwriter-selectric/vector_store/");
             
             
             
@@ -980,6 +981,8 @@ async fn search_similarity(
                 //check_api_key(&app_handle);
                 let path = app.path().app_data_dir().expect("This should never be None");
                 let path = path.join("./canon/");
+                let embedding_generator_clone: EmbeddingGenerator = b_embedding_generator.clone();
+
                 let doc_store = match DocumentStore::new(path.clone(), std::sync::Arc::new(b_embedding_generator)) {
                     Ok(store) => store,
                     Err(e) => {
@@ -1000,10 +1003,9 @@ async fn search_similarity(
                 
                 let store_name = doc_store.get_database_name().to_string();
                 let store_path = doc_store.get_database_path().to_string();
-                
                 let app_state = AppState::new(
                     doc_store,
-                    a_embedding_generator,
+                    embedding_generator_clone,
                     "/tmp/gh-log.json"
                 ).expect("Failed to create AppState");
 

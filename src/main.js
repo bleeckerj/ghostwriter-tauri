@@ -235,21 +235,21 @@ async function completionFromContext() {
 window.addEventListener("DOMContentLoaded", async () => {
   //create();
     invoke("set_logger_app_data_path", {}).then((res) => {
-    console.log('Logger App Data Path:', res);
+    //console.log('Logger App Data Path:', res);
     // invoke("simple_log_message", { message: 'Logger App Data Path: '+res, id: "tracker", level: "info" }).then((res) => {
     // });
-    addSimpleLogEntry({
-      id: "",
-      timestamp: Date.now(),
-      message: 'Logger App Data Path fn release: '+res,
-      level: 'info'
-    });
-    invoke("get_logger_path", {}).then((res) => {
-      console.log('Logger Path:', res);
-      invoke("simple_log_message", { message: 'JS Logger Path: '+res, id: "tracker", level: "debug" }).then((res) => {
-        //console.log('simple_log_emissions', res);
-      });
-    });
+    // addSimpleLogEntry({
+    //   id: "",
+    //   timestamp: Date.now(),
+    //   message: 'Logger App Data Path fn release: '+res,
+    //   level: 'info'
+    // });
+    // invoke("get_logger_path", {}).then((res) => {
+    //   console.log('Logger Path:', res);
+    //   invoke("simple_log_message", { message: 'JS Logger Path: '+res, id: "tracker", level: "debug" }).then((res) => {
+    //     //console.log('simple_log_emissions', res);
+    //   });
+    // });
   });
   let actionItem = editor.extensionManager.extensions.find(extension => extension.name === 'inlineActionItem');
   let nudgeButton = document.querySelector("#nudge-inline-action-item");
