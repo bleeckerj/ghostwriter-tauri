@@ -2,14 +2,13 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Ghostwriter",
   "version": "0.1.0",
-  "identifier": "com.nearfuturelaboratory.gh-tauri-tt-js.app",
+  "identifier": "com.nearfuturelaboratory.ghostwriter.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
     "devUrl": "http://localhost:5111",
     "frontendDist": "../dist"
   },
-
   "app": {
     "withGlobalTauri": true,
     "windows": [

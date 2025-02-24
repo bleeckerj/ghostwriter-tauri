@@ -25,6 +25,7 @@ use tauri::Manager; // Add this import
 use tauri::Emitter;
 use serde_json::json;
 use tokio::runtime::Handle;
+use log::{SetLoggerError, LevelFilter, info};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Document {
@@ -73,8 +74,13 @@ impl DocumentStore {
         store_path: PathBuf,
         embedding_generator: Arc<EmbeddingGenerator>
     ) -> Result<Self, Box<dyn std::error::Error>> {
+        log::debug!("1. Why do we crash in production and not in development?");
+
         let (conn, canon_path, canon_name, next_id) = 
             Self::initialize_database(&store_path)?;
+
+            log::debug!("2. Why do we crash in production and not in development?");
+
 
         let mut doc_store = DocumentStore { 
             conn: Arc::new(Mutex::new(conn)),
@@ -84,13 +90,21 @@ impl DocumentStore {
             canon_path,
             canon_name,
         };
+
+        log::debug!("3. Why do we crash in production and not in development?");
+
         
         doc_store.register_ingestor(Box::new(MdxIngestor));
+        log::debug!("4. Why do we crash in production and not in development?");
+
         doc_store.register_ingestor(Box::new(PdfIngestor));
         doc_store.register_ingestor(Box::new(MarkdownIngestor));
         doc_store.register_ingestor(Box::new(EpubIngestor));
         doc_store.register_ingestor(Box::new(TextIngestor));
         
+        log::debug!("5. Why do we crash in production and not in development?");
+
+
         Ok(doc_store)
     }
     
@@ -121,22 +135,54 @@ impl DocumentStore {
     fn initialize_database(
         store_path: &PathBuf,
     ) -> Result<(Connection, String, String, usize), Box<dyn std::error::Error>> {
-        
+        log::debug!("1. Now we're initialize_database?");
+
         if store_path.is_dir() || !store_path.exists() {
+            log::debug!("2. Create Dir?");
             std::fs::create_dir_all(store_path)?;
+            log::debug!("3. Create Dir?");
         }
         
+        log::debug!("4.");
+
         let db_path = Self::resolve_database_path(store_path);
+
+        log::debug!("5. db_path: {:?}", db_path);
+
 
         //let db_path = store_path.join(db_name);
         
-        let conn = Connection::open(&db_path)?;
+        let conn = Connection::open(&db_path).map_err(|e| {
+            let error_msg = format!(
+                "Failed to open SQLite database at {:?}: {}. Check permissions and disk space.", 
+                db_path, 
+                e
+            );
+            log::error!("{}", error_msg);
+            
+            // Log specific error conditions
+            match e {
+                rusqlite::Error::SqliteFailure(error, Some(msg)) => {
+                    log::error!("SQLite error code: {:?}, message: {}", error.code, msg);
+                }
+                rusqlite::Error::SqliteFailure(error, None) => {
+                    log::error!("SQLite error code: {:?}", error.code);
+                }
+                _ => log::error!("Other SQLite error: {}", e),
+            }
+            
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                error_msg
+            )) as Box<dyn std::error::Error>
+        })?;
         let canon_path = db_path.to_string_lossy().to_string();
         let canon_name = Path::new(&canon_path)
             .file_name()
             .map(|name| name.to_string_lossy().to_string())
             .unwrap_or_else(|| "UnknownDB".to_string());
-        
+        log::debug!("7. conn: {:?}", conn);
+
         // Create tables if they don't exist
         conn.execute(
             "CREATE TABLE IF NOT EXISTS documents 

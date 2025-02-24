@@ -14,6 +14,10 @@ use tauri::{generate_handler, Runtime, Builder, Emitter, AppHandle, Manager, Win
 use chrono::{Local, Utc};  // Add Utc here
 use std::sync::Arc;
 use rand::seq::SliceRandom; 
+use tauri_plugin_log::{Target, TargetKind};
+extern crate log;
+use syslog::{Facility, Formatter3164, BasicLogger};
+use log::{SetLoggerError, LevelFilter, info};
 
 mod preferences;
 use preferences::Preferences;
@@ -33,7 +37,6 @@ use conversations::Conversation;
 
 mod app_state; // Add this line
 use app_state::AppState;
-use tauri_plugin_log::{Target, TargetKind};
 
 use async_openai::{
     //config::OpenAIConfig,
@@ -193,18 +196,18 @@ async fn set_logger_app_data_path(
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
     let mut app_data_path: PathBuf = app_handle.path()
-        .app_log_dir()
-        .unwrap_or_else(|_| {
-            // Provide a default path if app_data_dir() returns None
-            // This could be a fallback path in the user's home directory or a temporary directory
-            std::env::temp_dir()
-        });
+    .app_log_dir()
+    .unwrap_or_else(|_| {
+        // Provide a default path if app_data_dir() returns None
+        // This could be a fallback path in the user's home directory or a temporary directory
+        std::env::temp_dir()
+    });
     app_data_path.push("ghostwriter_log.json");
-
+    
     /// PROBLEMATIC
     state.set_logger_path(app_data_path).await.map_err(|e| e.to_string());
     Ok(())
-
+    
 }
 
 #[tauri::command]
@@ -212,15 +215,15 @@ async fn get_log_contents(state: tauri::State<'_, AppState>) -> Result<Vec<Compl
     // Get the logger path from state
     let logger = state.logger.lock().await;
     let log_path = logger.get_logger_path();
-
+    
     // Read the file contents
     let file = std::fs::File::open(log_path)
-        .map_err(|e| format!("Failed to open log file: {}", e))?;
-
+    .map_err(|e| format!("Failed to open log file: {}", e))?;
+    
     // Parse JSON contents
     let contents: Vec<Completion> = serde_json::from_reader(file)
-        .map_err(|e| format!("Failed to parse log contents: {}", e))?;
-
+    .map_err(|e| format!("Failed to parse log contents: {}", e))?;
+    
     Ok(contents)
 }
 
@@ -306,7 +309,7 @@ async fn completion_from_context(
         let mut rng = rand::thread_rng();
         similar_docs.shuffle(&mut rng);
     }
-
+    
     new_logger.simple_log_message(
         format!("Found {} cosine similar documents ({})", similar_docs.len(), similarity_threshold),
         "".to_string(),
@@ -743,12 +746,12 @@ async fn search_similarity(
             store.get_database_path();
             let unlocked_store = store.clone();
             let result = format!("{:?}", unlocked_store);
-
+            
             let canon_info = CanonInfo {
                 name: store.get_database_name().to_string(),
                 path: store.get_database_path().to_string(),
             };
-
+            
             Ok(canon_info)
         }
         
@@ -899,104 +902,131 @@ async fn search_similarity(
         
         
         
-        #[cfg_attr(mobile, tauri::mobile_entry_point)]
         pub fn run() {
-            
-            let has_dotenv = dotenv::dotenv().is_ok();
-            let api_key = env::var("OPENAI_API_KEY");
-            
-            let client = match &*OPENAI_API_KEY {
-                Some(key) => {
-                    Client::with_config(
-                        OpenAIConfig::new()
-                        .with_api_key(key.clone())
-                    )
-                }
-                None => {
-                    println!("OPENAI_API_KEY not found.  Running without it.");
-                    *API_KEY_MISSING.lock().unwrap() = true; // Set the flag
-                    Client::new() // Create a client without an API key
-                }
-            };
+            // Set the log level to include everything except trace
+            log::set_max_level(LevelFilter::Debug);
             
             
-            let a_embedding_generator = EmbeddingGenerator::new(client.clone());
-            let b_embedding_generator = EmbeddingGenerator::new(client);
+            
+            // let has_dotenv = dotenv::dotenv().is_ok();
+            // let api_key = env::var("OPENAI_API_KEY");
+            
+            // let client = match &*OPENAI_API_KEY {
+            //     Some(key) => {
+            //         Client::with_config(
+            //             OpenAIConfig::new()
+            //             .with_api_key(key.clone())
+            //         )
+            //     }
+            //     None => {
+            //         println!("OPENAI_API_KEY not found.  Running without it.");
+            //         *API_KEY_MISSING.lock().unwrap() = true; // Set the flag
+            //         Client::new() // Create a client without an API key
+            //     }
+            // };
+            
+            
+            let a_embedding_generator = EmbeddingGenerator::new(Client::new());
+            let b_embedding_generator = EmbeddingGenerator::new(Client::new());
             let path = PathBuf::from("./resources/ghostwriter-selectric/vector_store/");
             
-            println!("Initializing DocumentStore with path: {:?}", path);
             
-            let doc_store = DocumentStore::new(path.clone(), std::sync::Arc::new(a_embedding_generator)).expect(&format!(
-                "Failed to initialize document store at path: {:?}",
-                path
-            ));
             
-            let store_name = doc_store.get_database_name().to_string();
-            let store_path = doc_store.get_database_path().to_string();
-
+            
+            // log::debug!("DocumentStore initialized");
+            
+            // let store_name = doc_store.get_database_name().to_string();
+            // let store_path = doc_store.get_database_path().to_string();
+            
             println!("DocumentStore successfully initialized.");
-            let app_state = AppState::new(
-                doc_store,
-                b_embedding_generator,
-                "/tmp/gh-log.json"
-            ).expect("Failed to create AppState");
             
             
             tauri::Builder::default()
-            .manage(app_state)
+            .plugin(tauri_plugin_clipboard_manager::init())
+            .plugin(tauri_plugin_dialog::init())
+            .plugin(tauri_plugin_opener::init())
+            .plugin(tauri_plugin_fs::init())
+            .plugin(
+                tauri_plugin_log::Builder::new()
+                .targets([
+                    Target::new(TargetKind::Stdout),       // Log to stdout
+                    Target::new(TargetKind::LogDir {       // Log to app's log directory
+                    file_name: None                     // Use default app name
+                }),
+                Target::new(TargetKind::Webview),      // Log to webview console
+                ])
+                .level(log::LevelFilter::Debug)
+                .build()
+            )
             .menu(|window| menu::build_menu(&window.app_handle()))
             .on_menu_event(|app, event| menu::handle_menu_event(app, event))
             .setup(move |app| {
                 let app_handle = app.handle();
-                
+                log::debug!("Application starting up");
+                log::info!("Initializing components...");
+                // Now these log messages will work
+                log::debug!("This is a debug message");
+                log::info!("This is an info message");
+                log::warn!("This is a warning message");
+                log::error!("This is an error message");
+                log::trace!("This is a trace message");
                 // ✅ Check the API_KEY_MISSING flag and open API Key entry window if needed
-                check_api_key(&app_handle);
+                //check_api_key(&app_handle);
+                let path = app.path().app_data_dir().expect("This should never be None");
+                let path = path.join("./canon/");
+                let doc_store = DocumentStore::new(path.clone(), std::sync::Arc::new(b_embedding_generator)).expect(&format!(
+                    "Failed to initialize document store at path: {:?}",
+                    path
+                ));
+                // let app_state = AppState::new(
+                //     doc_store,
+                //     a_embedding_generator,
+                //     "/tmp/gh-log.json"
+                // ).expect("Failed to create AppState");
                 
                 let new_logger = NewLogger::new(app_handle.clone());
                 new_logger.simple_log_message(
                     "Ghostwriter Is Up.".to_string(),
                     "start".to_string(),
                     "info".to_string());
-                new_logger.simple_log_message(
-                    format!("Canon file is {} at {}", store_name, store_path),
-                    "start".to_string(),
-                    "info".to_string());
+                    // new_logger.simple_log_message(
+                    //     format!("Canon file is {} at {}", store_name, store_path),
+                    //     "start".to_string(),
+                    //     "info".to_string());
+                    
+                    // app_state.update_logger_path(app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy().to_string()).expect("Failed to update logger path");
+                    println!("{}", app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy());
+                    // app.manage(doc_store);
+                    // app.manage(new_logger.clone());
+                    // app.manage(app_state);
+                    // Load .env file
+                    //dotenv::dotenv().ok();
+                    Ok(())
+                })
                 
-                // app_state.update_logger_path(app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy().to_string()).expect("Failed to update logger path");
-                println!("{}", app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy());
-                
-                app.manage(new_logger.clone());
-                // Load .env file
-                dotenv::dotenv().ok();
-                Ok(())
-            })
-            .plugin(tauri_plugin_clipboard_manager::init())
-            .plugin(tauri_plugin_dialog::init())
-            .plugin(tauri_plugin_opener::init())
-            .plugin(tauri_plugin_fs::init())
-            .invoke_handler(tauri::generate_handler![
-                greet,
-                completion_from_context,
-                search_similarity,
-                ingestion_from_file_dialog,
-                test_log_emissions,
-                simple_log_message,
-                rich_log_message,
-                delete_canon_entry,
-                save_api_key,
-                list_canon_docs,
-                load_preferences,
-                update_preferences,
-                reset_preferences,
-                prefs_file_path,
-                get_logger_path,
-                set_logger_app_data_path,
-                get_log_contents,
-                get_canon_info,
-                ])
-                .run(tauri::generate_context!())
-                .expect("error while running tauri application");
-                
-                
-                
-            }
+                .invoke_handler(tauri::generate_handler![
+                    greet,
+                    completion_from_context,
+                    search_similarity,
+                    ingestion_from_file_dialog,
+                    test_log_emissions,
+                    simple_log_message,
+                    rich_log_message,
+                    delete_canon_entry,
+                    save_api_key,
+                    list_canon_docs,
+                    load_preferences,
+                    update_preferences,
+                    reset_preferences,
+                    prefs_file_path,
+                    get_logger_path,
+                    set_logger_app_data_path,
+                    get_log_contents,
+                    get_canon_info,
+                    ])
+                    .run(tauri::generate_context!())
+                    .expect("error while running tauri application");
+                    
+                    
+                    
+                }
