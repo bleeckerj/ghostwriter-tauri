@@ -74,12 +74,10 @@ impl DocumentStore {
         store_path: PathBuf,
         embedding_generator: Arc<EmbeddingGenerator>
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        log::debug!("1. Why do we crash in production and not in development?");
 
         let (conn, canon_path, canon_name, next_id) = 
             Self::initialize_database(&store_path)?;
 
-            log::debug!("2. Why do we crash in production and not in development?");
 
 
         let mut doc_store = DocumentStore { 
@@ -135,22 +133,17 @@ impl DocumentStore {
     fn initialize_database(
         store_path: &PathBuf,
     ) -> Result<(Connection, String, String, usize), Box<dyn std::error::Error>> {
-        log::debug!("1. Now we're initialize_database?");
 
         if store_path.is_dir() || !store_path.exists() {
-            log::debug!("2. Create Dir?");
             std::fs::create_dir_all(store_path)?;
-            log::debug!("3. Create Dir?");
         }
         
-        log::debug!("4.");
 
         let db_path = Self::resolve_database_path(store_path);
 
         log::debug!("5. db_path: {:?}", db_path);
 
 
-        //let db_path = store_path.join(db_name);
         
         let conn = Connection::open(&db_path).map_err(|e| {
             let error_msg = format!(

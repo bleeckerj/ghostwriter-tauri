@@ -236,7 +236,13 @@ window.addEventListener("DOMContentLoaded", async () => {
   //create();
     invoke("set_logger_app_data_path", {}).then((res) => {
     console.log('Logger App Data Path:', res);
-    invoke("simple_log_message", { message: 'Logger App Data Path: '+res, id: "tracker", level: "info" }).then((res) => {
+    // invoke("simple_log_message", { message: 'Logger App Data Path: '+res, id: "tracker", level: "info" }).then((res) => {
+    // });
+    addSimpleLogEntry({
+      id: "",
+      timestamp: Date.now(),
+      message: 'Logger App Data Path fn release: '+res,
+      level: 'info'
     });
     invoke("get_logger_path", {}).then((res) => {
       console.log('Logger Path:', res);
@@ -695,7 +701,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     console.log('Preferences Loaded:', res);
   });
   
-  invoke("simple_log_message", { message: 'Ghostwriter Up.', id: "tracker", level: "info" }).then((res) => {
+  invoke("simple_log_message", { message: 'Ghostwriter Is Up.', id: "tracker", level: "info" }).then((res) => {
     console.log('simple_log_emissions', res);
   });
   

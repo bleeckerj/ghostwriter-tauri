@@ -18,6 +18,7 @@ use tauri_plugin_log::{Target, TargetKind};
 extern crate log;
 use syslog::{Facility, Formatter3164, BasicLogger};
 use log::{SetLoggerError, LevelFilter, info};
+use serde_json::json;
 
 mod preferences;
 use preferences::Preferences;
@@ -702,25 +703,32 @@ async fn search_similarity(
         
         #[tauri::command]
         async fn list_canon_docs(
-            logger: tauri::State<'_, NewLogger>,
+            //logger: tauri::State<'_, NewLogger>,
             app_state: tauri::State<'_, AppState>,
             app_handle: tauri::AppHandle,
         ) -> Result<String, String> {
             let doc_store = Arc::clone(&app_state.doc_store);
+            println!("Listing canon documents");
+            log::debug!("Listing canon documents");
+            log::debug!("doc_store is {:?}", doc_store);
             let store = doc_store.lock().await;
+            log::debug!("store (locked doc_store) is {:?}", store);
             match store.fetch_documents().await {
                 Ok(listing) => {
+                    log::debug!("listing is {:?}", listing);
                     let json_string = serde_json::to_string(&listing).map_err(|e| e.to_string())?;
                     app_handle.emit("canon-list", json_string).map_err(|e| e.to_string())?;
                     Ok("Canon list emitted".to_string())
                 }
                 Err(e) => {
                     let error_message = format!("Failed to fetch canon documents: {}", e);
-                    logger.simple_log_message(
+                    let new_logger = NewLogger::new(app_handle.clone());
+                    new_logger.simple_log_message(
                         error_message.clone(),
                         "".to_string(),
                         "error".to_string(),
                     );
+                    log::error!("{}", error_message);
                     Err(error_message)
                 }
             } 
@@ -861,6 +869,7 @@ async fn search_similarity(
                         eprintln!("Failed to emit simple log: {}", e);
                     }
                 }
+                log::debug!("{}", message);
             }
             
             fn rich_log_message(&self, message: String, data: String, level: String) {
@@ -876,6 +885,7 @@ async fn search_similarity(
                         eprintln!("Failed to emit rich log: {}", e);
                     }   
                 }
+                log::info!("{}", message);
             }
         }
         
@@ -903,9 +913,6 @@ async fn search_similarity(
         
         
         pub fn run() {
-            // Set the log level to include everything except trace
-            log::set_max_level(LevelFilter::Debug);
-            
             
             
             // let has_dotenv = dotenv::dotenv().is_ok();
@@ -935,8 +942,7 @@ async fn search_similarity(
             
             // log::debug!("DocumentStore initialized");
             
-            // let store_name = doc_store.get_database_name().to_string();
-            // let store_path = doc_store.get_database_path().to_string();
+            
             
             println!("DocumentStore successfully initialized.");
             
@@ -974,59 +980,75 @@ async fn search_similarity(
                 //check_api_key(&app_handle);
                 let path = app.path().app_data_dir().expect("This should never be None");
                 let path = path.join("./canon/");
-                let doc_store = DocumentStore::new(path.clone(), std::sync::Arc::new(b_embedding_generator)).expect(&format!(
-                    "Failed to initialize document store at path: {:?}",
-                    path
-                ));
-                // let app_state = AppState::new(
-                //     doc_store,
-                //     a_embedding_generator,
-                //     "/tmp/gh-log.json"
-                // ).expect("Failed to create AppState");
+                let doc_store = match DocumentStore::new(path.clone(), std::sync::Arc::new(b_embedding_generator)) {
+                    Ok(store) => store,
+                    Err(e) => {
+                        let error_msg = format!("Failed to initialize document store at path: {:?}. Error: {}", path, e);
+                        log::error!("{}", error_msg);
+                        let new_logger = NewLogger::new(app_handle.clone());
+                        new_logger.simple_log_message(
+                            error_msg.clone(),
+                            "startup".to_string(),
+                            "error".to_string()
+                        );
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            error_msg
+                        )));
+                    }
+                };
                 
+                let store_name = doc_store.get_database_name().to_string();
+                let store_path = doc_store.get_database_path().to_string();
+                
+                let app_state = AppState::new(
+                    doc_store,
+                    a_embedding_generator,
+                    "/tmp/gh-log.json"
+                ).expect("Failed to create AppState");
+
+
+                app.manage(app_state);
+                let foo = app.state::<AppState>();
+                
+                log::debug!("AppState managed? {:?}", foo);
+
+
                 let new_logger = NewLogger::new(app_handle.clone());
-                new_logger.simple_log_message(
-                    "Ghostwriter Is Up.".to_string(),
-                    "start".to_string(),
-                    "info".to_string());
-                    // new_logger.simple_log_message(
-                    //     format!("Canon file is {} at {}", store_name, store_path),
-                    //     "start".to_string(),
-                    //     "info".to_string());
-                    
-                    // app_state.update_logger_path(app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy().to_string()).expect("Failed to update logger path");
-                    println!("{}", app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy());
-                    // app.manage(doc_store);
-                    // app.manage(new_logger.clone());
-                    // app.manage(app_state);
-                    // Load .env file
-                    //dotenv::dotenv().ok();
-                    Ok(())
-                })
-                
-                .invoke_handler(tauri::generate_handler![
-                    greet,
-                    completion_from_context,
-                    search_similarity,
-                    ingestion_from_file_dialog,
-                    test_log_emissions,
-                    simple_log_message,
-                    rich_log_message,
-                    delete_canon_entry,
-                    save_api_key,
-                    list_canon_docs,
-                    load_preferences,
-                    update_preferences,
-                    reset_preferences,
-                    prefs_file_path,
-                    get_logger_path,
-                    set_logger_app_data_path,
-                    get_log_contents,
-                    get_canon_info,
-                    ])
-                    .run(tauri::generate_context!())
-                    .expect("error while running tauri application");
-                    
-                    
-                    
-                }
+                app.manage(new_logger);
+                // app_state.update_logger_path(app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy().to_string()).expect("Failed to update logger path");
+                //println!("{}", app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy());
+                // app.manage(doc_store);
+                // app.manage(new_logger.clone());
+                // Load .env file
+                //dotenv::dotenv().ok();
+
+                Ok(()
+            )
+        })
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            completion_from_context,
+            search_similarity,
+            ingestion_from_file_dialog,
+            test_log_emissions,
+            simple_log_message,
+            rich_log_message,
+            delete_canon_entry,
+            save_api_key,
+            list_canon_docs,
+            load_preferences,
+            update_preferences,
+            reset_preferences,
+            prefs_file_path,
+            get_logger_path,
+            set_logger_app_data_path,
+            get_log_contents,
+            get_canon_info,
+            ])
+            .run(tauri::generate_context!())
+            .expect("error while running tauri application");
+            
+            
+            
+        }
