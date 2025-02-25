@@ -7,7 +7,9 @@ use crate::SimpleLog;
 use tauri::AppHandle;
 use tauri::Emitter;
 use serde_json::json;
-use chrono::Local;
+// use chrono::Local;
+// use sodiumoxide::crypto::box_;
+// use sodiumoxide::crypto::sealedbox;
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct Preferences {
@@ -21,8 +23,9 @@ pub struct Preferences {
     pub shuffle_similars: bool,
     pub similarity_count: usize,
     pub max_history: usize,
-    #[serde(skip)]
-    pub app_handle: Option<AppHandle>,
+    // #[serde(skip_serializing, skip_deserializing)]
+    // pub api_key: Option<String>,
+    // pub encrypted_api_key: Option<String>,
 }
 
 // ✅ Define constant defaults
@@ -107,10 +110,6 @@ impl Preferences {
     pub fn save(&self) -> Result<(), confy::ConfyError> {
         //let path = confy::store_path("ghostwriter", "preferences");
         confy::store("ghostwriter", "preferences", self)
-    }
-
-    pub fn set_app_handle(&mut self, app_handle: AppHandle) {
-        self.app_handle = Some(app_handle);
     }
 
     pub fn prefs_file_path() -> String {

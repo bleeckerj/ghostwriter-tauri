@@ -251,6 +251,17 @@ window.addEventListener("DOMContentLoaded", async () => {
     //   });
     // });
   });
+
+  invoke("load_openai_api_key_from_keyring", {}).then((res) => {
+    console.log('OpenAI API Key:', res);
+    addSimpleLogEntry({
+      id: "",
+      timestamp: Date.now(),
+      message: 'OpenAI API Key: '+res,
+      level: 'info'
+    });
+  });
+
   let actionItem = editor.extensionManager.extensions.find(extension => extension.name === 'inlineActionItem');
   let nudgeButton = document.querySelector("#nudge-inline-action-item");
   if (actionItem) {
@@ -381,8 +392,19 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
   panel = document.getElementById('side-panel');
   
-  
-  
+  openaiApiKeyEl = document.querySelector("#openai-api-key-btn");
+  openaiApiKeyEl.addEventListener("click", () => {
+    invoke("load_openai_api_key_from_keyring", {}).then((res) => {
+      console.log('OpenAI API Key:', res);
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'OpenAI API Key: '+res,
+        level: 'debug'
+      });
+    });
+  });
+
   prefsLoadBtn = document.querySelector("#prefs-load-btn");
   prefsLoadBtn.addEventListener("click", () => {
     invoke("load_preferences").then((res) => {

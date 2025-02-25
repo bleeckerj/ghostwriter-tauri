@@ -22,6 +22,8 @@ use serde_json::json;
 
 mod preferences;
 use preferences::Preferences;
+mod keychain_handler;
+use keychain_handler::KeychainHandler;
 
 
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
@@ -91,21 +93,85 @@ impl fmt::Display for CompletionTiming {
 }
 
 #[tauri::command]
-async fn save_api_key(
+async fn load_openai_api_key_from_keyring(
+    app_handle: tauri::AppHandle, 
+    state: tauri::State<'_, AppState>) -> Result<(bool), String> {
+    // Create logger instance
+    let new_logger = NewLogger::new(app_handle.clone());
+
+    // Returns true if there was a key there (even if it was invalid)
+    // Returns false if there was no key there
+    // Returns an error if there was a problem loading the key
+    match KeychainHandler::retrieve_api_key() {
+        Ok(key) => {
+            match key {
+                Some(k) => {
+                    log::info!("API key successfully loaded from keychain");
+                    new_logger.simple_log_message(
+                        format!("{} API key successfully loaded from keychain", k),
+                        "keychain".to_string(),
+                        "debug".to_string()
+                    );
+                    Ok(true)
+                }
+                None => {
+                    log::info!("No API key found in keychain");
+                    new_logger.simple_log_message(
+                        "No API key not found in keychain".to_string(),
+                        "keychain".to_string(),
+                        "debug".to_string()
+                    );
+                    Ok(false)
+                }
+            }
+        }
+        Err(e) => {
+            let error_msg = format!("Keychain issue? Failed to load API key from keychain: {}", e);
+            log::error!("{}", error_msg);
+            new_logger.simple_log_message(
+                error_msg.clone(),
+                "keychain".to_string(),
+                "error".to_string()
+            );
+            Err(error_msg)
+        }
+    }
+
+    
+}
+
+
+#[tauri::command]
+async fn save_openai_api_key_to_keyring(
     app_handle: tauri::AppHandle, 
     state: tauri::State<'_, AppState>, 
     key: String
-) -> Result<(), String> {  // ✅ Function must return `Result`
-    let mut api_key = state.api_key.lock().await; // ✅ Use `.await` instead of `.unwrap()`
-    *api_key = Some(key.clone()); // ✅ Store the API key
-    
-    // ✅ Save the API key to a file
-    if let Err(err) = state.save_api_key(&app_handle, key).await {
-        eprintln!("Failed to save API key: {}", err);
-        return Err(format!("Failed to save API key: {}", err)); // ✅ Return an error string
+) -> Result<(), String> {
+    // Create logger instance
+    let new_logger = NewLogger::new(app_handle.clone());
+
+    // Attempt to store the key
+    match KeychainHandler::store_api_key(&key) {
+        Ok(_) => {
+            log::info!("API key successfully stored in keychain");
+            new_logger.simple_log_message(
+                "API key successfully stored in keychain".to_string(),
+                "keychain".to_string(),
+                "debug".to_string()
+            );
+            Ok(())
+        }
+        Err(e) => {
+            let error_msg = format!("Failed to store API key in keychain: {}", e);
+            log::error!("{}", error_msg);
+            new_logger.simple_log_message(
+                error_msg.clone(),
+                "keychain".to_string(),
+                "error".to_string()
+            );
+            Err(error_msg)
+        }
     }
-    
-    Ok(())
 }
 
 /**
@@ -1037,7 +1103,8 @@ async fn search_similarity(
             simple_log_message,
             rich_log_message,
             delete_canon_entry,
-            save_api_key,
+            save_openai_api_key_to_keyring,
+            load_openai_api_key_from_keyring,
             list_canon_docs,
             load_preferences,
             update_preferences,
