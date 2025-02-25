@@ -39,7 +39,7 @@ let prefsSaveBtn;
 let prefsResetBtn;
 
 
-
+let openaiApiKeyEl;
 let prefsMainPromptTextArea;
 let prefsResponseLimitTextArea;
 let prefsFinalPreambleTextArea;

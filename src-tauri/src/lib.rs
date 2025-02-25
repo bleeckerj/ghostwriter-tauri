@@ -115,11 +115,11 @@ async fn load_openai_api_key_from_keyring(
                     Ok(true)
                 }
                 None => {
-                    log::info!("No API key found in keychain");
+                    log::warn!("No API key found in keychain");
                     new_logger.simple_log_message(
                         "No API key not found in keychain".to_string(),
                         "keychain".to_string(),
-                        "debug".to_string()
+                        "warn".to_string()
                     );
                     Ok(false)
                 }
@@ -811,8 +811,7 @@ async fn search_similarity(
         async fn get_canon_info(
             logger: tauri::State<'_, NewLogger>,
             app_state: tauri::State<'_, AppState>,
-            app_handle: tauri::AppHandle,
-            docid: String,
+            app_handle: tauri::AppHandle
         ) -> Result<CanonInfo, String> {
             
             
