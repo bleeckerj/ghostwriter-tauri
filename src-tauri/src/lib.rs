@@ -982,7 +982,7 @@ async fn search_similarity(
         pub fn run() {
             
             //let a_embedding_generator = EmbeddingGenerator::new(Client::new());
-            let b_embedding_generator = EmbeddingGenerator::new_with_api_key("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");
+            // let b_embedding_generator = EmbeddingGenerator::new_with_api_key("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");
             //let path = PathBuf::from("./resources/ghostwriter-selectric/vector_store/");
             
             // log::debug!("DocumentStore initialized");            
@@ -1039,12 +1039,15 @@ async fn search_similarity(
                     } 
                 };
 
-                let b_embedding_generator: EmbeddingGenerator;
-                if api_key == None {
-                    b_embedding_generator = EmbeddingGenerator::new();
+                let b_embedding_generator = if let Some(key) = api_key {
+                    // We have a key, create generator with it
+                    log::debug!("Initializing EmbeddingGenerator with API key");
+                    EmbeddingGenerator::new_with_api_key(&key)
                 } else {
-                    b_embedding_generator = EmbeddingGenerator::new_with_api_key(api_key.as_deref());
-                }
+                    // No key found, create default generator
+                    log::warn!("No API key available, initializing EmbeddingGenerator without key");
+                    EmbeddingGenerator::new()
+                };
                 let path = app.path().app_data_dir().expect("This should never be None");
                 let path = path.join("./canon/");
 

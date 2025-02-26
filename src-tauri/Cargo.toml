@@ -1,5 +1,5 @@
 [package]
-name = "gh-tauri-tt-js"
+name = "Ghostwriter"
 version = "0.1.0"
 description = "Ghostwriter"
 authors = ["you"]

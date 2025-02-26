@@ -3,6 +3,53 @@
 version = 4
 
 [[package]]
+name = "Ghostwriter"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "aes-gcm",
+ "async-openai",
+ "async-trait",
+ "base64 0.22.1",
+ "bincode",
+ "chrono",
+ "confy",
+ "dotenv",
+ "env_logger",
+ "epub",
+ "futures",
+ "gray_matter",
+ "keyring",
+ "lazy_static",
+ "log",
+ "lopdf 0.35.0",
+ "pdf-extract",
+ "pdfium-render",
+ "pulldown-cmark",
+ "rand 0.8.5",
+ "regex",
+ "reqwest",
+ "rusqlite",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sodiumoxide",
+ "sqlite-vec",
+ "syslog",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-clipboard-manager",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-log",
+ "tauri-plugin-opener",
+ "tempfile",
+ "thiserror 2.0.11",
+ "tokio",
+ "walkdir",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2061,53 +2108,6 @@ dependencies = [
  "libc",
  "wasi 0.13.3+wasi-0.2.2",
  "windows-targets 0.52.6",
-]
-
-[[package]]
-name = "gh-tauri-tt-js"
-version = "0.1.0"
-dependencies = [
- "aes",
- "aes-gcm",
- "async-openai",
- "async-trait",
- "base64 0.22.1",
- "bincode",
- "chrono",
- "confy",
- "dotenv",
- "env_logger",
- "epub",
- "futures",
- "gray_matter",
- "keyring",
- "lazy_static",
- "log",
- "lopdf 0.35.0",
- "pdf-extract",
- "pdfium-render",
- "pulldown-cmark",
- "rand 0.8.5",
- "regex",
- "reqwest",
- "rusqlite",
- "secrecy",
- "serde",
- "serde_json",
- "sodiumoxide",
- "sqlite-vec",
- "syslog",
- "tauri",
- "tauri-build",
- "tauri-plugin-clipboard-manager",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-log",
- "tauri-plugin-opener",
- "tempfile",
- "thiserror 2.0.11",
- "tokio",
- "walkdir",
 ]
 
 [[package]]
