@@ -252,16 +252,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     // });
   });
 
-  invoke("load_openai_api_key_from_keyring", {}).then((res) => {
-    console.log('OpenAI API Key:', res);
-    addSimpleLogEntry({
-      id: "",
-      timestamp: Date.now(),
-      message: 'OpenAI API Key: '+res,
-      level: 'info'
-    });
-  });
-
   let actionItem = editor.extensionManager.extensions.find(extension => extension.name === 'inlineActionItem');
   let nudgeButton = document.querySelector("#nudge-inline-action-item");
   if (actionItem) {
@@ -395,7 +385,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   openaiApiKeyEl = document.querySelector("#openai-api-key-btn");
   openaiApiKeyEl.addEventListener("click", () => {
     invoke("load_openai_api_key_from_keyring", {}).then((res) => {
-      console.log('OpenAI API Key:', res);
+      openaiApiKeyEl.value = res;
       addSimpleLogEntry({
         id: "",
         timestamp: Date.now(),
@@ -446,13 +436,29 @@ window.addEventListener("DOMContentLoaded", async () => {
     //console.log("what's this ->", prefsSimilarityThreshold.value);
     // Convert the string "true"/"false" to an actual boolean
     const shuffleSimilarsValue = prefsShuffleSimilars.checked;
-    
+    const openaiApiKey = document.querySelector("#openai-api-key").value;
     addSimpleLogEntry({
       id: "",
       timestamp: Date.now(),
-      message: 'shuffleSimilarsValue is '+shuffleSimilarsValue,
-      level: 'debug'
+      message: 'openaiApiKey is '+openaiApiKey,
     });
+    invoke("save_openai_api_key_to_keyring", { key:openaiApiKey } ).then((res) => {
+      console.log('OpenAI API Key Saved:', res);
+    }).catch((error) => {
+      console.error('Failed to save OpenAI API Key:', error); 
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'Failed to save OpenAI API Key: '+error,
+        level: 'error'
+      });
+    });
+    // addSimpleLogEntry({
+    //   id: "",
+    //   timestamp: Date.now(),
+    //   message: 'shuffleSimilarsValue is '+shuffleSimilarsValue,
+    //   level: 'debug'
+    // });
     invoke("update_preferences", {
       responselimit: prefsResponseLimitTextArea.value,
       mainprompt: prefsMainPromptTextArea.value,
@@ -730,9 +736,15 @@ window.addEventListener("DOMContentLoaded", async () => {
   
   invoke("get_canon_info", {}).then((res) => {
     console.log('Canon Info:', res);
-    invoke("simple_log_message", { message: 'Canon Info: '+res, id: "tracker", level: "info" }).then((res) => {
-      //console.log('simple_log_emissions', res);
-    });
+    if (typeof res === 'object' && res !== null) {
+      //console.log('Canon Info:', res);
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'Canon Info: '+JSON.stringify(res, null, 2),
+        level: 'info'
+      });
+    }
   });
   
   // invoke("rich_log_message", { message: 'Ghostwriter Up.', data: "no data", level: "info" }).then((res) => {

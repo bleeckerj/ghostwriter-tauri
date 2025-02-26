@@ -62,7 +62,7 @@ p {
 }
 
 .dynamic-text-mark {
-  @apply text-[0.9em];
+  @apply text-[1em];
   @apply font-[WarblerText];
 }
 

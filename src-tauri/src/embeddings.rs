@@ -8,20 +8,25 @@ use reqwest::header::AUTHORIZATION;
 #[derive(Debug, Clone)]
 pub struct EmbeddingGenerator {
     client: Client<OpenAIConfig>,
-    api_key_set: bool,
 }
 
 impl EmbeddingGenerator {
-    // New constructor that takes a client
-    pub fn new(client: Client<OpenAIConfig>) -> Self {
-        EmbeddingGenerator { client: client, api_key_set: false }
+    // New constructor no client
+    pub fn new() -> Self {
+        EmbeddingGenerator { 
+            client: Client::new() 
+        }
     }
+
+    // pub fn new(client: Client<OpenAIConfig>) -> Self {
+    //     EmbeddingGenerator { client: client }
+    // }
 
     pub fn new_with_api_key(api_key: &str) -> Self {
         let config = OpenAIConfig::new()
         .with_api_key(api_key.to_string());
         let client = Client::with_config(config);
-        EmbeddingGenerator { client, api_key_set: true }
+        EmbeddingGenerator { client }
     }
     
     // Optional: Add a constructor that creates a client from an API key
@@ -29,7 +34,7 @@ impl EmbeddingGenerator {
         let config = OpenAIConfig::new()
         .with_api_key(api_key.to_string());
         let client = Client::with_config(config);
-        EmbeddingGenerator { client, api_key_set: true }
+        EmbeddingGenerator { client }
     }
 
     pub fn set_api_key(&mut self, api_key: &str) {
@@ -37,12 +42,6 @@ impl EmbeddingGenerator {
         .with_api_key(api_key.to_string());
         let client = Client::with_config(config);
         self.client = client;
-        self.api_key_set = true;
-    }
-
-    pub fn has_api_key(&self) -> bool {
-        // Test if this is a default client (no API key) or configured client (with API key)
-        self.api_key_set
     }
 
     /// Chunks text into segments with optional overlap

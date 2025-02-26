@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use chrono::Local;
 use crate::preferences::Preferences;
 
-const MAX_ENTRIES: usize = 3;
+const MAX_ENTRIES: usize = 50;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct VectorSearchResult {
@@ -52,6 +52,7 @@ impl Logger {
         if let Some(parent) = log_path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
                 println!("Failed to create parent directories: {}", e);
+                log::error!("Failed to create parent directories: {}", e);
                 format!("Failed to create parent directories: {}", e)
             })?;
         }
@@ -69,6 +70,7 @@ impl Logger {
         }
 
         println!("** Opened log file at {:?}", log_path);
+        log::debug!("** Opened log file at {:?}", log_path);
         Ok(Logger { log_file: Some(file), log_path })
     }
 
@@ -108,6 +110,7 @@ impl Logger {
         serde_json::to_writer(&file, &Vec::<Completion>::new())?;
 
         self.log_file = Some(file);
+        log::info!("Rotated log file to {:?}", backup_path);
         Ok(())
     }
     
@@ -121,6 +124,7 @@ impl Logger {
         // Read existing entries
         log_file.seek(SeekFrom::Start(0))?;
         println!("Log file is at {:?}", log_file);
+        log::debug!("Log file is at {:?}", log_file);
         let entries: Vec<Completion> = match serde_json::from_reader(BufReader::new(&log_file)) {
             Ok(entries) => entries,
             Err(e) => {

@@ -981,37 +981,11 @@ async fn search_similarity(
         
         pub fn run() {
             
-            
-            // let has_dotenv = dotenv::dotenv().is_ok();
-            // let api_key = env::var("OPENAI_API_KEY");
-            
-            // let client = match &*OPENAI_API_KEY {
-            //     Some(key) => {
-            //         Client::with_config(
-            //             OpenAIConfig::new()
-            //             .with_api_key(key.clone())
-            //         )
-            //     }
-            //     None => {
-            //         println!("OPENAI_API_KEY not found.  Running without it.");
-            //         *API_KEY_MISSING.lock().unwrap() = true; // Set the flag
-            //         Client::new() // Create a client without an API key
-            //     }
-            // };
-            
             //let a_embedding_generator = EmbeddingGenerator::new(Client::new());
             let b_embedding_generator = EmbeddingGenerator::new_with_api_key("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");
             //let path = PathBuf::from("./resources/ghostwriter-selectric/vector_store/");
             
-            
-            
-            
-            // log::debug!("DocumentStore initialized");
-            
-            
-            
-            println!("DocumentStore successfully initialized.");
-            
+            // log::debug!("DocumentStore initialized");            
             
             tauri::Builder::default()
             .plugin(tauri_plugin_clipboard_manager::init())
@@ -1034,18 +1008,48 @@ async fn search_similarity(
             .on_menu_event(|app, event| menu::handle_menu_event(app, event))
             .setup(move |app| {
                 let app_handle = app.handle();
-                log::debug!("Application starting up");
+                log::info!("Ghostwriter starting up");
                 log::info!("Initializing components...");
                 // Now these log messages will work
-                log::debug!("This is a debug message");
-                log::info!("This is an info message");
-                log::warn!("This is a warning message");
-                log::error!("This is an error message");
-                log::trace!("This is a trace message");
-                // ✅ Check the API_KEY_MISSING flag and open API Key entry window if needed
-                //check_api_key(&app_handle);
+                // log::debug!("This is a debug message");
+                // log::info!("This is an info message");
+                // log::warn!("This is a warning message");
+                // log::error!("This is an error message");
+                // log::trace!("This is a trace message");
+
+                let api_key = match KeychainHandler::retrieve_api_key() {
+
+                    Ok(Some(key)) => {
+                        let new_logger: NewLogger = NewLogger::new(app_handle.clone());
+                        new_logger.simple_log_message("Successfully retrieved API key from keyring".to_string(), "startup".to_string(), "info".to_string());
+                        log::info!("Successfully retrieved API key from keyring");
+                        Some(key)
+                    },
+                    Ok(None) => {
+                        log::warn!("No API key found in keyring");
+                        let new_logger: NewLogger = NewLogger::new(app_handle.clone());
+                        new_logger.simple_log_message("No API key found in keyring".to_string(), "startup".to_string(), "warn".to_string());
+                        None
+                    },
+                    Err(e) => {
+                        log::error!("Failed to retrieve OpenAI API key from keyring: {}", e);
+                        let new_logger: NewLogger = NewLogger::new(app_handle.clone());
+                        new_logger.simple_log_message("Failed to retrieve OpenAI API key from keyring".to_string(), "startup".to_string(), "error".to_string());
+                        None
+                    } 
+                };
+
+                let b_embedding_generator: EmbeddingGenerator;
+                if api_key == None {
+                    b_embedding_generator = EmbeddingGenerator::new();
+                } else {
+                    b_embedding_generator = EmbeddingGenerator::new_with_api_key(api_key.as_deref());
+                }
                 let path = app.path().app_data_dir().expect("This should never be None");
                 let path = path.join("./canon/");
+
+                //load_openai_api_key_from_keyring(app_handle.clone(), );
+
                 let embedding_generator_clone: EmbeddingGenerator = b_embedding_generator.clone();
 
                 let doc_store = match DocumentStore::new(path.clone(), std::sync::Arc::new(b_embedding_generator)) {
