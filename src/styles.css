@@ -62,7 +62,7 @@ p {
 }
 
 .dynamic-text-mark {
-  @apply text-[0.9em];
+  @apply text-[1em];
   @apply font-[WarblerText];
 }
 
@@ -364,23 +364,28 @@ button {
 }
 
 .simple-log-level-debug {
-  background-color: #ff00d4;
-  color: white;
+  background-color:#000000;
+  color: rgb(249, 249, 249);
+  @apply border-l-8 border-[#ff00d4];
 }
 
 .simple-log-level-info {
   background-color: black;
+  color: rgb(249, 249, 249);
+  @apply border-l-8 border-green-400;
 }
 
 .simple-log-level-warn {
-  background-color: #f8ff93;
-  color: black;
+  background-color:#000000;
+  color: rgb(249, 249, 249);
+  @apply border-l-8 border-[#f8ff93];
 }
 
 .simple-log-level-error {
-  background-color:#ac0e00;
-  color: white;
+  background-color:#000000;
+  color: rgb(249, 249, 249);
   @apply font-bold;
+  @apply border-l-8 border-red-500;
 }
 
 .simple-log-timestamp {

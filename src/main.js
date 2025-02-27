@@ -39,7 +39,7 @@ let prefsSaveBtn;
 let prefsResetBtn;
 
 
-
+let openaiApiKeyEl;
 let prefsMainPromptTextArea;
 let prefsResponseLimitTextArea;
 let prefsFinalPreambleTextArea;
@@ -159,7 +159,7 @@ async function completionFromContext() {
   if (actionItem) {
     if (actionItem.options.disabled === false) {
       wasDisabled = false;
-
+      
       // Disable the extension temporarily..to avoid it appearing before emanation concludes..
       actionItem.options.disabled = true;
       addSimpleLogEntry({
@@ -183,7 +183,7 @@ async function completionFromContext() {
   .then(([content, timing]) => {
     clearInterval(loadingInterval);
     
-    greetMsgEl.textContent = 'Complete';
+    greetMsgEl.textContent = 'Emanation Complete';
     //console.log("Completion content:", content);
     editor.chain()
     .focus()
@@ -227,14 +227,31 @@ async function completionFromContext() {
   })
   .catch((err) => {
     clearInterval(loadingInterval);
-    greetMsgEl.textContent = 'Error occurred';
+    greetMsgEl.textContent = 'Error occurred '+err;
     console.error(err);
   });
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
   //create();
-  
+    invoke("set_logger_app_data_path", {}).then((res) => {
+    //console.log('Logger App Data Path:', res);
+    // invoke("simple_log_message", { message: 'Logger App Data Path: '+res, id: "tracker", level: "info" }).then((res) => {
+    // });
+    // addSimpleLogEntry({
+    //   id: "",
+    //   timestamp: Date.now(),
+    //   message: 'Logger App Data Path fn release: '+res,
+    //   level: 'info'
+    // });
+    // invoke("get_logger_path", {}).then((res) => {
+    //   console.log('Logger Path:', res);
+    //   invoke("simple_log_message", { message: 'JS Logger Path: '+res, id: "tracker", level: "debug" }).then((res) => {
+    //     //console.log('simple_log_emissions', res);
+    //   });
+    // });
+  });
+
   let actionItem = editor.extensionManager.extensions.find(extension => extension.name === 'inlineActionItem');
   let nudgeButton = document.querySelector("#nudge-inline-action-item");
   if (actionItem) {
@@ -365,8 +382,19 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
   panel = document.getElementById('side-panel');
   
-  
-  
+  openaiApiKeyEl = document.querySelector("#openai-api-key-btn");
+  openaiApiKeyEl.addEventListener("click", () => {
+    invoke("load_openai_api_key_from_keyring", {}).then((res) => {
+      openaiApiKeyEl.value = res;
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'OpenAI API Key: '+res,
+        level: 'debug'
+      });
+    });
+  });
+
   prefsLoadBtn = document.querySelector("#prefs-load-btn");
   prefsLoadBtn.addEventListener("click", () => {
     invoke("load_preferences").then((res) => {
@@ -406,8 +434,31 @@ window.addEventListener("DOMContentLoaded", async () => {
   prefsSaveBtn = document.querySelector("#prefs-save-btn");
   prefsSaveBtn.addEventListener("click", () => {
     //console.log("what's this ->", prefsSimilarityThreshold.value);
-    const shuffleSimilarsValue = prefsShuffleSimilars.checked ? "true" : "false";
-    
+    // Convert the string "true"/"false" to an actual boolean
+    const shuffleSimilarsValue = prefsShuffleSimilars.checked;
+    const openaiApiKey = document.querySelector("#openai-api-key").value;
+    addSimpleLogEntry({
+      id: "",
+      timestamp: Date.now(),
+      message: 'openaiApiKey is '+openaiApiKey,
+    });
+    invoke("save_openai_api_key_to_keyring", { key:openaiApiKey } ).then((res) => {
+      console.log('OpenAI API Key Saved:', res);
+    }).catch((error) => {
+      console.error('Failed to save OpenAI API Key:', error); 
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'Failed to save OpenAI API Key: '+error,
+        level: 'error'
+      });
+    });
+    // addSimpleLogEntry({
+    //   id: "",
+    //   timestamp: Date.now(),
+    //   message: 'shuffleSimilarsValue is '+shuffleSimilarsValue,
+    //   level: 'debug'
+    // });
     invoke("update_preferences", {
       responselimit: prefsResponseLimitTextArea.value,
       mainprompt: prefsMainPromptTextArea.value,
@@ -426,7 +477,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         id: "",
         timestamp: Date.now(),
         message: 'Preferences saved<br/>'+JSON.stringify(res, null, 2),
-        level: 'info'
+        level: 'debug'
       });
     }).catch((error) => {
       console.error('Failed to save preferences:', error);
@@ -466,12 +517,20 @@ window.addEventListener("DOMContentLoaded", async () => {
     // console.log('Panel before:', panel.classList.contains('open')); 
     invoke("load_preferences").then((res) => {
       console.log('Preferences Loaded:', res);
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'Preferences loaded<br/>'+JSON.stringify(res, null, 2),
+        level: 'info'
+      });
       prefsMainPromptTextArea.textContent = res.main_prompt;
       prefsResponseLimitTextArea.textContent = res.response_limit;
       prefsFinalPreambleTextArea.textContent = res.final_preamble;
       prefsProseStyleTextArea.textContent = res.prose_style;
       prefsShuffleSimilars.checked = res.shuffle_similars;
       prefsSimilarityThreshold.value = res.similarity_threshold * 100;
+      prefsSimilarityThreshold.textContent = res.similarity_threshold;
+      prefsSimilarityThresholdValue.textContent = res.similarity_threshold;
       prefsSimilarityCount.value = res.similarity_count;
       prefsSimilarityCountValue.textContent = res.similarity_count;
       prefsMaxHistoryItems.value = res.max_history;
@@ -489,24 +548,35 @@ window.addEventListener("DOMContentLoaded", async () => {
   openLogBtnEl.addEventListener("click", () => {
     const currentWindow = getCurrentWebviewWindow()
     console.log(currentWindow);
-    const webview = new WebviewWindow('unique-window-label', {
-      url: 'view-log.html', // URL to load
-      title: 'log.json',
-      width: 800,
-      height: 600,
-      resizable: true,
-      fullscreen: false,
-      decorations: true, // window decorations (title bar, borders)
-      transparent: false,
-      center: true
-    })
-    webview.once('tauri://created', function () {
-      // webview successfully created
-      console.log("created");
-    });
-    webview.once('tauri://error', function (e) {
-      // an error happened creating the webview
-      console.log("woops", e)
+    invoke("get_logger_path", {}).then((res) => {
+      console.log('Logger Path:', res);
+      const logPath = res;
+      const encodedLogPath = encodeURIComponent(logPath);
+      const webview = new WebviewWindow('view-log-window-label', {
+        url: `view-log.html?logPath=${encodedLogPath}`, // URL to load
+        title: 'Ghostwriter Log Viewer',
+        width: 800,
+        height: 600,
+        resizable: true,
+        fullscreen: false,
+        decorations: true, // window decorations (title bar, borders)
+        transparent: false,
+        center: true
+      })
+      webview.once('tauri://created', function () {
+        // webview successfully created
+        console.log("created");
+      });
+      webview.once('tauri://error', function (e) {
+        // an error happened creating the webview
+        console.log("woops", e)
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date.now(),
+          message: 'Error opening log viewer: '+JSON.stringify(e, null, 2)+". (Window is probably already open and buried behind other windows.)",
+          level: 'error'
+        });
+      });
     });
   });
   
@@ -683,6 +753,11 @@ window.addEventListener("DOMContentLoaded", async () => {
           total_steps: event.payload.total_steps,
           meta: "Completed Ingestion"
         })
+        greetMsgEl.textContent = 'Ingestion Completed for '+event.payload.current_file+' with '+event.payload.total_steps+' chunks.';
+        window.timeout(() => {
+          greetMsgEl.textContent = 'Ingestion Completed';
+        }
+        , 5000);
       }
     });
   } catch (error) {
@@ -693,9 +768,24 @@ window.addEventListener("DOMContentLoaded", async () => {
     console.log('Preferences Loaded:', res);
   });
   
-  invoke("simple_log_message", { message: 'Ghostwriter Up.', id: "tracker", level: "info" }).then((res) => {
+  invoke("simple_log_message", { message: 'Ghostwriter Is Up.', id: "tracker", level: "info" }).then((res) => {
     console.log('simple_log_emissions', res);
   });
+  
+  
+  invoke("get_canon_info", {}).then((res) => {
+    console.log('Canon Info:', res);
+    if (typeof res === 'object' && res !== null) {
+      //console.log('Canon Info:', res);
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'Canon Info: '+JSON.stringify(res, null, 2),
+        level: 'info'
+      });
+    }
+  });
+  
   // invoke("rich_log_message", { message: 'Ghostwriter Up.', data: "no data", level: "info" }).then((res) => {
     //   console.log('rich_log_emissions', res);
   // });
@@ -786,7 +876,7 @@ const editor = new Editor({
           greetMsgEl.textContent = 'Completed';
         } catch (error) {
           console.error('Action failed:', error);
-          greetMsgEl.textContent = 'Error occurred';
+          greetMsgEl.textContent = 'Error occurred '+error;
           
           // Make sure to re-enable even on error
           const pluginKey = new PluginKey('inlineActionItem');

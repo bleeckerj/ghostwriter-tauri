@@ -10,7 +10,7 @@ use super::document_ingestor::{
     IngestError
 };
 use gray_matter::Pod;
-
+#[derive(Debug)]
 pub struct EpubIngestor;
 
 #[async_trait]

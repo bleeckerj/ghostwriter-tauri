@@ -17,7 +17,7 @@ use tauri::{
 use std::{path, sync::Arc};
 use tokio::sync::Mutex;
 
-use crate::DocumentStore;
+use crate::{logger, DocumentStore};
 use chrono::Local;
 use crate::NewLogger;
 use crate::SimpleLog;
@@ -66,17 +66,17 @@ pub fn build_canon_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu
     .accelerator("CmdOrControl+L")
     .build(app)?;
     
-    let new_item = MenuItemBuilder::new("New")
+    let new_item = MenuItemBuilder::new("New Canon")
     .id(MENU_CANON_NEW)
     .accelerator("CmdOrControl+Shift+N")
     .build(app)?;
     
-    let load_item = MenuItemBuilder::new("Load")
+    let load_item = MenuItemBuilder::new("Load Canon")
     .id(MENU_CANON_LOAD)
     .accelerator("CmdOrControl+O")
     .build(app)?;
     
-    let ingest_item = MenuItemBuilder::new("Ingest")
+    let ingest_item = MenuItemBuilder::new("Ingest Material")
     .id(MENU_CANON_INGEST)
     .accelerator("CmdOrControl+I")
     .build(app)?;
@@ -107,7 +107,7 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
 
     match event.id.0.as_str() {
         MENU_FILE_SAVE => {
-            println!("New file");
+            println!("New File Is What Exactly?");
             app.emit("save-file-dialog", json!({
                 "defautPath": "new_file.txt",
                 "filters": [
@@ -117,6 +117,12 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
                     }
                 ]}
             ));
+            let simple_log_data = SimpleLog {
+                message: format!("{}", "New File Is What Exactly?"),
+                level: "debug".to_string(),
+                timestamp: chrono::Local::now().to_rfc3339().to_string(),
+                id: None,
+            };
         }
 
         MENU_FILE_QUIT => {
@@ -135,6 +141,7 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
                                 // Emit the JSON string
                                 // Send to the front end, basically.
                                 app_handle.emit("canon-list", json_string);
+                                drop(store);
                             }
                             Err(e) => {
                                 // Handle serialization error
@@ -177,13 +184,37 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
                 id: None,
             };
             let _ = app_handle.emit("simple-log-message", simple_log_data);
+            let app_handle = app.clone();
+            let dialog = app_handle.dialog().clone();
+            let doc_store: Arc<Mutex<DocumentStore>> = Arc::clone(&app_state.doc_store);
+            app_handle.dialog().file().add_filter("Canon", &["db", "canon"])
+            .set_title("Create New Canon")
+            .save_file(move |file_path| {
+                if let Some(path) = file_path {
+                    let path_as_string = path.clone().to_string();
+                    println!("File path is {}", &path);
+            
+                    // Properly convert to PathBuf
+                    let path_buf = convert_file_path_to_path_buf(path.clone());
+            
+                    // Clone the doc_store and app_handle to ensure 'static lifetime
+                    let doc_store = Arc::clone(&doc_store);
+                    let app_handle = app_handle.clone();
+            
+                    tauri::async_runtime::spawn(async move {
+                        set_database_path_async(doc_store, path_as_string, app_handle).await;
+                    });
+                }
+            });
         }
         MENU_CANON_LOAD => {
             let app_handle = app.clone();
             let dialog = app_handle.dialog().clone();
             let doc_store: Arc<Mutex<DocumentStore>> = Arc::clone(&app_state.doc_store);
             FileDialogBuilder::new(dialog)
-            .set_title("Select a File")
+            .set_title("Select A Canon Database")
+            .set_can_create_directories(true)
+            .add_filter("Canon files", &[".canon", ".db"])
             .pick_file(move |file_path| {
                 if let Some(path) = file_path {
                     let path_as_string = path.to_string().clone();
@@ -226,7 +257,7 @@ async fn set_database_path_async<R: Runtime>(
     match store.set_database_path(path_buf).await {
         Ok(_) => {
             let simple_log_data = SimpleLog {
-                message: format!("New database path set: {}", path),
+                message: format!("New canon set: {}", path),
                 level: "info".to_string(),
                 timestamp: chrono::Local::now().to_rfc3339().to_string(),
                 id: None,
@@ -235,7 +266,7 @@ async fn set_database_path_async<R: Runtime>(
         }
         Err(e) => {
             let simple_log_data = SimpleLog {
-                message: format!("Error setting database path: {}", e),
+                message: format!("Error setting canon path: {}", e),
                 level: "error".to_string(),
                 timestamp: chrono::Local::now().to_rfc3339().to_string(),
                 id: None,

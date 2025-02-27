@@ -25,6 +25,7 @@ use tauri::Manager; // Add this import
 use tauri::Emitter;
 use serde_json::json;
 use tokio::runtime::Handle;
+use log::{SetLoggerError, LevelFilter, info};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Document {
@@ -57,7 +58,7 @@ pub struct DocumentInfo {
     pub file_path: String,
     pub created_at: String,
 }
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct DocumentStore {
     conn: Arc<Mutex<Connection>>, // Change to tokio Mutex
     ingestors: Vec<Arc<Box<dyn DocumentIngestor>>>,
@@ -73,7 +74,11 @@ impl DocumentStore {
         store_path: PathBuf,
         embedding_generator: Arc<EmbeddingGenerator>
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let (conn, canon_path, canon_name, next_id) = Self::initialize_database(&store_path)?;
+
+        let (conn, canon_path, canon_name, next_id) = 
+            Self::initialize_database(&store_path)?;
+
+
 
         let mut doc_store = DocumentStore { 
             conn: Arc::new(Mutex::new(conn)),
@@ -83,13 +88,21 @@ impl DocumentStore {
             canon_path,
             canon_name,
         };
+
+        log::debug!("3. Why do we crash in production and not in development?");
+
         
         doc_store.register_ingestor(Box::new(MdxIngestor));
+        log::debug!("4. Why do we crash in production and not in development?");
+
         doc_store.register_ingestor(Box::new(PdfIngestor));
         doc_store.register_ingestor(Box::new(MarkdownIngestor));
         doc_store.register_ingestor(Box::new(EpubIngestor));
         doc_store.register_ingestor(Box::new(TextIngestor));
         
+        log::debug!("5. Why do we crash in production and not in development?");
+
+
         Ok(doc_store)
     }
     
@@ -107,19 +120,62 @@ impl DocumentStore {
         Ok(())
     }
 
+    fn resolve_database_path(store_path: &PathBuf) -> PathBuf {
+        if store_path.is_file() {
+            // If it's a file, use it directly
+            store_path.to_path_buf()
+        } else {
+            // If it's a directory (or doesn't exist), append "ghostwriter.canon"
+            store_path.join("ghostwriter.canon")
+        }
+    }
+
     fn initialize_database(
         store_path: &PathBuf,
     ) -> Result<(Connection, String, String, usize), Box<dyn std::error::Error>> {
-        std::fs::create_dir_all(store_path)?;
-        let db_path = store_path.join("documents.db");
+
+        if store_path.is_dir() || !store_path.exists() {
+            std::fs::create_dir_all(store_path)?;
+        }
         
-        let conn = Connection::open(&db_path)?;
+
+        let db_path = Self::resolve_database_path(store_path);
+
+        log::debug!("5. db_path: {:?}", db_path);
+
+
+        
+        let conn = Connection::open(&db_path).map_err(|e| {
+            let error_msg = format!(
+                "Failed to open SQLite database at {:?}: {}. Check permissions and disk space.", 
+                db_path, 
+                e
+            );
+            log::error!("{}", error_msg);
+            
+            // Log specific error conditions
+            match e {
+                rusqlite::Error::SqliteFailure(error, Some(msg)) => {
+                    log::error!("SQLite error code: {:?}, message: {}", error.code, msg);
+                }
+                rusqlite::Error::SqliteFailure(error, None) => {
+                    log::error!("SQLite error code: {:?}", error.code);
+                }
+                _ => log::error!("Other SQLite error: {}", e),
+            }
+            
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                error_msg
+            )) as Box<dyn std::error::Error>
+        })?;
         let canon_path = db_path.to_string_lossy().to_string();
         let canon_name = Path::new(&canon_path)
             .file_name()
             .map(|name| name.to_string_lossy().to_string())
             .unwrap_or_else(|| "UnknownDB".to_string());
-        
+        log::debug!("7. conn: {:?}", conn);
+
         // Create tables if they don't exist
         conn.execute(
             "CREATE TABLE IF NOT EXISTS documents 
@@ -205,7 +261,7 @@ impl DocumentStore {
              FROM documents d 
              JOIN embeddings e ON d.id = e.doc_id"
         )?;  // Use ? directly for rusqlite::Error
-        println!("************************ {}", similarity_threshold);
+        //println!("************************ {}", similarity_threshold);
         let mut similarities = Vec::new();
         
         let rows = stmt.query_map([], |row| {
@@ -232,8 +288,8 @@ impl DocumentStore {
         }
         
         // Log the similarities before filtering
-        println!("Similarities before filtering: {:?}", similarities.iter().map(|(doc_id, name, _, _, similarity)| (doc_id, name, similarity)).collect::<Vec<_>>());
-        println!("Similarity threshold: {}", similarity_threshold);
+        //println!("Similarities before filtering: {:?}", similarities.iter().map(|(doc_id, name, _, _, similarity)| (doc_id, name, similarity)).collect::<Vec<_>>());
+        //println!("Similarity threshold: {}", similarity_threshold);
         
         // Filter by min_score and sort by similarity score in descending order
         similarities.retain(|&(doc_id, ref name, _, _, similarity)| {
@@ -275,7 +331,7 @@ impl DocumentStore {
             }
         }
         
-        println!("Final results: {:?}", unique_results.iter().map(|(doc_id, name, _, _, similarity)| (doc_id, name, similarity)).collect::<Vec<_>>());
+        //println!("Final results: {:?}", unique_results.iter().map(|(doc_id, name, _, _, similarity)| (doc_id, name, similarity)).collect::<Vec<_>>());
         Ok(unique_results)
     }
     
@@ -325,7 +381,6 @@ impl DocumentStore {
         app_handle: tauri::AppHandle, // Add app_handle parameter
     ) -> Result<(), Box<dyn std::error::Error>> {
         let store = self.clone(); // Clone Arc to get a reference
-        println!("Processing document: {:?}", path);
         
         // Find suitable ingestor
         let ingestor = match store.ingestors.iter().find(|i| i.can_handle(path)) {
@@ -339,12 +394,21 @@ impl DocumentStore {
                     "level": "error"
                 }))?;
                 println!("Ingestor not found");
+                app_handle.emit("simple-log-message", json!({
+                    "message": format!("No ingestor found for {}", path.to_string_lossy()),
+                    "timestamp": chrono::Local::now().to_rfc3339(),
+                    "level": "warn"
+                }))?;
                 return Err(Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, error_message)));
             }
         };
         
-        
-        println!("Ingestor found");
+        app_handle.emit("simple-message", json!({
+            "message": format!("Ingestor found: {:?}", ingestor),
+            "timestamp": chrono::Local::now().to_rfc3339(),
+            "level": "debug"
+        }))?;
+        //println!("Ingestor found");
         let ingested = ingestor.ingest_file(path).await?;
         //println!("Ingested document: {:?}", ingested);
         let document = Document {
@@ -356,13 +420,16 @@ impl DocumentStore {
         };
         let doc_name = document.name.clone();
         println!("Document created: {:?}", document);
+        log::debug!("Document created: {:?}", document);
+
         let doc_id_result = {
-            let conn = store.conn.lock().await;  // ✅ Correctly locks the database connection
+            let conn = store.conn.lock().await;
             store.add_document_internal(&conn, document)
         };
         let doc_id = match doc_id_result {
             Ok(id) => {
                 println!("Document ID: {}", id);
+                log::debug!("Document ID: {}", id);
                 id
             }
             Err(e) => {
@@ -400,6 +467,12 @@ impl DocumentStore {
             }
             Err(e) => {
                 println!("Error processing embeddings: {:?}", e);
+                app_handle.emit("simple-message", json!({
+                    "message": format!("Ingestion & embedding complete: {}", file_name_clone),
+                    "timestamp": chrono::Local::now().to_rfc3339(),
+                    "level": "warn"
+                }));
+                log::warn!("Error processing embeddings: {:?}", e);
             }
         }
         
@@ -481,11 +554,11 @@ impl DocumentStore {
         embedding_generator: &EmbeddingGenerator,
         app_handle: tauri::AppHandle,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        println!("app_handle: {:?}", app_handle);
+        //println!("app_handle: {:?}", app_handle);
         // Chunk the content
         let chunks = self.embedding_generator.chunk_text(&content, 2048, 0); // adjust size/overlap as needed
         // Emit progress update
-        println!("Processing {} chunks", chunks.len());
+        //println!("Processing {} chunks", chunks.len());
         app_handle.emit("progress-indicator-load", json!({
             "progress_id": format!("embedding_doc_id_{}",doc_id),
             "current_step": 0,

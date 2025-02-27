@@ -5,7 +5,7 @@
   <link rel="stylesheet" href="/src/styles.css" />
   <link rel="stylesheet" href="/src/fonts.css" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tauri App</title>
+  <title>Ghostwriter</title>
   <script type="module" src="./src/main.js" defer></script>
 </head>
 
@@ -17,9 +17,6 @@
       <!-- <input id="greet-input" class="bg-blue-700 mr-[5em] p-2 rounded-sm border-[0.5px] border-black" placeholder="Write Something..." /> -->
       <!-- <div class="mb-8 relative"> -->
         
-        <div class="absolute right-4 top-3 z-10 flex items-center transparent rounded-full shadow-sm shadow-black">
-          <img class="h-[2em]" src="/src/images/icons/LaboratoryCircle_Guy_01_CircleTeal.webp" />
-        </div>
         
       <!-- </div> -->
       <div class="scroll-area">
@@ -35,15 +32,21 @@
         
         
         <div id="action-buttons" class="diagnostics-btn-area bg-gray-200 border-[0.5px] text-[0.8em] w-full rounded-sm pl-4">
+          <span id="incant-btn" class="diagnostics-area-button enabled">INCNT</span>
           <span id="clear-diagnostics-btn" class="diagnostics-area-button enabled">CLEAR</span>
           <span id="reset-rag-btn" class="diagnostics-area-button button-inactive">RESET</span>
-          <span id="list-canon-btn" class="diagnostics-area-button enabled">LIST</span>
+          <span id="list-canon-btn" class="diagnostics-area-button enabled">CANON</span>
           <span id="ingest-btn" class="diagnostics-area-button enabled">INGST</span>
-          <span id="incant-btn" class="diagnostics-area-button enabled">INCNT</span>
           <span id="panel-toggle-btn" class="diagnostics-area-button enabled">PREFS</span>
           <span id="similarity-search-btn" class="diagnostics-area-button enabled">SSRCH</span>
           <span id="nudge-inline-action-item" class="diagnostics-area-button enabled">NUDGE</span>
-          <span id="open-log-btn" class="diagnostics-area-button enabled">LOGJ</span>
+          <span id="open-log-btn" class="diagnostics-area-button enabled">LOGJS</span>
+          <span id="openai-api-key-btn" class="diagnostics-area-button enabled">OPNAI</span>
+          <span id="lm-notebook-btn" class="diagnostics-area-button disabled">LMNBK</span>
+
+          <div class="absolute right-4 top-2 z-10 flex items-center transparent rounded-full shadow-sm shadow-black">
+            <img class="h-[2.2em]" src="/src/images/icons/LaboratoryCircle_Guy_01_CircleTeal.webp" />
+          </div>
         </div>
         <div id="diagnostics-editor" class="diagnostics-content bg-blue-700 h-full bg-2 rounded-sm">
           <div class="diagnostics bg-blue-700 rounded-sm mb-2"></div>
@@ -176,6 +179,31 @@
             </div>
           </label>
           
+          <!-- Little spot to put in OpenAI API Key -->
+          <div class="label">
+            <span class="label-text text-sm font-['Haffer'] ml-1">OpenAI API Key</span>
+          </div>
+          <label class="input input-bordered flex items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              class="h-4 w-4 opacity-70">
+              <path
+                fill-rule="evenodd"
+                d="M14 6a4 4 0 0 1-4.899 3.899l-1.955 1.955a.5.5 0 0 1-.353.146H5v1.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2.293a.5.5 0 0 1 .146-.353l3.955-3.955A4 4 0 1 1 14 6Zm-4-2a.75.75 0 0 0 0 1.5.5.5 0 0 1 .5.5.75.75 0 0 0 1.5 0 2 2 0 0 0-2-2Z"
+                clip-rule="evenodd" />
+            </svg>
+            <div class="flex grow items-center !shadow-none">
+              <span class="text-gray-500 select-none">sk-</span>
+              <input 
+                id="openai-api-key" 
+                type="text" 
+                class="grow !shadow-none border-none focus:outline-none font-mono text-xs placeholder:text-gray-400 placeholder:text-xs placeholder:font-mono" 
+                placeholder="paste your API key here"
+              />
+            </div>
+          </label>
         </div>
       </div>
     </main>

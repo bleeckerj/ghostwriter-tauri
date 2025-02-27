@@ -14,9 +14,16 @@ use tauri::{generate_handler, Runtime, Builder, Emitter, AppHandle, Manager, Win
 use chrono::{Local, Utc};  // Add Utc here
 use std::sync::Arc;
 use rand::seq::SliceRandom; 
+use tauri_plugin_log::{Target, TargetKind};
+extern crate log;
+use syslog::{Facility, Formatter3164, BasicLogger};
+use log::{SetLoggerError, LevelFilter, info};
+use serde_json::json;
 
 mod preferences;
 use preferences::Preferences;
+mod keychain_handler;
+use keychain_handler::KeychainHandler;
 
 
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
@@ -33,7 +40,6 @@ use conversations::Conversation;
 
 mod app_state; // Add this line
 use app_state::AppState;
-use tauri_plugin_log::{Target, TargetKind};
 
 use async_openai::{
     //config::OpenAIConfig,
@@ -87,6 +93,7 @@ impl fmt::Display for CompletionTiming {
 }
 
 #[tauri::command]
+<<<<<<< HEAD
 async fn save_to_file(
     app_handle: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
@@ -113,20 +120,87 @@ async fn save_to_file(
 
 #[tauri::command]
 async fn save_api_key(
+=======
+async fn load_openai_api_key_from_keyring(
+    app_handle: tauri::AppHandle, 
+    state: tauri::State<'_, AppState>) -> Result<(bool), String> {
+    // Create logger instance
+    let new_logger = NewLogger::new(app_handle.clone());
+
+    // Returns true if there was a key there (even if it was invalid)
+    // Returns false if there was no key there
+    // Returns an error if there was a problem loading the key
+    match KeychainHandler::retrieve_api_key() {
+        Ok(key) => {
+            match key {
+                Some(k) => {
+                    log::info!("API key successfully loaded from keychain");
+                    new_logger.simple_log_message(
+                        format!("{} API key successfully loaded from keychain", k),
+                        "keychain".to_string(),
+                        "debug".to_string()
+                    );
+                    Ok(true)
+                }
+                None => {
+                    log::warn!("No API key found in keychain");
+                    new_logger.simple_log_message(
+                        "No API key not found in keychain".to_string(),
+                        "keychain".to_string(),
+                        "warn".to_string()
+                    );
+                    Ok(false)
+                }
+            }
+        }
+        Err(e) => {
+            let error_msg = format!("Keychain issue? Failed to load API key from keychain: {}", e);
+            log::error!("{}", error_msg);
+            new_logger.simple_log_message(
+                error_msg.clone(),
+                "keychain".to_string(),
+                "error".to_string()
+            );
+            Err(error_msg)
+        }
+    }
+
+    
+}
+
+
+#[tauri::command]
+async fn save_openai_api_key_to_keyring(
+>>>>>>> staging
     app_handle: tauri::AppHandle, 
     state: tauri::State<'_, AppState>, 
     key: String
-) -> Result<(), String> {  // ✅ Function must return `Result`
-    let mut api_key = state.api_key.lock().await; // ✅ Use `.await` instead of `.unwrap()`
-    *api_key = Some(key.clone()); // ✅ Store the API key
-    
-    // ✅ Save the API key to a file
-    if let Err(err) = state.save_api_key(&app_handle, key).await {
-        eprintln!("Failed to save API key: {}", err);
-        return Err(format!("Failed to save API key: {}", err)); // ✅ Return an error string
+) -> Result<(), String> {
+    // Create logger instance
+    let new_logger = NewLogger::new(app_handle.clone());
+
+    // Attempt to store the key
+    match KeychainHandler::store_api_key(&key) {
+        Ok(_) => {
+            log::info!("API key successfully stored in keychain");
+            new_logger.simple_log_message(
+                "API key successfully stored in keychain".to_string(),
+                "keychain".to_string(),
+                "debug".to_string()
+            );
+            Ok(())
+        }
+        Err(e) => {
+            let error_msg = format!("Failed to store API key in keychain: {}", e);
+            log::error!("{}", error_msg);
+            new_logger.simple_log_message(
+                error_msg.clone(),
+                "keychain".to_string(),
+                "error".to_string()
+            );
+            Err(error_msg)
+        }
     }
-    
-    Ok(())
 }
 
 /**
@@ -155,15 +229,13 @@ async fn update_preferences(
     finalpreamble: String,
     prosestyle: String,
     similaritythreshold: String,
-    shufflesimilars: String,
+    shufflesimilars: bool,
     similaritycount: String,
     maxhistory: String,
     maxtokens: String,
     temperature: String,
 ) -> Result<(Preferences), String> {
     
-    println!("Hello");
-    println!("");
     println!("update_preferences called with: {}, {}, {}, {} {} {} {} {} {} {}",
     responselimit, mainprompt, finalpreamble, prosestyle, similaritythreshold, shufflesimilars, similaritycount, maxhistory, maxtokens, temperature);
     
@@ -173,7 +245,7 @@ async fn update_preferences(
     preferences.final_preamble = finalpreamble;
     preferences.prose_style = prosestyle;
     preferences.similarity_threshold = similaritythreshold.parse::<f32>().unwrap() / 100.0;
-    preferences.shuffle_similars = shufflesimilars == "true";
+    preferences.shuffle_similars = shufflesimilars == true;
     preferences.similarity_count = similaritycount.parse::<usize>().unwrap_or(Preferences::SIMILARITY_COUNT_DEFAULT);
     preferences.max_history = maxhistory.parse::<usize>().unwrap_or(Preferences::MAX_HISTORY_DEFAULT);
     preferences.max_output_tokens = maxtokens.parse::<u32>().unwrap_or(Preferences::MAX_OUTPUT_TOKENS_DEFAULT);
@@ -186,7 +258,9 @@ async fn update_preferences(
         new_logger.simple_log_message(error_message.clone(), "preferences".to_string(), "error".to_string());
         return Err(error_message);
     }
-    
+    let debug_message = format!("Preferences updated: {:?}", preferences);
+    let new_logger = NewLogger::new(app_handle.clone());
+    new_logger.simple_log_message(debug_message.clone(), "preferences".to_string(), "debug".to_string());
     Ok((prefs_clone))
 }
 
@@ -206,6 +280,48 @@ async fn prefs_file_path() -> Result<String, String> {
     Ok(Preferences::prefs_file_path())
 }
 
+#[tauri::command]
+async fn get_logger_path(state: tauri::State<'_, AppState>) -> Result<String, String> {
+    let logger = state.logger.lock().await;
+    Ok(logger.get_logger_path().to_str().unwrap().to_string())
+}
+
+#[tauri::command]
+async fn set_logger_app_data_path(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    let mut app_data_path: PathBuf = app_handle.path()
+    .app_log_dir()
+    .unwrap_or_else(|_| {
+        // Provide a default path if app_data_dir() returns None
+        // This could be a fallback path in the user's home directory or a temporary directory
+        std::env::temp_dir()
+    });
+    app_data_path.push("ghostwriter_log.json");
+    
+    /// PROBLEMATIC
+    state.set_logger_path(app_data_path).await.map_err(|e| e.to_string());
+    Ok(())
+    
+}
+
+#[tauri::command]
+async fn get_log_contents(state: tauri::State<'_, AppState>) -> Result<Vec<Completion>, String> {
+    // Get the logger path from state
+    let logger = state.logger.lock().await;
+    let log_path = logger.get_logger_path();
+    
+    // Read the file contents
+    let file = std::fs::File::open(log_path)
+    .map_err(|e| format!("Failed to open log file: {}", e))?;
+    
+    // Parse JSON contents
+    let contents: Vec<Completion> = serde_json::from_reader(file)
+    .map_err(|e| format!("Failed to parse log contents: {}", e))?;
+    
+    Ok(contents)
+}
 
 #[tauri::command]
 async fn ingestion_from_file_dialog(
@@ -215,6 +331,8 @@ async fn ingestion_from_file_dialog(
 ) -> Result<String, String> {
     
     println!("Ingesting file: {}", file_path);
+    log::debug!("Ingesting file: {}", file_path);
+
     let file_path_buf = PathBuf::from(file_path);
     let file_name = file_path_buf.clone().as_path().file_name().unwrap().to_str().unwrap().to_string();
     
@@ -223,8 +341,8 @@ async fn ingestion_from_file_dialog(
     //let embedding_generator = state.embedding_generator.clone();
     
     let store = state.doc_store.lock().await;
-    let store_arc = Arc::new(store.clone());
-    store_arc.process_document_async(&file_path_buf, app_handle).await;
+    let store_clone = Arc::new(store.clone());
+    store_clone.process_document_async(&file_path_buf, app_handle).await;
     
     // tokio::spawn(async move {
     //     if let Err(err) = store.process_document_async(file_path_buf.as_path()).await {
@@ -254,6 +372,33 @@ async fn completion_from_context(
     let max_history = preferences.max_history;
     let similarity_threshold = preferences.similarity_threshold;
     let mut new_logger = NewLogger::new(app_handle.clone());
+    
+    let openai_api_key = get_api_key().map_err(|e| e.to_string())?;
+
+    let logger_clone = state.logger.clone();
+    let client = match openai_api_key {
+        Some(key) => {
+            Client::with_config(
+                OpenAIConfig::new()
+                .with_api_key(key.clone())
+            )
+        }
+        None => {
+            log::warn!("OPENAI_API_KEY not found. No use running without it.");
+            let mut new_logger = NewLogger::new(app_handle.clone());
+            new_logger.simple_log_message(
+                "OPENAI_API_KEY not found or invalid. No use running without it.".to_string(),
+                "".to_string(),
+                "error".to_string()
+            );
+            new_logger.simple_log_message(
+                "Check preferences and check os keychain".to_string(),
+                "".to_string(),
+                "error".to_string()
+            );
+            return Err("OpenAI API key is required but was not found. Check preferences and/or system keychain.".to_string());
+        }
+    };
 
     let start_total = Instant::now();
     
@@ -268,10 +413,18 @@ async fn completion_from_context(
     
     // Time similarity search
     let start_search = Instant::now();
-    
+    let mut similar_docs: Vec<(i64, String, usize, String, f32)> = Vec::new();
+    let database_name: String;
+    let database_path: String;
     // similar docs get the top 4, which may all be from the same source
-    let store = state.doc_store.lock().await;
-    let mut similar_docs = store.search(&embedding, similarity_count, similarity_threshold).await.map_err(|e| e.to_string())?;
+    // fence this off so we can release the lock on the store
+    {
+        let store = state.doc_store.lock().await;
+        similar_docs = store.search(&embedding, similarity_count, similarity_threshold).await.map_err(|e| e.to_string())?;
+        database_name = (store.get_database_name().to_string()); // Just convert &str to String
+        database_path = store.get_database_path().to_string(); // Just convert &str to String
+    }
+    // lock on store should be released by now
     
     let search_duration = start_search.elapsed();
     
@@ -281,6 +434,12 @@ async fn completion_from_context(
         let mut rng = rand::thread_rng();
         similar_docs.shuffle(&mut rng);
     }
+    
+    new_logger.simple_log_message(
+        format!("Found {} cosine similar documents ({})", similar_docs.len(), similarity_threshold),
+        "".to_string(),
+        "info".to_string()
+    );
     
     // Prepare the context for the LLM
     // This has all the document metadata..is that okay?
@@ -368,41 +527,10 @@ let request = CreateChatCompletionRequestArgs::default()
 
 // Time OpenAI request
 let start_openai = Instant::now();
-dotenv::dotenv().ok();
-
-let openai_api_key = env::var("OPENAI_API_KEY").expect("
-    OPENAI_API_KEY not found. Error.");
+//dotenv::dotenv().ok();
 
 
-let has_dotenv = dotenv::dotenv().is_ok();
-let api_key = env::var("OPENAI_API_KEY");
-let logger_clone = state.logger.clone();
-let client = match &*OPENAI_API_KEY {
-    Some(key) => {
-        Client::with_config(
-            OpenAIConfig::new()
-            .with_api_key(key.clone())
-        )
-    }
-    None => {
-        println!("OPENAI_API_KEY not found.  Running without it.");
-        *API_KEY_MISSING.lock().unwrap() = true; // Set the flag
-        println!("OPENAI_API_KEY not found.  Running without it.");
-        //let mut logger = state.logger.lock().await;
-        let mut new_logger = NewLogger::new(app_handle.clone());
-        new_logger.simple_log_message(
-            "OPENAI_API_KEY not found or invalid. No use running without it.".to_string(),
-            "".to_string(),
-            "error".to_string()
-        );
-        new_logger.simple_log_message(
-            "Try restarting and re-entering your OpenAI API Key".to_string(),
-            "".to_string(),
-            "error".to_string()
-        );
-        Client::new() // Create a client without an API key
-    }
-};
+
 let response = client
 .chat()
 .create(request)
@@ -422,9 +550,9 @@ if let Some(choice) = response.choices.first() {
             openai_request_ms: openai_duration.as_millis(),
             total_ms: total_duration.as_millis(),
         };
-        let store = state.doc_store.lock().await;
-        let database_name = store.get_database_name().to_string(); // Just convert &str to String
-        let database_path = store.get_database_path().to_string(); // Just convert &str to String
+        // let store: tokio::sync::MutexGuard<'_, DocumentStore> = state.doc_store.lock().await;
+        // let database_name = store.get_database_name().to_string(); // Just convert &str to String
+        // let database_path = store.get_database_path().to_string(); // Just convert &str to String
         
         
         let entry = Completion {
@@ -435,8 +563,9 @@ if let Some(choice) = response.choices.first() {
                 system_prompt: system_content.clone(),
                 conversation_context: conversation_context.clone(),
                 vector_search_results_for_log: vector_search_results_for_log,
-                canon_name: database_name.clone(),
-                canon_path: database_path.clone(),
+                canon_name: database_name,
+                canon_path: database_path,
+                preferences: preferences.clone(),
                 
             }
         };
@@ -449,12 +578,30 @@ if let Some(choice) = response.choices.first() {
             "info".to_string()
         );
         
-        state
-        .logger
-        .lock()
-        .await
-        .log_completion(entry)
-        .map_err(|e| e.to_string())?;
+        // state
+        // .logger
+        // .lock()
+        // .await
+        // .log_completion(entry)
+        // .map_err(|e| e.to_string())?;
+        // Instead of directly failing if logging fails, log the error and continue
+        match state.logger.lock().await.log_completion(entry) {
+            Ok(_) => {
+                new_logger.simple_log_message(
+                    "Successfully logged completion".to_string(),
+                    "completion_log".to_string(),
+                    "debug".to_string()
+                );
+            },
+            Err(e) => {
+                new_logger.simple_log_message(
+                    format!("Failed to log completion: {}", e),
+                    "completion_log".to_string(),
+                    "error".to_string()
+                );
+                // Continue execution despite logging failure
+            }
+        };
         
         let mut conversation = state.conversation.lock().await;
         
@@ -467,6 +614,44 @@ if let Some(choice) = response.choices.first() {
 }
 
 Err("No completion returned.".to_string())
+}
+
+fn get_api_key() -> Result<Option<String>, String> {
+    match KeychainHandler::retrieve_api_key() {
+        Ok(key) => {
+            match key {
+                Some(k) => {
+                    log::info!("API key successfully loaded from keychain");
+                    // let new_logger = NewLogger::new(Tauri::.clone());
+                    // new_logger.simple_log_message(
+                    //     format!("{} API key successfully loaded from keychain", k),
+                    //     "keychain".to_string(),
+                    //     "debug".to_string()
+                    // );
+                    Ok(Some(k.clone()))
+                }
+                None => {
+                    log::warn!("No API key found in keychain");
+                    // new_logger.simple_log_message(
+                    //     "No API key not found in keychain".to_string(),
+                    //     "keychain".to_string(),
+                    //     "warn".to_string()
+                    // );
+                    Ok(None)
+                }
+            }
+        }
+        Err(e) => {
+            let error_msg = format!("Keychain issue? Failed to load API key from keychain: {}", e);
+            log::error!("{}", error_msg);
+            // new_logger.simple_log_message(
+            //     error_msg.clone(),
+            //     "keychain".to_string(),
+            //     "error".to_string()
+            // );
+            Err(error_msg)
+        }
+    }
 }
 
 // Add this near your other struct definitions
@@ -486,7 +671,7 @@ async fn search_similarity(
 ) -> Result<Vec<SearchResult>, String> {  // Changed return type
     let limit = limit.unwrap_or(3);
     let preferences = state.preferences.lock().await;
-
+    
     let embedding = state
     .embedding_generator
     .generate_embedding(&query)
@@ -649,28 +834,63 @@ async fn search_similarity(
         
         #[tauri::command]
         async fn list_canon_docs(
-            logger: tauri::State<'_, NewLogger>,
+            //logger: tauri::State<'_, NewLogger>,
             app_state: tauri::State<'_, AppState>,
             app_handle: tauri::AppHandle,
         ) -> Result<String, String> {
             let doc_store = Arc::clone(&app_state.doc_store);
+            println!("Listing canon documents");
+            log::debug!("Listing canon documents");
+            log::debug!("doc_store is {:?}", doc_store);
             let store = doc_store.lock().await;
+            log::debug!("store (locked doc_store) is {:?}", store);
             match store.fetch_documents().await {
                 Ok(listing) => {
+                    log::debug!("listing is {:?}", listing);
                     let json_string = serde_json::to_string(&listing).map_err(|e| e.to_string())?;
                     app_handle.emit("canon-list", json_string).map_err(|e| e.to_string())?;
                     Ok("Canon list emitted".to_string())
                 }
                 Err(e) => {
                     let error_message = format!("Failed to fetch canon documents: {}", e);
-                    logger.simple_log_message(
+                    let new_logger = NewLogger::new(app_handle.clone());
+                    new_logger.simple_log_message(
                         error_message.clone(),
                         "".to_string(),
                         "error".to_string(),
                     );
+                    log::error!("{}", error_message);
                     Err(error_message)
                 }
             } 
+        }
+        
+        #[derive(Serialize, Clone)]
+        struct CanonInfo {
+            name: String,
+            path: String,
+        }
+        #[tauri::command]
+        async fn get_canon_info(
+            logger: tauri::State<'_, NewLogger>,
+            app_state: tauri::State<'_, AppState>,
+            app_handle: tauri::AppHandle
+        ) -> Result<CanonInfo, String> {
+            
+            
+            let doc_store = Arc::clone(&app_state.doc_store);
+            let store = doc_store.lock().await;
+            store.get_database_name();
+            store.get_database_path();
+            let unlocked_store = store.clone();
+            let result = format!("{:?}", unlocked_store);
+            
+            let canon_info = CanonInfo {
+                name: store.get_database_name().to_string(),
+                path: store.get_database_path().to_string(),
+            };
+            
+            Ok(canon_info)
         }
         
         
@@ -779,6 +999,7 @@ async fn search_similarity(
                         eprintln!("Failed to emit simple log: {}", e);
                     }
                 }
+                log::debug!("{}", message);
             }
             
             fn rich_log_message(&self, message: String, data: String, level: String) {
@@ -794,6 +1015,7 @@ async fn search_similarity(
                         eprintln!("Failed to emit rich log: {}", e);
                     }   
                 }
+                log::info!("{}", message);
             }
         }
         
@@ -820,56 +1042,117 @@ async fn search_similarity(
         
         
         
-        #[cfg_attr(mobile, tauri::mobile_entry_point)]
         pub fn run() {
             
-            let has_dotenv = dotenv::dotenv().is_ok();
-            let api_key = env::var("OPENAI_API_KEY");
+            //let a_embedding_generator = EmbeddingGenerator::new(Client::new());
+            // let b_embedding_generator = EmbeddingGenerator::new_with_api_key("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");
+            //let path = PathBuf::from("./resources/ghostwriter-selectric/vector_store/");
             
-            let client = match &*OPENAI_API_KEY {
-                Some(key) => {
-                    Client::with_config(
-                        OpenAIConfig::new()
-                        .with_api_key(key.clone())
-                    )
-                }
-                None => {
-                    println!("OPENAI_API_KEY not found.  Running without it.");
-                    *API_KEY_MISSING.lock().unwrap() = true; // Set the flag
-                    Client::new() // Create a client without an API key
-                }
-            };
-            
-            
-            let a_embedding_generator = EmbeddingGenerator::new(client.clone());
-            let b_embedding_generator = EmbeddingGenerator::new(client);
-            let path = PathBuf::from("./resources/ghostwriter-selectric/vector_store/");
-            
-            println!("Initializing Do cumentStore with path: {:?}", path);
-            
-            let doc_store = DocumentStore::new(path.clone(), std::sync::Arc::new(a_embedding_generator)).expect(&format!(
-                "Failed to initialize document store at path: {:?}",
-                path
-            ));
-            println!("DocumentStore successfully initialized.");
-            let app_state = AppState::new(
-                doc_store,
-                b_embedding_generator,
-                "./log.json"
-            ).expect("Failed to create AppState");
-            
+            // log::debug!("DocumentStore initialized");            
             
             tauri::Builder::default()
-            .manage(app_state)
+            .plugin(tauri_plugin_clipboard_manager::init())
+            .plugin(tauri_plugin_dialog::init())
+            .plugin(tauri_plugin_opener::init())
+            .plugin(tauri_plugin_fs::init())
+            .plugin(
+                tauri_plugin_log::Builder::new()
+                .targets([
+                    Target::new(TargetKind::Stdout),       // Log to stdout
+                    Target::new(TargetKind::LogDir {       // Log to app's log directory
+                    file_name: None                     // Use default app name
+                }),
+                Target::new(TargetKind::Webview),      // Log to webview console
+                ])
+                .level(log::LevelFilter::Debug)
+                .build()
+            )
             .menu(|window| menu::build_menu(&window.app_handle()))
             .on_menu_event(|app, event| menu::handle_menu_event(app, event))
-            .setup(|app| {
+            .setup(move |app| {
                 let app_handle = app.handle();
+                log::info!("Ghostwriter starting up");
+                log::info!("Initializing components...");
+                // Now these log messages will work
+                // log::debug!("This is a debug message");
+                // log::info!("This is an info message");
+                // log::warn!("This is a warning message");
+                // log::error!("This is an error message");
+                // log::trace!("This is a trace message");
+
+                let api_key = match KeychainHandler::retrieve_api_key() {
+
+                    Ok(Some(key)) => {
+                        let new_logger: NewLogger = NewLogger::new(app_handle.clone());
+                        new_logger.simple_log_message("Successfully retrieved API key from keyring".to_string(), "startup".to_string(), "info".to_string());
+                        log::info!("Successfully retrieved API key from keyring");
+                        Some(key)
+                    },
+                    Ok(None) => {
+                        log::warn!("No API key found in keyring");
+                        let new_logger: NewLogger = NewLogger::new(app_handle.clone());
+                        new_logger.simple_log_message("No API key found in keyring".to_string(), "startup".to_string(), "warn".to_string());
+                        None
+                    },
+                    Err(e) => {
+                        log::error!("Failed to retrieve OpenAI API key from keyring: {}", e);
+                        let new_logger: NewLogger = NewLogger::new(app_handle.clone());
+                        new_logger.simple_log_message("Failed to retrieve OpenAI API key from keyring".to_string(), "startup".to_string(), "error".to_string());
+                        None
+                    } 
+                };
+
+                let b_embedding_generator = if let Some(key) = api_key {
+                    // We have a key, create generator with it
+                    log::debug!("Initializing EmbeddingGenerator with API key");
+                    EmbeddingGenerator::new_with_api_key(&key)
+                } else {
+                    // No key found, create default generator
+                    log::warn!("No API key available, initializing EmbeddingGenerator without key");
+                    EmbeddingGenerator::new()
+                };
+                let path = app.path().app_data_dir().expect("This should never be None");
+                let path = path.join("./canon/");
+
+                //load_openai_api_key_from_keyring(app_handle.clone(), );
+
+                let embedding_generator_clone: EmbeddingGenerator = b_embedding_generator.clone();
+
+                let doc_store = match DocumentStore::new(path.clone(), std::sync::Arc::new(b_embedding_generator)) {
+                    Ok(store) => store,
+                    Err(e) => {
+                        let error_msg = format!("Failed to initialize document store at path: {:?}. Error: {}", path, e);
+                        log::error!("{}", error_msg);
+                        let new_logger = NewLogger::new(app_handle.clone());
+                        new_logger.simple_log_message(
+                            error_msg.clone(),
+                            "startup".to_string(),
+                            "error".to_string()
+                        );
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            error_msg
+                        )));
+                    }
+                };
                 
-                // ✅ Check the API_KEY_MISSING flag and open API Key entry window if needed
-                check_api_key(&app_handle);
+                let store_name = doc_store.get_database_name().to_string();
+                let store_path = doc_store.get_database_path().to_string();
+                let app_state = AppState::new(
+                    doc_store,
+                    embedding_generator_clone,
+                    "/tmp/gh-log.json"
+                ).expect("Failed to create AppState");
+
+
+                app.manage(app_state);
+                let foo = app.state::<AppState>();
                 
+                log::debug!("AppState managed? {:?}", foo);
+
+
                 let new_logger = NewLogger::new(app_handle.clone());
+<<<<<<< HEAD
                 new_logger.simple_log_message(
                     "Ghostwriter Is Up.".to_string(),
                     "start".to_string(),
@@ -913,3 +1196,43 @@ async fn search_similarity(
                     
                     
                 }
+=======
+                app.manage(new_logger);
+                // app_state.update_logger_path(app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy().to_string()).expect("Failed to update logger path");
+                //println!("{}", app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy());
+                // app.manage(doc_store);
+                // app.manage(new_logger.clone());
+                // Load .env file
+                //dotenv::dotenv().ok();
+
+                Ok(()
+            )
+        })
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            completion_from_context,
+            search_similarity,
+            ingestion_from_file_dialog,
+            test_log_emissions,
+            simple_log_message,
+            rich_log_message,
+            delete_canon_entry,
+            save_openai_api_key_to_keyring,
+            load_openai_api_key_from_keyring,
+            list_canon_docs,
+            load_preferences,
+            update_preferences,
+            reset_preferences,
+            prefs_file_path,
+            get_logger_path,
+            set_logger_app_data_path,
+            get_log_contents,
+            get_canon_info,
+            ])
+            .run(tauri::generate_context!())
+            .expect("error while running tauri application");
+            
+            
+            
+        }
+>>>>>>> staging

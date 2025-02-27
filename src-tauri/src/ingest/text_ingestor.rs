@@ -10,6 +10,7 @@ use super::document_ingestor::{
     IngestError
 };
 
+#[derive(Debug)]
 pub struct TextIngestor;
 
 #[async_trait]

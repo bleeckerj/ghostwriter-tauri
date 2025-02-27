@@ -37,7 +37,7 @@ pub struct DocumentMetadata {
 }
 
 #[async_trait]
-pub trait DocumentIngestor: Send + Sync {
+pub trait DocumentIngestor: Send + Sync + std::fmt::Debug {
     /// Check if this ingestor can handle the given file
     fn can_handle(&self, path: &Path) -> bool;
     
