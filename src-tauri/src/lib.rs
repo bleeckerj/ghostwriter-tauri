@@ -344,6 +344,33 @@ async fn completion_from_context(
     let similarity_threshold = preferences.similarity_threshold;
     let mut new_logger = NewLogger::new(app_handle.clone());
     
+    let openai_api_key = get_api_key().map_err(|e| e.to_string())?;
+
+    let logger_clone = state.logger.clone();
+    let client = match openai_api_key {
+        Some(key) => {
+            Client::with_config(
+                OpenAIConfig::new()
+                .with_api_key(key.clone())
+            )
+        }
+        None => {
+            log::warn!("OPENAI_API_KEY not found. No use running without it.");
+            let mut new_logger = NewLogger::new(app_handle.clone());
+            new_logger.simple_log_message(
+                "OPENAI_API_KEY not found or invalid. No use running without it.".to_string(),
+                "".to_string(),
+                "error".to_string()
+            );
+            new_logger.simple_log_message(
+                "Check preferences and check os keychain".to_string(),
+                "".to_string(),
+                "error".to_string()
+            );
+            return Err("OpenAI API key is required but was not found. Check preferences and/or system keychain.".to_string());
+        }
+    };
+
     let start_total = Instant::now();
     
     // Time embedding generation
@@ -471,41 +498,10 @@ let request = CreateChatCompletionRequestArgs::default()
 
 // Time OpenAI request
 let start_openai = Instant::now();
-dotenv::dotenv().ok();
-
-let openai_api_key = env::var("OPENAI_API_KEY").expect("
-    OPENAI_API_KEY not found. Error.");
+//dotenv::dotenv().ok();
 
 
-let has_dotenv = dotenv::dotenv().is_ok();
-let api_key = env::var("OPENAI_API_KEY");
-let logger_clone = state.logger.clone();
-let client = match &*OPENAI_API_KEY {
-    Some(key) => {
-        Client::with_config(
-            OpenAIConfig::new()
-            .with_api_key(key.clone())
-        )
-    }
-    None => {
-        println!("OPENAI_API_KEY not found.  Running without it.");
-        *API_KEY_MISSING.lock().unwrap() = true; // Set the flag
-        println!("OPENAI_API_KEY not found.  Running without it.");
-        //let mut logger = state.logger.lock().await;
-        let mut new_logger = NewLogger::new(app_handle.clone());
-        new_logger.simple_log_message(
-            "OPENAI_API_KEY not found or invalid. No use running without it.".to_string(),
-            "".to_string(),
-            "error".to_string()
-        );
-        new_logger.simple_log_message(
-            "Try restarting and re-entering your OpenAI API Key".to_string(),
-            "".to_string(),
-            "error".to_string()
-        );
-        Client::new() // Create a client without an API key
-    }
-};
+
 let response = client
 .chat()
 .create(request)
@@ -589,6 +585,44 @@ if let Some(choice) = response.choices.first() {
 }
 
 Err("No completion returned.".to_string())
+}
+
+fn get_api_key() -> Result<Option<String>, String> {
+    match KeychainHandler::retrieve_api_key() {
+        Ok(key) => {
+            match key {
+                Some(k) => {
+                    log::info!("API key successfully loaded from keychain");
+                    // let new_logger = NewLogger::new(Tauri::.clone());
+                    // new_logger.simple_log_message(
+                    //     format!("{} API key successfully loaded from keychain", k),
+                    //     "keychain".to_string(),
+                    //     "debug".to_string()
+                    // );
+                    Ok(Some(k.clone()))
+                }
+                None => {
+                    log::warn!("No API key found in keychain");
+                    // new_logger.simple_log_message(
+                    //     "No API key not found in keychain".to_string(),
+                    //     "keychain".to_string(),
+                    //     "warn".to_string()
+                    // );
+                    Ok(None)
+                }
+            }
+        }
+        Err(e) => {
+            let error_msg = format!("Keychain issue? Failed to load API key from keychain: {}", e);
+            log::error!("{}", error_msg);
+            // new_logger.simple_log_message(
+            //     error_msg.clone(),
+            //     "keychain".to_string(),
+            //     "error".to_string()
+            // );
+            Err(error_msg)
+        }
+    }
 }
 
 // Add this near your other struct definitions

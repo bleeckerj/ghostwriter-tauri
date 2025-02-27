@@ -45,9 +45,9 @@ pub struct AppState {
     pub doc_store: Arc<Mutex<DocumentStore>>,
     pub embedding_generator: Arc<EmbeddingGenerator>,
     pub conversation: Mutex<Conversation>,
-    pub buffer: Mutex<String>,
+    //pub buffer: Mutex<String>,
     pub logger: Arc<Mutex<Logger>>,  
-    pub api_key: Mutex<Option<SecretString>>,
+    pub api_key: Arc<Mutex<String>>,
     pub preferences: Mutex<Preferences>, 
     pub app_handle: Option<AppHandle>,
 }
@@ -66,8 +66,8 @@ impl AppState {
             doc_store: Arc::new(Mutex::new(doc_store)),
             embedding_generator: Arc::new(embedding_generator),
             conversation: Mutex::new(Conversation::new(32000)),
-            buffer: Mutex::new(String::new()),
-            api_key: Mutex::new(None),
+            //buffer: Mutex::new(String::new()),
+            api_key: Arc::new(Mutex::new(String::new())),
             preferences: Mutex::new(Preferences::default()), // Start with default preferences
             app_handle: None,
         };
@@ -121,6 +121,15 @@ impl AppState {
         logger.get_logger_path().to_str().unwrap().to_string()
     }
     
+    pub async fn set_api_key(&self, key: String) {
+        let mut api_key = self.api_key.lock().await;
+        *api_key = key;
+    }
+
+    pub async fn get_api_key(&self) -> String {
+        let api_key = self.api_key.lock().await;
+        api_key.clone()
+    }
     // pub async fn set_logger(&self, logger: Logger) {
     //     *self.logger.lock().await = logger;
     //     println!("Logger set");
@@ -164,30 +173,4 @@ impl AppState {
 
     // }
     
-    // // ✅ Save API key to a file
-    // pub async fn save_api_key(&self, _app_handle: &AppHandle, key: String) -> Result<(), Box<dyn std::error::Error>> {
-    //     let env_path = ".env"; // ✅ Save to .env in the app's root directory
-        
-    //     // ✅ Read existing .env contents (if any)
-    //     let mut env_contents = fs::read_to_string(env_path).unwrap_or_else(|_| String::new());
-        
-    //     // ✅ Remove any existing `OPENAI_API_KEY` entry
-    //     env_contents = env_contents
-    //     .lines()
-    //     .filter(|line| !line.starts_with("OPENAI_API_KEY="))
-    //     .map(|line| format!("{}\n", line))
-    //     .collect();
-        
-    //     // ✅ Append the new API key entry
-    //     env_contents.push_str(&format!("OPENAI_API_KEY={}\n", key));
-        
-    //     // ✅ Write back to .env
-    //     fs::write(env_path, env_contents)?;
-        
-    //     let mut api_key = self.api_key.lock().await; // ✅ Store it in-memory as well
-    //     *api_key = Some(key);
-        
-    //     println!("API Key saved to .env.");
-    //     Ok(())
-    // }
 }
