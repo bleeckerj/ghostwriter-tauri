@@ -93,8 +93,7 @@ impl fmt::Display for CompletionTiming {
 }
 
 #[tauri::command]
-<<<<<<< HEAD
-async fn save_to_file(
+async fn save_text_content(
     app_handle: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
     file_path: String,
@@ -104,6 +103,7 @@ async fn save_to_file(
     let result = tokio::fs::write(&path, content).await;
     match result {
         Ok(_) => {
+            log::debug!("Saved to file: {}", path.to_string_lossy());
             let message = format!("Saved to file: {}", path.to_string_lossy());
             let new_logger = NewLogger::new(app_handle.clone());
             new_logger.simple_log_message(message.clone(), "".to_string(), "info".to_string());
@@ -119,8 +119,42 @@ async fn save_to_file(
 }
 
 #[tauri::command]
-async fn save_api_key(
-=======
+async fn save_json_content(
+    app_handle: tauri::AppHandle,
+    file_path: String, 
+    content: Value  // Use serde_json::Value to receive any valid JSON
+) -> Result<(), String> {
+    let path = PathBuf::from(file_path);
+    
+    // Convert the JSON to a pretty-printed string
+    let json_string = match serde_json::to_string_pretty(&content) {
+        Ok(s) => s,
+        Err(e) => return Err(format!("Failed to format JSON: {}", e))
+    };
+    log::debug!("JSON content: {}", json_string);
+    log::debug!("Trying to save JSON content to file: {}", path.to_string_lossy());
+    // Write to file
+    match tokio::fs::write(&path, json_string).await {
+        Ok(_) => {
+            log::debug!("Saved JSON content to file: {}", path.to_string_lossy());
+            let message = format!("Saved JSON content to file: {}", path.to_string_lossy());
+            let new_logger = NewLogger::new(app_handle.clone());
+            new_logger.simple_log_message(
+                message,
+                "file_save".to_string(),
+                "info".to_string()
+            );
+            Ok(())
+        },
+        Err(e) => {
+            let error_msg = format!("Failed to write to file: {}", e);
+            log::error!("{}", error_msg);
+            Err(e.to_string())
+        }
+    }
+}
+
+#[tauri::command]
 async fn load_openai_api_key_from_keyring(
     app_handle: tauri::AppHandle, 
     state: tauri::State<'_, AppState>) -> Result<(bool), String> {
@@ -171,7 +205,6 @@ async fn load_openai_api_key_from_keyring(
 
 #[tauri::command]
 async fn save_openai_api_key_to_keyring(
->>>>>>> staging
     app_handle: tauri::AppHandle, 
     state: tauri::State<'_, AppState>, 
     key: String
@@ -373,7 +406,7 @@ async fn completion_from_context(
     let similarity_threshold = preferences.similarity_threshold;
     let mut new_logger = NewLogger::new(app_handle.clone());
     
-    let openai_api_key = get_api_key().map_err(|e| e.to_string())?;
+    let openai_api_key = get_api_key(&app_handle).map_err(|e| e.to_string())?;
 
     let logger_clone = state.logger.clone();
     let client = match openai_api_key {
@@ -435,12 +468,21 @@ async fn completion_from_context(
         similar_docs.shuffle(&mut rng);
     }
     
-    new_logger.simple_log_message(
-        format!("Found {} cosine similar documents ({})", similar_docs.len(), similarity_threshold),
-        "".to_string(),
-        "info".to_string()
-    );
-    
+
+    if(similar_docs.len() == 0) {
+        new_logger.simple_log_message(
+            "No similar documents found. No emanations will issue.".to_string(),
+            "".to_string(),
+            "info".to_string()
+        );
+        return Err("No similar documents found. No emanations will issue.".to_string());
+    } else {
+        new_logger.simple_log_message(
+            format!("Found {} cosine similar documents ({})", similar_docs.len(), similarity_threshold),
+            "".to_string(),
+            "info".to_string()
+        );
+    }
     // Prepare the context for the LLM
     // This has all the document metadata..is that okay?
     let mut context = String::new();
@@ -616,10 +658,21 @@ if let Some(choice) = response.choices.first() {
 Err("No completion returned.".to_string())
 }
 
-fn get_api_key() -> Result<Option<String>, String> {
+fn get_api_key(app_handle: &AppHandle) -> Result<Option<String>, String> {
     match KeychainHandler::retrieve_api_key() {
         Ok(key) => {
             match key {
+                Some(k) if k.is_empty() => {
+                    // Handle empty string case
+                    log::warn!("API key found in keychain but it is empty");
+                    let new_logger = NewLogger::new(app_handle.clone());
+                    new_logger.simple_log_message(
+                        "API key is empty. Please provide a valid key.".to_string(),
+                        "keychain".to_string(),
+                        "warn".to_string()
+                    );
+                    Ok(None)  // Treat empty string the same as None
+                },
                 Some(k) => {
                     log::info!("API key successfully loaded from keychain");
                     // let new_logger = NewLogger::new(Tauri::.clone());
@@ -1152,51 +1205,6 @@ async fn search_similarity(
 
 
                 let new_logger = NewLogger::new(app_handle.clone());
-<<<<<<< HEAD
-                new_logger.simple_log_message(
-                    "Ghostwriter Is Up.".to_string(),
-                    "start".to_string(),
-                    "info".to_string());
-                    new_logger.rich_log_message(
-                        "Ghostwriter Is Up.".to_string(),
-                        "Ghostwriter is up and running.".to_string(),
-                        "info".to_string()
-                    );
-                    // app_state.update_logger_path(app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy().to_string()).expect("Failed to update logger path");
-                    println!("{}", app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy());
-                    
-                    app.manage(new_logger.clone());
-                    // Load .env file
-                    dotenv::dotenv().ok();
-                    Ok(())
-                })
-                .plugin(tauri_plugin_clipboard_manager::init())
-                .plugin(tauri_plugin_dialog::init())
-                .plugin(tauri_plugin_opener::init())
-                .invoke_handler(tauri::generate_handler![
-                    greet,
-                    completion_from_context,
-                    search_similarity,
-                    ingestion_from_file_dialog,
-                    test_log_emissions,
-                    simple_log_message,
-                    rich_log_message,
-                    delete_canon_entry,
-                    save_api_key,
-                    list_canon_docs,
-                    load_preferences,
-                    update_preferences,
-                    reset_preferences,
-                    prefs_file_path,
-                    save_to_file,
-                    ])
-                    .run(tauri::generate_context!())
-                    .expect("error while running tauri application");
-                    
-                    
-                    
-                }
-=======
                 app.manage(new_logger);
                 // app_state.update_logger_path(app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy().to_string()).expect("Failed to update logger path");
                 //println!("{}", app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy());
@@ -1228,6 +1236,8 @@ async fn search_similarity(
             set_logger_app_data_path,
             get_log_contents,
             get_canon_info,
+            save_text_content,
+            save_json_content,
             ])
             .run(tauri::generate_context!())
             .expect("error while running tauri application");
@@ -1235,4 +1245,3 @@ async fn search_similarity(
             
             
         }
->>>>>>> staging

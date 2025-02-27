@@ -14,9 +14,9 @@
     "windows": [
       {
         "title": "Ghostwriter",
-        "width": 800,
+        "width": 820,
         "height": 600,
-        "minWidth": 800,
+        "minWidth": 820,
         "minHeight": 600,
         "resizable": true,
         "fullscreen": false,

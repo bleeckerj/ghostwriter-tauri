@@ -39,8 +39,8 @@ export const InlineActionItem = Node.create({
     return ['span', { 
       ...HTMLAttributes,
       'data-type': 'inline-action',
-      class: 'inline-action-item bg-gradient-animated'
-    }, ' ']
+      class: 'inline-action-item bg-gradient-animated text-[1.5em] rounded-full'
+    }, '🥑']
   },
 
   // renderHTML({ HTMLAttributes }) {
@@ -73,7 +73,7 @@ export const InlineActionItem = Node.create({
                 const tr = view.state.tr.delete(pos, pos + node.nodeSize)
                 view.dispatch(tr)
                 waitingForTyping = true
-                console.log("waitingForTyping set to true on click", waitingForTyping)
+                //console.log("waitingForTyping set to true on click", waitingForTyping)
                 options.onClick(view, pos, event)
               }
               return true

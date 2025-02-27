@@ -12,7 +12,7 @@ import { InlineActionItem } from './extensions/InlineActionItem';
 import { PluginKey } from 'prosemirror-state';
 //import {Menu, Submenu} from '@tauri-apps/api/menu'
 
-import { open, confirm, prefsSaveBtn } from '@tauri-apps/plugin-dialog';
+import { open, save, confirm } from '@tauri-apps/plugin-dialog';
 import { getCurrentWebviewWindow, WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { list } from 'postcss';
 
@@ -100,6 +100,26 @@ async function greet() {
   });
 }
 
+async function openDialogForFileSave(options) {
+  // Open a dialog
+  
+  const file = await save(options);
+  const fileWithoutExt = file.replace(/\.\w+$/, '');
+  await invoke("save_json_content", {
+    filePath: fileWithoutExt + ".json",
+    content: editor.getJSON()
+  }).then((res) => {
+    console.log(res);
+    //return res;
+  });
+  await invoke("save_text_content", {
+    filePath: file,
+    content: editor.getText()
+  }).then((res) => {
+    console.log(res);
+    //return res;
+  });
+}
 /** need to handle this asynchronously and the menu handler in Rust is synchronous
 * so we have to have Rust tell the frontend to open the dialog
 * and then we get the file path and send it back to Rust for ingestion
@@ -234,10 +254,10 @@ async function completionFromContext() {
 
 window.addEventListener("DOMContentLoaded", async () => {
   //create();
-    invoke("set_logger_app_data_path", {}).then((res) => {
+  invoke("set_logger_app_data_path", {}).then((res) => {
     //console.log('Logger App Data Path:', res);
     // invoke("simple_log_message", { message: 'Logger App Data Path: '+res, id: "tracker", level: "info" }).then((res) => {
-    // });
+      // });
     // addSimpleLogEntry({
     //   id: "",
     //   timestamp: Date.now(),
@@ -245,13 +265,13 @@ window.addEventListener("DOMContentLoaded", async () => {
     //   level: 'info'
     // });
     // invoke("get_logger_path", {}).then((res) => {
-    //   console.log('Logger Path:', res);
+      //   console.log('Logger Path:', res);
     //   invoke("simple_log_message", { message: 'JS Logger Path: '+res, id: "tracker", level: "debug" }).then((res) => {
-    //     //console.log('simple_log_emissions', res);
+      //     //console.log('simple_log_emissions', res);
     //   });
     // });
   });
-
+  
   let actionItem = editor.extensionManager.extensions.find(extension => extension.name === 'inlineActionItem');
   let nudgeButton = document.querySelector("#nudge-inline-action-item");
   if (actionItem) {
@@ -394,7 +414,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       });
     });
   });
-
+  
   prefsLoadBtn = document.querySelector("#prefs-load-btn");
   prefsLoadBtn.addEventListener("click", () => {
     invoke("load_preferences").then((res) => {
@@ -555,8 +575,8 @@ window.addEventListener("DOMContentLoaded", async () => {
       const webview = new WebviewWindow('view-log-window-label', {
         url: `view-log.html?logPath=${encodedLogPath}`, // URL to load
         title: 'Ghostwriter Log Viewer',
-        width: 800,
-        height: 600,
+        width: 820,
+        height: 640,
         resizable: true,
         fullscreen: false,
         decorations: true, // window decorations (title bar, borders)
@@ -590,49 +610,29 @@ window.addEventListener("DOMContentLoaded", async () => {
   let unlistenProgressIndicatorLoadFn;
   let unlistenOpenFileDialogForIngestFn;
   let unlistenCanonListFn;
-  let unlistenFileSaveDialogFn;
-  let unlistenPrefsLoadFn;
-  let unlistenPrefsSaveFn;
-  let unlistenPrefsResetFn;
+  // let unlistenPrefsLoadFn;
+  // let unlistenPrefsSaveFn;
+  // let unlistenPrefsResetFn;
+  let unlistenSaveFileMessageFn;
+  
   
   try {
-    unlistenFileSaveDialogFn = await listen('file-save-dialog', (event) => {
-      console.log('Received file save event:', event);
-      save({
-        filters: [{
-          name: 'Text',
-          extensions: ['txt', 'md', 'mdx']
-        }]
-      }).then((result) => {
-        console.log('File save dialog result:', result);
-        editor.getText().then((content) => {
-          invoke("save_to_file", {
-            file_path: result,
-            content: content
-          }).then((res) => {
-            console.log('File saved:', res);
-            addSimpleLogEntry({
-              id: Date.now(),
-              timestamp: Date.now(),
-              message: 'File saved: '+res,
-              level: 'info'
-            });
-          }).catch((error) => {
-            addSimpleLogEntry({
-              id: Date.now(),
-              timestamp: Date.now(),
-              message: 'Failed to save file: '+error,
-              level: 'error'
-            });
-          });
+    unlistenSaveFileMessageFn = await listen('save-file-dialog', (event) => {
+      console.log('Received event:', event);
+      openDialogForFileSave(event.payload);
+      if (event.payload) {
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date(),
+          message: "save-file-dialog",
+          level: "debug"
         });
-      });
+      }
     });
   } catch (error) {
     console.error('Failed to setup event listener:', error);
   }
-
-    
+  
   try {
     unlistenSimpleLogMessageFn = await listen('simple-log-message', (event) => {
       console.log('Received event:', event);
@@ -858,7 +858,7 @@ const editor = new Editor({
     DynamicTextMark,
     InlineActionItem.configure({
       disabled: true,                // Disables the feature
-      timeout: 3000,                 // Show button after 3 seconds
+      timeout: 5000,                 // Show button after 3 seconds
       onClick: async (view, pos, event) => {
         try {
           // Show loading state in the message element

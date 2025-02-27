@@ -155,6 +155,7 @@ button {
   height: 100vh; /* Changed from min-height to fixed height */
   width: 100%;
   max-width: 100%;
+  min-width: 820px;
   padding-left: 0.5rem;
   padding-right: 0.5rem;
   overflow: hidden; /* Add this to prevent container scrolling */
