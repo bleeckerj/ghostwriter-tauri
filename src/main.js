@@ -462,17 +462,23 @@ window.addEventListener("DOMContentLoaded", async () => {
       timestamp: Date.now(),
       message: 'openaiApiKey is '+openaiApiKey,
     });
-    invoke("save_openai_api_key_to_keyring", { key:openaiApiKey } ).then((res) => {
-      console.log('OpenAI API Key Saved:', res);
-    }).catch((error) => {
-      console.error('Failed to save OpenAI API Key:', error); 
-      addSimpleLogEntry({
-        id: "",
-        timestamp: Date.now(),
-        message: 'Failed to save OpenAI API Key: '+error,
-        level: 'error'
+    if (openaiApiKey.length !== 0) {
+      invoke("save_openai_api_key_to_keyring", { key:openaiApiKey } ).then((res) => {
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date.now(),
+          message: 'OpenAI API Key saved (not empty).',
+          level: 'info'
+        });
+      }).catch((error) => { 
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date.now(),
+          message: 'Failed to save OpenAI API Key: '+error,
+          level: 'error'
+        });
       });
-    });
+    }
     // addSimpleLogEntry({
     //   id: "",
     //   timestamp: Date.now(),
