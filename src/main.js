@@ -402,18 +402,18 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
   panel = document.getElementById('side-panel');
   
-  openaiApiKeyEl = document.querySelector("#openai-api-key-btn");
-  openaiApiKeyEl.addEventListener("click", () => {
-    invoke("load_openai_api_key_from_keyring", {}).then((res) => {
-      openaiApiKeyEl.value = res;
-      addSimpleLogEntry({
-        id: "",
-        timestamp: Date.now(),
-        message: 'OpenAI API Key: '+res,
-        level: 'debug'
-      });
-    });
-  });
+  // openaiApiKeyBtnEl = document.querySelector("#openai-api-key-btn");
+  // openaiApiKeyBtnEl.addEventListener("click", () => {
+  //   invoke("load_openai_api_key_from_keyring", {}).then((res) => {
+  //     openaiApiKeyBtnEl.value = res;
+  //     addSimpleLogEntry({
+  //       id: "",
+  //       timestamp: Date.now(),
+  //       message: 'OpenAI API Key: '+res,
+  //       level: 'debug'
+  //     });
+  //   });
+  // });
   
   prefsLoadBtn = document.querySelector("#prefs-load-btn");
   prefsLoadBtn.addEventListener("click", () => {
@@ -563,6 +563,10 @@ window.addEventListener("DOMContentLoaded", async () => {
       prefsMaxOutputTokens.value = res.max_output_tokens;
       prefsTemperature.value = res.temperature;
       prefsTemperatureValue.textContent = res.temperature;
+      
+      invoke("load_openai_api_key_from_keyring", {}).then((res) => {
+        openaiApiKeyEl.value = res;
+      });
       
       panel.classList.toggle('open');
       panelToggleBtn.classList.toggle('open');

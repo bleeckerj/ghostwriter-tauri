@@ -437,11 +437,28 @@ async fn completion_from_context(
     
     // Time embedding generation
     let start_embedding = Instant::now();
-    let embedding = state
-    .embedding_generator
+
+    let embedding_generator = EmbeddingGenerator::new_with_client(client.clone());
+
+    
+    let embedding = 
+    embedding_generator
     .generate_embedding(&input)
     .await
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| {
+        let error_msg = format!("Embedding generation failed: {}", e);
+        log::error!("{}", error_msg);
+        
+        // Also log to frontend via new_logger
+        new_logger.simple_log_message(
+            error_msg.clone(),
+            "embeddings".to_string(),
+            "error".to_string()
+        );
+        
+        error_msg  // Return the formatted error message for propagation
+    })?;
+
     let embedding_duration = start_embedding.elapsed();
     
     // Time similarity search

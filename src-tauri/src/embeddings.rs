@@ -18,9 +18,9 @@ impl EmbeddingGenerator {
         }
     }
 
-    // pub fn new(client: Client<OpenAIConfig>) -> Self {
-    //     EmbeddingGenerator { client: client }
-    // }
+    pub fn new_with_client(client: Client<OpenAIConfig>) -> Self {
+        EmbeddingGenerator { client: client }
+    }
 
     pub fn new_with_api_key(api_key: &str) -> Self {
         let config = OpenAIConfig::new()
