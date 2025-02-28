@@ -168,7 +168,7 @@ async fn load_openai_api_key_from_keyring(
         Ok(key) => {
             match key {
                 Some(k) => {
-                    log::info!("API key successfully loaded from keychain");
+                    log::debug!("API key successfully loaded from keychain");
                     new_logger.simple_log_message(
                         format!("{} API key successfully loaded from keychain", k),
                         "keychain".to_string(),

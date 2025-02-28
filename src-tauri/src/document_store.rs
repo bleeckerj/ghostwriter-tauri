@@ -5,7 +5,7 @@ use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use std::path;
 use std::path::PathBuf;
-use chrono::Local;  // Add this to your imports at the top
+use chrono::Local; 
 use serde_json;
 use crate::ingest::DocumentIngestor;
 use std::path::Path;
@@ -20,6 +20,7 @@ use crate::ingest::{
     markdown_ingestor::MarkdownIngestor,
     epub_ingestor::EpubIngestor,
     text_ingestor::TextIngestor,
+    url_ingestor::UrlDocumentIngestor,
 };
 use tauri::Manager; // Add this import
 use tauri::Emitter;
@@ -99,6 +100,7 @@ impl DocumentStore {
         doc_store.register_ingestor(Box::new(MarkdownIngestor));
         doc_store.register_ingestor(Box::new(EpubIngestor));
         doc_store.register_ingestor(Box::new(TextIngestor));
+        doc_store.register_ingestor(Box::new(UrlDocumentIngestor));
         
         log::debug!("5. Why do we crash in production and not in development?");
 

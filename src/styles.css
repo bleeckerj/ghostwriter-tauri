@@ -70,7 +70,6 @@ h1 {
   text-align: left;
 }
 
-input,
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -728,4 +727,23 @@ button {
 
 .toggle-switch input:checked+.slider::before {
   transform: translateX(26px);
+}
+
+/********************/
+/* URL panel styles */
+/********************/
+.url-panel-hidden {
+  height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0 !important;
+  border: none !important;
+  transition: height 0.3s ease-out, ease-out, margin 0.3s ease-out;
+}
+
+.url-panel-visible {
+  height: auto;
+  padding: 0.25rem !important;
+  margin-bottom: 0.25rem;
+  transition: height 0.3s ease-in, ease-in, margin 0.3s ease-in;
 }

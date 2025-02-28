@@ -71,11 +71,11 @@ impl Preferences {
             }
         };
         prefs.apply_defaults();
-        app_handle.emit("simple-log-message", json!({
-            "message": format!("Preferences loaded and defaults applied: {:?}", prefs),
-            "timestamp": chrono::Local::now().to_rfc3339(),
-            "level": "debug"
-        }));
+        // app_handle.emit("simple-log-message", json!({
+        //     "message": format!("Preferences loaded and defaults applied: {:?}", prefs),
+        //     "timestamp": chrono::Local::now().to_rfc3339(),
+        //     "level": "debug"
+        // }));
         prefs
     }
 

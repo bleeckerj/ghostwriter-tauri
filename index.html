@@ -7,18 +7,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ghostwriter</title>
   <script type="module" src="./src/main.js" defer></script>
+  <script type="module" src="./src/url-panel.js" defer></script>
+
 </head>
 
 <body>
   <main class="container">
-    <!-- <p class="bg-amber-300 rounded-2xl p-4 mx-auto w-11/12 text-center font-['Haffer'] font-extrabold text-[1.5em]">Welcome to Ghostwriter</p> -->
-    
-    <!-- <div class="row pb-2 m-8" id="buttons"> -->
-      <!-- <input id="greet-input" class="bg-blue-700 mr-[5em] p-2 rounded-sm border-[0.5px] border-black" placeholder="Write Something..." /> -->
-      <!-- <div class="mb-8 relative"> -->
-        
-        
-      <!-- </div> -->
+
+<!-- URL Top Panel -->
+<div id="url-panel" class="url-panel-hidden border-[0.5px] relative w-full z-50 rounded-sm">
+  <div class="flex items-center gap-2 p-2">
+    <input type="text" id="url-input" placeholder="Enter URL..." class="w-3/4  !bg-white !rounded-[1px] flex-grow !p-1 !text-[0.8em] !font-['Haffer'] !border-[0.1px]">
+    <span id="url-submit-btn" class="diagnostics-area-button enabled whitespace-nowrap min-w-[4rem]">INGST</span>
+    <span id="url-close-btn" class="diagnostics-area-button enabled min-w-[2.5rem] text-center">×</span>
+  </div>
+</div>
+
       <div class="scroll-area">
         <div class="editor-content h-full">
           <div class="element"></div>
@@ -42,7 +46,7 @@
           <span id="nudge-inline-action-item" class="diagnostics-area-button enabled">NUDGE</span>
           <span id="open-log-btn" class="diagnostics-area-button enabled">LOGJS</span>
           <!-- <span id="openai-api-key-btn" class="diagnostics-area-button enabled">OPNAI</span> -->
-          <span id="lm-notebook-btn" class="diagnostics-area-button disabled">LMNBK</span>
+          <span id="ingest-url-btn" class="diagnostics-area-button enabled">NGSTU</span>
 
           <div class="absolute right-4 top-2 z-10 flex items-center transparent rounded-full shadow-sm shadow-black">
             <img class="h-[2.2em]" src="/src/images/icons/LaboratoryCircle_Guy_01_CircleTeal.webp" />
