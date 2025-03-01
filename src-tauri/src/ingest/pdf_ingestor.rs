@@ -53,7 +53,7 @@ impl PdfIngestor {
 
         for (index, page) in document.pages().iter().enumerate() {
             if let Ok(text) = page.text() {
-                extracted_text.push_str(&format!("\n=============== Page {} ===============\n", index + 1));
+                //extracted_text.push_str(&format!("\n=============== Page {} ===============\n", index + 1));
                 extracted_text.push_str(&text.all());
             }
         }

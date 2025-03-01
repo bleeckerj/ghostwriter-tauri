@@ -457,7 +457,7 @@ async fn completion_from_context(
     
     let embedding = 
     embedding_generator
-    .generate_embedding(&input)
+    .generate_embedding(app_handle.clone(), &input)
     .await
     .map_err(|e| {
         let error_msg = format!("Embedding generation failed: {}", e);
@@ -590,7 +590,7 @@ let user_message = ChatCompletionRequestMessage::User(
 
 // Create and send the OpenAI request
 let request = CreateChatCompletionRequestArgs::default()
-.model("chatgpt-4o-latest")
+.model("gpt-4o-mini")
 .messages(vec![system_message, user_message])
 .temperature(temperature)
 .max_completion_tokens(max_tokens as u32)
@@ -750,6 +750,7 @@ struct SearchResult {
 #[tauri::command]
 async fn search_similarity(
     state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
     query: String,
     limit: Option<usize>,  
 ) -> Result<Vec<SearchResult>, String> {  // Changed return type
@@ -758,7 +759,7 @@ async fn search_similarity(
     
     let embedding = state
     .embedding_generator
-    .generate_embedding(&query)
+    .generate_embedding(app_handle.clone(), &query)
     .await
     .map_err(|e| format!("Embedding generation failed: {}", e))?;
     

@@ -436,7 +436,7 @@ impl DocumentStore {
             }
         };
         drop(doc_id_result); // Release the lock
-        app_handle.emit("simple-message", json!({
+        app_handle.emit("simple-log-message", json!({
             "message": format!("Document added with ID: {}", doc_id),
             "timestamp": chrono::Local::now().to_rfc3339(),
             "level": "info"
@@ -452,7 +452,7 @@ impl DocumentStore {
             {
                 Ok(_) => {
                     println!("Document processed with ID: {}", doc_id);
-                    app_handle.emit("simple-message", json!({
+                    app_handle.emit("simple-log-message", json!({
                         "message": format!("Ingestion & embedding complete: {}", file_name_clone),
                         "timestamp": chrono::Local::now().to_rfc3339(),
                         "level": "info"
@@ -460,7 +460,7 @@ impl DocumentStore {
                 }
                 Err(e) => {
                     println!("Error processing embeddings: {:?}", e);
-                    app_handle.emit("simple-message", json!({
+                    app_handle.emit("simple-log-message", json!({
                         "message": format!("Ingestion & embedding complete: {}", file_name_clone),
                         "timestamp": chrono::Local::now().to_rfc3339(),
                         "level": "warn"
@@ -506,7 +506,7 @@ impl DocumentStore {
                 }
             };
             
-            app_handle.emit("simple-message", json!({
+            app_handle.emit("simple-log-message", json!({
                 "message": format!("Ingestor found: {:?}", ingestor),
                 "timestamp": chrono::Local::now().to_rfc3339(),
                 "level": "debug"
@@ -548,7 +548,7 @@ impl DocumentStore {
                 }
             };
             drop(doc_id_result); // Release the lock
-            app_handle.emit("simple-message", json!({
+            app_handle.emit("simple-log-message", json!({
                 "message": format!("Document added with ID: {}", doc_id),
                 "timestamp": chrono::Local::now().to_rfc3339(),
                 "level": "info"
@@ -563,7 +563,7 @@ impl DocumentStore {
             {
                 Ok(_) => {
                     println!("Document processed with ID: {}", doc_id);
-                    app_handle.emit("simple-message", json!({
+                    app_handle.emit("simple-log-message", json!({
                         "message": format!("Ingestion & embedding complete: {}", file_name_clone),
                         "timestamp": chrono::Local::now().to_rfc3339(),
                         "level": "info"
@@ -571,7 +571,7 @@ impl DocumentStore {
                 }
                 Err(e) => {
                     println!("Error processing embeddings: {:?}", e);
-                    app_handle.emit("simple-message", json!({
+                    app_handle.emit("simple-log-message", json!({
                         "message": format!("Ingestion & embedding complete: {}", file_name_clone),
                         "timestamp": chrono::Local::now().to_rfc3339(),
                         "level": "warn"
@@ -680,7 +680,7 @@ impl DocumentStore {
                     "current_file": file_name,
                     "meta": chunk,
                 }))?;
-                let embedding = embedding_generator.generate_embedding(&chunk).await?;
+                let embedding = embedding_generator.generate_embedding(app_handle.clone(), &chunk).await?;
                 
                 // Convert embedding to JSON string
                 let embedding_json = serde_json::to_string(&embedding)?;
