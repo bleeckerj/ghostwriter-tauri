@@ -1,3 +1,5 @@
+const { invoke } = window.__TAURI__.core;
+
 document.addEventListener('DOMContentLoaded', () => {
   // Get the elements
   const urlPanel = document.getElementById('url-panel');
@@ -42,12 +44,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (url) {
       console.log('Processing URL:', url);
       // Here you would add your URL processing logic
-      
+      invoke("ingest_from_url", { url }).then((response) => {
+        console.log('Response:', response);
+        // Show a success message or handle the response
+      }).catch((error) => {
+        console.error('Error:', error);
+        // Show an error message or handle the error
+      });
       // Clear the input field for next use
       urlInput.value = '';
       
       // Hide the panel after submission
-      hideUrlPanel();
+      //hideUrlPanel();
     }
   }
 

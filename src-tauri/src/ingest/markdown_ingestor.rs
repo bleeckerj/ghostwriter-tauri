@@ -14,31 +14,37 @@ pub struct MarkdownIngestor;
 
 #[async_trait]
 impl DocumentIngestor for MarkdownIngestor {
-    fn can_handle(&self, path: &Path) -> bool {
-        path.extension()
-            .map(|ext| ext.eq_ignore_ascii_case("md"))
-            .unwrap_or(false)
+    fn can_handle(&self, resource: &Resource) -> bool {
+        match resource {
+            Resource::FilePath(path) => path.extension().map_or(false, |ext| ext == "md"),
+            Resource::Url(_) => false, // This ingestor doesn't handle URLs
+        }
     }
 
-    async fn ingest_file(&self, path: &Path) -> Result<IngestedDocument, IngestError> {
-        let content = fs::read_to_string(path)
-            .map_err(IngestError::Io)?;
-        println!("Content: {}", content);
-        
-        Ok(IngestedDocument {
-            title: path.file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string(),
-            content,
-            metadata: DocumentMetadata {
-                source_type: "markdown".to_string(),
-                source_path: path.to_string_lossy().to_string(),
-                author: None,
-                created_date: None,
-                modified_date: None,
-                frontmatter: HashMap::new(),
-            }
-        })
+    async fn ingest(&self, resource: &Resource) -> Result<IngestedDocument, IngestError> {
+        match resource {
+            Resource::FilePath(path) => {
+                let content = fs::read_to_string(path).map_err(IngestError::Io)?;
+                
+                Ok(IngestedDocument {
+                    title: path.file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string(),
+                    content,
+                    metadata: DocumentMetadata {
+                        source_type: "markdown".to_string(),
+                        source_path: path.to_string_lossy().to_string(),
+                        author: None,
+                        created_date: None,
+                        modified_date: None,
+                        frontmatter: HashMap::new(),
+                    }
+                })
+            },
+            Resource::Url(url) => Err(IngestError::UnsupportedFormat(format!(
+                "URL ingestion not supported for Markdown: {}", url
+            ))),
+        }
     }
 }

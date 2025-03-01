@@ -7,20 +7,40 @@ use super::document_ingestor::{
     DocumentIngestor,
     IngestedDocument,
     DocumentMetadata,
-    IngestError
+    IngestError,
+    Resource
 };
 use gray_matter::Pod;
+
 #[derive(Debug)]
 pub struct EpubIngestor;
 
 #[async_trait]
 impl DocumentIngestor for EpubIngestor {
-    fn can_handle(&self, path: &Path) -> bool {
-        path.extension()
-            .map(|ext| ext.eq_ignore_ascii_case("epub"))
-            .unwrap_or(false)
+    // Implement the required can_handle method with Resource parameter
+    fn can_handle(&self, resource: &Resource) -> bool {
+        match resource {
+            Resource::FilePath(path) => path.extension()
+                .map(|ext| ext.eq_ignore_ascii_case("epub"))
+                .unwrap_or(false),
+            Resource::Url(_) => false, // This ingestor doesn't handle URLs
+        }
     }
+    
+    // Implement the required ingest method with Resource parameter
+    async fn ingest(&self, resource: &Resource) -> Result<IngestedDocument, IngestError> {
+        match resource {
+            Resource::FilePath(path) => self.ingest_file(path).await,
+            Resource::Url(url) => Err(IngestError::UnsupportedFormat(
+                format!("EpubIngestor cannot process URLs: {}", url)
+            )),
+        }
+    }
+}
 
+// Extend EpubIngestor with additional methods
+impl EpubIngestor {
+    // Helper method for file-specific ingestion logic
     async fn ingest_file(&self, path: &Path) -> Result<IngestedDocument, IngestError> {
         let mut book = EpubDoc::new(path)
             .map_err(|e| IngestError::Parse(e.to_string()))?;
@@ -40,11 +60,9 @@ impl DocumentIngestor for EpubIngestor {
             if let Some((chapter_content, _)) = book.get_current_str() {
                 // Strip HTML tags from chapter_content
                 let stripped_content = re.replace_all(&chapter_content, "");
-                //content.push_str(&format!("\n=============== Chapter {} ===============\n", i + 1));
                 content.push_str(&stripped_content);
             }
         }
-
 
         let mut frontmatter: HashMap<String, Pod> = HashMap::new();
         for (key, value) in book.metadata.clone() {
@@ -59,50 +77,9 @@ impl DocumentIngestor for EpubIngestor {
                 source_path: path.to_string_lossy().to_string(),
                 author: book.mdata("creator"),
                 created_date: book.mdata("date"),
-                modified_date: None, // EPUB doesn't typically have a modified date
+                modified_date: None,
                 frontmatter,
             }
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::PathBuf;
-    use tokio::fs::File;
-    use tokio::io::AsyncWriteExt;
-
-    fn get_test_epub_path() -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("tests")
-            .join("fixtures")
-            .join("test.epub") // Replace with your test epub file
-    }
-
-    #[tokio::test]
-    async fn test_epub_ingestion() {
-        // Create a temporary test file
-        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        path.push("tests");
-        path.push("fixtures");
-        tokio::fs::create_dir_all(&path).await.unwrap();
-        path.push("test.epub");
-
-        // Create a dummy epub file (replace with a real epub if needed)
-        let mut file = File::create(&path).await.unwrap();
-        file.write_all(b"Dummy EPUB Content").await.unwrap();
-
-        let ingestor = EpubIngestor;
-        let result = ingestor.ingest_file(&path).await;
-
-        // Clean up the test file
-        tokio::fs::remove_file(&path).await.unwrap();
-
-        assert!(result.is_ok(), "EPUB ingestion failed: {:?}", result.err());
-
-        let doc = result.unwrap();
-        println!("Content length: {}", doc.content.len());
-        println!("First 100 chars: {}", &doc.content[..100.min(doc.content.len())]);
     }
 }

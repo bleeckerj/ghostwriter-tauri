@@ -93,6 +93,20 @@ impl fmt::Display for CompletionTiming {
 }
 
 #[tauri::command]
+async fn ingest_from_url(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    url: String,
+) -> Result<(), String> {
+    let store = state.doc_store.lock().await;
+    let store_clone = Arc::new(store.clone());
+    store_clone.process_url_async(&url, app_handle).await;
+
+
+    Ok(())
+}
+
+#[tauri::command]
 async fn save_text_content(
     app_handle: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
@@ -1255,6 +1269,7 @@ async fn search_similarity(
             get_canon_info,
             save_text_content,
             save_json_content,
+            ingest_from_url,
             ])
             .run(tauri::generate_context!())
             .expect("error while running tauri application");
