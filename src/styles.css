@@ -70,7 +70,6 @@ h1 {
   text-align: left;
 }
 
-input,
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -262,7 +261,7 @@ button {
   /* @apply before:w-full before:h-full before:border-[0.5px] before:border-black; */
   @apply hover:before:border-[1px] hover:before:border-black cursor-pointer hover:bg-amber-600;
   @apply hover:shadow-[inset_2px_2px_0px_0px_#000000];
-  transition: transform 180ms ease-in-out, box-shadow 100ms ease-in-out, background-color 100ms ease-in-out, border-color 100ms ease-in-out; /* Add this line */
+  transition: transform 180ms ease-in-out, box-shadow 280ms ease-in-out, background-color 100ms ease-in-out, border-color 100ms ease-in-out; /* Add this line */
 }
 
 .diagnostics-area-button.button-out {
@@ -728,4 +727,23 @@ button {
 
 .toggle-switch input:checked+.slider::before {
   transform: translateX(26px);
+}
+
+/********************/
+/* URL panel styles */
+/********************/
+.url-panel-hidden {
+  height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0 !important;
+  border: none !important;
+  transition: height 0.3s ease-out, ease-out, margin 0.3s ease-out;
+}
+
+.url-panel-visible {
+  height: auto;
+  padding: 0.25rem !important;
+  margin-bottom: 0.25rem;
+  transition: height 0.3s ease-in, ease-in, margin 0.3s ease-in;
 }

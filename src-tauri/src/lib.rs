@@ -93,6 +93,20 @@ impl fmt::Display for CompletionTiming {
 }
 
 #[tauri::command]
+async fn ingest_from_url(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    url: String,
+) -> Result<(), String> {
+    let store = state.doc_store.lock().await;
+    let store_clone = Arc::new(store.clone());
+    store_clone.process_url_async(&url, app_handle).await;
+
+
+    Ok(())
+}
+
+#[tauri::command]
 async fn save_text_content(
     app_handle: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
@@ -168,7 +182,7 @@ async fn load_openai_api_key_from_keyring(
             Ok(key) => {
                 match key {
                     Some(k) => {
-                        log::info!("API key successfully loaded from keychain");
+                        log::debug!("API key successfully loaded from keychain");
                         new_logger.simple_log_message(
                             format!("{} API key successfully loaded from keychain", k),
                             "keychain".to_string(),
@@ -443,7 +457,7 @@ async fn load_openai_api_key_from_keyring(
         
         let embedding = 
         embedding_generator
-        .generate_embedding(&input)
+        .generate_embedding(app_handle.clone(), &input)
         .await
         .map_err(|e| {
             let error_msg = format!("Embedding generation failed: {}", e);
@@ -550,122 +564,122 @@ async fn load_openai_api_key_from_keyring(
         Input Text: {input}\
         \
         Answer this in prose using this specific writing style: {prose_style}"
-    );
-    
-    // Create system and user messages for OpenAI
-    let system_message = ChatCompletionRequestMessage::System(
-        ChatCompletionRequestSystemMessageArgs::default()
-        .content(system_content.clone())
-        .build()
-        .map_err(|e| e.to_string())?,
-    );
-    
-    let user_message = ChatCompletionRequestMessage::User(
-        ChatCompletionRequestUserMessageArgs::default()
-        .content(input.clone())
-        .build()
-        .map_err(|e| e.to_string())?,
-    );
-    
-    // Create and send the OpenAI request
-    let request = CreateChatCompletionRequestArgs::default()
-    .model("chatgpt-4o-latest")
-    .messages(vec![system_message, user_message])
-    .temperature(temperature)
-    .max_completion_tokens(max_tokens as u32)
-    .n(1)
+);
+
+// Create system and user messages for OpenAI
+let system_message = ChatCompletionRequestMessage::System(
+    ChatCompletionRequestSystemMessageArgs::default()
+    .content(system_content.clone())
     .build()
-    .map_err(|e| e.to_string())?;
-    
-    // Time OpenAI request
-    let start_openai = Instant::now();
-    //dotenv::dotenv().ok();
-    
-    
-    
-    let response = client
-    .chat()
-    .create(request)
-    .await
-    .map_err(|e| e.to_string())?;
-    let openai_duration = start_openai.elapsed();
-    
-    let total_duration = start_total.elapsed();
-    
-    // Process the response
-    if let Some(choice) = response.choices.first() {
-        if let Some(content) = &choice.message.content {
-            // Create timing info
-            let timing = CompletionTiming {
-                embedding_generation_ms: embedding_duration.as_millis(),
-                similarity_search_ms: search_duration.as_millis(),
-                openai_request_ms: openai_duration.as_millis(),
-                total_ms: total_duration.as_millis(),
-            };
-            // let store: tokio::sync::MutexGuard<'_, DocumentStore> = state.doc_store.lock().await;
-            // let database_name = store.get_database_name().to_string(); // Just convert &str to String
-            // let database_path = store.get_database_path().to_string(); // Just convert &str to String
-            
-            
-            let entry = Completion {
-                completion: CompletionLogEntry {
-                    timestamp: Utc::now(),
-                    completion_result: content.clone(),
-                    input_text: input.to_string(),
-                    system_prompt: system_content.clone(),
-                    conversation_context: conversation_context.clone(),
-                    vector_search_results_for_log: vector_search_results_for_log,
-                    canon_name: database_name,
-                    canon_path: database_path,
-                    preferences: preferences.clone(),
-                    
-                }
-            };
-            
-            let new_logger = NewLogger::new(app_handle.clone());
-            
-            new_logger.simple_log_message(
-                timing.to_string(),
-                "completion_time".to_string(),
-                "info".to_string()
-            );
-            
-            // state
-            // .logger
-            // .lock()
-            // .await
-            // .log_completion(entry)
-            // .map_err(|e| e.to_string())?;
-            // Instead of directly failing if logging fails, log the error and continue
-            match state.logger.lock().await.log_completion(entry) {
-                Ok(_) => {
-                    new_logger.simple_log_message(
-                        "Successfully logged completion".to_string(),
-                        "completion_log".to_string(),
-                        "debug".to_string()
-                    );
-                },
-                Err(e) => {
-                    new_logger.simple_log_message(
-                        format!("Failed to log completion: {}", e),
-                        "completion_log".to_string(),
-                        "error".to_string()
-                    );
-                    // Continue execution despite logging failure
-                }
-            };
-            
-            let mut conversation = state.conversation.lock().await;
-            
-            conversation.add_exchange(input.clone(), content.clone(), max_history);
-            
-            new_logger.simple_log_message(format!("History context is {} exchanges and {} characters", conversation.get_history().len(), conversation.get_context().len()), "".to_string(), "info".to_string());
-            //println!("Completion: {}", content);
-            return Ok((content.clone(), timing));
-        }
+    .map_err(|e| e.to_string())?,
+);
+
+let user_message = ChatCompletionRequestMessage::User(
+    ChatCompletionRequestUserMessageArgs::default()
+    .content(input.clone())
+    .build()
+    .map_err(|e| e.to_string())?,
+);
+
+// Create and send the OpenAI request
+let request = CreateChatCompletionRequestArgs::default()
+.model("gpt-4o-mini")
+.messages(vec![system_message, user_message])
+.temperature(temperature)
+.max_completion_tokens(max_tokens as u32)
+.n(1)
+.build()
+.map_err(|e| e.to_string())?;
+
+// Time OpenAI request
+let start_openai = Instant::now();
+//dotenv::dotenv().ok();
+
+
+
+let response = client
+.chat()
+.create(request)
+.await
+.map_err(|e| e.to_string())?;
+let openai_duration = start_openai.elapsed();
+
+let total_duration = start_total.elapsed();
+
+// Process the response
+if let Some(choice) = response.choices.first() {
+    if let Some(content) = &choice.message.content {
+        // Create timing info
+        let timing = CompletionTiming {
+            embedding_generation_ms: embedding_duration.as_millis(),
+            similarity_search_ms: search_duration.as_millis(),
+            openai_request_ms: openai_duration.as_millis(),
+            total_ms: total_duration.as_millis(),
+        };
+        // let store: tokio::sync::MutexGuard<'_, DocumentStore> = state.doc_store.lock().await;
+        // let database_name = store.get_database_name().to_string(); // Just convert &str to String
+        // let database_path = store.get_database_path().to_string(); // Just convert &str to String
+        
+        
+        let entry = Completion {
+            completion: CompletionLogEntry {
+                timestamp: Utc::now(),
+                completion_result: content.clone(),
+                input_text: input.to_string(),
+                system_prompt: system_content.clone(),
+                conversation_context: conversation_context.clone(),
+                vector_search_results_for_log: vector_search_results_for_log,
+                canon_name: database_name,
+                canon_path: database_path,
+                preferences: preferences.clone(),
+                
+            }
+        };
+        
+        let new_logger = NewLogger::new(app_handle.clone());
+        
+        new_logger.simple_log_message(
+            timing.to_string(),
+            "completion_time".to_string(),
+            "info".to_string()
+        );
+        
+        // state
+        // .logger
+        // .lock()
+        // .await
+        // .log_completion(entry)
+        // .map_err(|e| e.to_string())?;
+        // Instead of directly failing if logging fails, log the error and continue
+        match state.logger.lock().await.log_completion(entry) {
+            Ok(_) => {
+                new_logger.simple_log_message(
+                    "Successfully logged completion".to_string(),
+                    "completion_log".to_string(),
+                    "debug".to_string()
+                );
+            },
+            Err(e) => {
+                new_logger.simple_log_message(
+                    format!("Failed to log completion: {}", e),
+                    "completion_log".to_string(),
+                    "error".to_string()
+                );
+                // Continue execution despite logging failure
+            }
+        };
+        
+        let mut conversation = state.conversation.lock().await;
+        
+        conversation.add_exchange(input.clone(), content.clone(), max_history);
+        
+        new_logger.simple_log_message(format!("History context is {} exchanges and {} characters", conversation.get_history().len(), conversation.get_context().len()), "".to_string(), "info".to_string());
+        //println!("Completion: {}", content);
+        return Ok((content.clone(), timing));
     }
-    
-    Err("No completion returned.".to_string())
+}
+
+Err("No completion returned.".to_string())
 }
 
 fn get_api_key(app_handle: &AppHandle) -> Result<Option<String>, String> {
@@ -729,6 +743,7 @@ struct SearchResult {
 #[tauri::command]
 async fn search_similarity(
     state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
     query: String,
     limit: Option<usize>,  
 ) -> Result<Vec<SearchResult>, String> {  // Changed return type
@@ -737,7 +752,7 @@ async fn search_similarity(
     
     let embedding = state
     .embedding_generator
-    .generate_embedding(&query)
+    .generate_embedding(app_handle.clone(), &query)
     .await
     .map_err(|e| format!("Embedding generation failed: {}", e))?;
     
@@ -1248,6 +1263,7 @@ async fn search_similarity(
             get_canon_info,
             save_text_content,
             save_json_content,
+            ingest_from_url,
             ])
             .run(tauri::generate_context!())
             .expect("error while running tauri application");

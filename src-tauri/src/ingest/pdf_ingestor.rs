@@ -6,7 +6,8 @@ use super::document_ingestor::{
     DocumentIngestor,
     IngestedDocument,
     DocumentMetadata,
-    IngestError
+    IngestError,
+    Resource  // Add this import
 };
 
 #[derive(Debug)]
@@ -14,17 +15,35 @@ pub struct PdfIngestor;
 
 #[async_trait]
 impl DocumentIngestor for PdfIngestor {
-    fn can_handle(&self, path: &Path) -> bool {
-        path.extension()
-            .map(|ext| ext.eq_ignore_ascii_case("pdf"))
-            .unwrap_or(false)
+    // Update can_handle to work with Resource enum
+    fn can_handle(&self, resource: &Resource) -> bool {
+        match resource {
+            Resource::FilePath(path) => path.extension()
+                .map(|ext| ext.eq_ignore_ascii_case("pdf"))
+                .unwrap_or(false),
+            Resource::Url(_) => false, // PDFs aren't handled via URL directly
+        }
     }
 
+    // Add the ingest method required by the trait
+    async fn ingest(&self, resource: &Resource) -> Result<IngestedDocument, IngestError> {
+        match resource {
+            Resource::FilePath(path) => self.ingest_file(path).await,
+            Resource::Url(url) => Err(IngestError::UnsupportedFormat(
+                format!("PdfIngestor cannot process URLs directly: {}", url)
+            )),
+        }
+    }
+}
+
+// Move existing implementation to a helper method in a separate impl block
+impl PdfIngestor {
+    // Keep the existing ingest_file implementation
     async fn ingest_file(&self, path: &Path) -> Result<IngestedDocument, IngestError> {
         let pdfium = Pdfium::new(
             Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path("./resources/"))
                 .or_else(|_| Pdfium::bind_to_system_library())
-                .unwrap() // Or use the ? unwrapping operator to pass any error up to the caller
+                .unwrap()
         );
 
         let document = pdfium.load_pdf_from_file(path, None)
@@ -34,7 +53,7 @@ impl DocumentIngestor for PdfIngestor {
 
         for (index, page) in document.pages().iter().enumerate() {
             if let Ok(text) = page.text() {
-                extracted_text.push_str(&format!("\n=============== Page {} ===============\n", index + 1));
+                //extracted_text.push_str(&format!("\n=============== Page {} ===============\n", index + 1));
                 extracted_text.push_str(&text.all());
             }
         }
