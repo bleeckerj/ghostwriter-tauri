@@ -70,6 +70,9 @@ pub struct DocumentStore {
 
 
 impl DocumentStore {
+    pub const DEFAULT_CHUNK_SIZE: usize = 4096;
+    pub const DEFAULT_CHUNK_OVERLAP: usize = 400;
+
     pub fn new(
         store_path: PathBuf,
         embedding_generator: Arc<EmbeddingGenerator>
@@ -556,7 +559,7 @@ impl DocumentStore {
     ) -> Result<(), Box<dyn std::error::Error>> {
         //println!("app_handle: {:?}", app_handle);
         // Chunk the content
-        let chunks = self.embedding_generator.chunk_text(&content, 2048, 0); // adjust size/overlap as needed
+        let chunks = self.embedding_generator.chunk_text(&content, Self::DEFAULT_CHUNK_SIZE, Self::DEFAULT_CHUNK_OVERLAP); // adjust size/overlap as needed
         // Emit progress update
         //println!("Processing {} chunks", chunks.len());
         app_handle.emit("progress-indicator-load", json!({
