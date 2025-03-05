@@ -209,6 +209,42 @@
             </div>
           </label>
         </div>
+        <!-- Add this after "Prose Style" section and before the RAG Shuffle toggle -->
+<div class="my-4">
+  <div class="label">
+    <span class="label-text text-sm font-['Haffer'] ml-1">AI Provider</span>
+  </div>
+  <div class="provider-selection flex gap-3 mb-2">
+    <label class="radio-label cursor-pointer flex items-center gap-1">
+      <input type="radio" name="ai-provider" value="openai" id="provider-openai" checked class="radio-input">
+      <span class="text-[0.8em]">OpenAI</span>
+    </label>
+    <label class="radio-label cursor-pointer flex items-center gap-1">
+      <input type="radio" name="ai-provider" value="lmstudio" id="provider-lmstudio" class="radio-input">
+      <span class="text-[0.8em]">LM Studio (local)</span>
+    </label>
+  </div>
+  
+  <!-- LM Studio URL - only visible when LM Studio is selected -->
+  <div id="lmstudio-url-container" class="hidden mb-3">
+    <div class="label">
+      <span class="label-text text-sm font-['Haffer'] ml-1">LM Studio URL</span>
+    </div>
+    <input type="text" id="prefs-lmstudio-url" placeholder="http://localhost:1234/v1" 
+           class="w-full text-[0.7em] font-['ESKlarheitKurrentMono'] p-1.5 input input-bordered">
+  </div>
+  
+  <!-- Model Selection Dropdown -->
+  <div class="mb-3">
+    <div class="label">
+      <span class="label-text text-sm font-['Haffer'] ml-1">Model</span>
+      <button id="refresh-models-btn" class="text-xs p-0.5 px-2 rounded bg-gray-200 hover:bg-gray-300" title="Refresh available models">↻</button>
+    </div>
+    <select id="prefs-model-name" class="w-full text-[0.7em] font-['ESKlarheitKurrentMono'] p-1.5 input input-bordered">
+      <option value="">Loading models...</option>
+    </select>
+  </div>
+</div>
       </div>
     </main>
     

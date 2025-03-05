@@ -32,8 +32,13 @@ pub fn create_provider(provider_type: ProviderType, config: &str) -> Provider {
             Provider::OpenAI(OpenAIProvider::new(config))
         },
         ProviderType::LMStudio => {
-            // For LMStudio, the config string is the base URL
-            Provider::LMStudio(LMStudioProvider::new(config, None))
+            // For LMStudio, use a default URL if empty string is provided
+            let url = if config.is_empty() {
+                "http://localhost:1234/v1/"  // Default LM Studio URL
+            } else {
+                config  // Use provided URL if not empty
+            };
+            Provider::LMStudio(LMStudioProvider::new(url, None))
         }
     }
 }

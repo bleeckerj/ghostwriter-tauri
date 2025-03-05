@@ -1,6 +1,7 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
 #![allow(unused)]
+use ai::ModelProvider;
 use epub::doc;
 use pdf_extract::Path;
 use std::io::Stdout;
@@ -425,19 +426,43 @@ async fn load_openai_api_key_from_keyring(
         let mut new_logger = NewLogger::new(app_handle.clone());
         
         let openai_api_key = get_api_key(&app_handle).map_err(|e| e.to_string())?;
-        
+        let key_clone = openai_api_key.clone().unwrap();
         let logger_clone = state.logger.clone();
         
-        let provider = match openai_api_key {
-            Some(key) => {
-                providers::create_provider(ProviderType::OpenAI, &key)
-            }
-            None => {
-                log::warn!("OPENAI_API_KEY not found. No use running without it.");
-                // Same error handling...
-                return Err("OpenAI API key is required but was not found. Check preferences and/or system keychain.".to_string());
+        // Create provider based on preferences
+        let provider = match preferences.ai_provider.to_lowercase().as_str() {
+            "lmstudio" => {
+                new_logger.simple_log_message(
+                    format!("Using LM Studio provider at: {}", preferences.lm_studio_url),
+                    "provider".to_string(),
+                    "info".to_string()
+                );
+                providers::create_provider(ProviderType::LMStudio, &preferences.lm_studio_url)
+            },
+            "openai" | _ => {
+                // Default to OpenAI if unrecognized
+                let openai_api_key = get_api_key(&app_handle).map_err(|e| e.to_string())?;
+                match openai_api_key {
+                    Some(key) => {
+                        new_logger.simple_log_message(
+                            "Using OpenAI provider".to_string(),
+                            "provider".to_string(),
+                            "info".to_string()
+                        );
+                        providers::create_provider(ProviderType::OpenAI, &key)
+                    },
+                    None => {
+                        log::warn!("OpenAI API key not found. Cannot use OpenAI provider.");
+                        return Err("OpenAI API key is required but was not found. Check preferences and/or system keychain.".to_string());
+                    }
+                }
             }
         };
+        
+        let lm_models = provider.list_models().await;
+        lm_models.iter().for_each(|model| {
+            log::debug!("Model: {:?}", model);
+        });
         
         let start_total = Instant::now();
         
@@ -450,9 +475,18 @@ async fn load_openai_api_key_from_keyring(
                 EmbeddingGenerator::new_with_client(openai.get_client().clone())
             },
             _ => {
-                EmbeddingGenerator::new() // Or handle differently
+                //EmbeddingGenerator::new() // Or handle differently
+                EmbeddingGenerator::new_with_api_key(&key_clone)
             }
         };        
+        
+        // Option 2: Maintain a separate embedding generator
+        // If embeddings are still using the OpenAI API directly
+        // let embedding_generator = if let Some(key) = &openai_api_key {
+        //     EmbeddingGenerator::new_with_api_key(key)
+        // } else {
+        //     EmbeddingGenerator::new()
+        // };
         
         let embedding = 
         embedding_generator
@@ -566,119 +600,113 @@ async fn load_openai_api_key_from_keyring(
     );
     
     // Create message array in the generic format
-        // Create message array in the generic format
-        let messages = vec![
-            ChatMessage {
-                role: MessageRole::System,
-                content: system_content.clone(),
-                name: None,
-            },
-            ChatMessage {
-                role: MessageRole::User,
-                content: input.clone(),
-                name: None,
-            },
-        ];
+    // Create message array in the generic format
+    let messages = vec![
+    ChatMessage {
+        role: MessageRole::System,
+        content: system_content.clone(),
+        name: None,
+    },
+    ChatMessage {
+        role: MessageRole::User,
+        content: input.clone(),
+        name: None,
+    },
+    ];
     
-        // Create a provider-agnostic request
-        let chat_request = ChatCompletionRequest {
-            messages,
-            model: "gpt-4o-mini".to_string(),
-            temperature: Some(temperature),
-            max_tokens: Some(max_tokens),
-            stream: false,
+    // Use the model name from preferences
+    let chat_request = ChatCompletionRequest {
+        messages,
+        model: preferences.model_name.clone(),  // Use from preferences
+        temperature: Some(temperature),
+        max_tokens: Some(max_tokens),
+        stream: false,
+    };
+    
+    // Time AI request
+    let start_openai = Instant::now();
+    
+    // Make the request through the provider
+    let chat_response = provider
+    .create_chat_completion(&chat_request)
+    .await
+    .map_err(|e| format!("AI completion failed: {}", e))?;
+    
+    let openai_duration = start_openai.elapsed();
+    let total_duration = start_total.elapsed();
+    
+    // Process the response
+    if let Some(choice) = chat_response.choices.first() {
+        let content = &choice.message.content;
+        
+        // Create timing info
+        let timing = CompletionTiming {
+            embedding_generation_ms: embedding_duration.as_millis(),
+            similarity_search_ms: search_duration.as_millis(),
+            openai_request_ms: openai_duration.as_millis(),
+            total_ms: total_duration.as_millis(),
         };
-    
-        // Time AI request
-        let start_openai = Instant::now();
-    
-        // Make the request through the provider
-        let chat_response = provider
-            .create_chat_completion(&chat_request)
-            .await
-            .map_err(|e| format!("AI completion failed: {}", e))?;
-    
-        let openai_duration = start_openai.elapsed();
-        let total_duration = start_total.elapsed();
-    
-        // Process the response
-        if let Some(choice) = chat_response.choices.first() {
-            let content = &choice.message.content;
-            
-            // Create timing info
-            let timing = CompletionTiming {
-                embedding_generation_ms: embedding_duration.as_millis(),
-                similarity_search_ms: search_duration.as_millis(),
-                openai_request_ms: openai_duration.as_millis(),
-                total_ms: total_duration.as_millis(),
-            };
-
-            
-            // let store: tokio::sync::MutexGuard<'_, DocumentStore> = state.doc_store.lock().await;
-            // let database_name = store.get_database_name().to_string(); // Just convert &str to String
-            // let database_path = store.get_database_path().to_string(); // Just convert &str to String
-            
-            
-            let entry = Completion {
-                completion: CompletionLogEntry {
-                    timestamp: Utc::now(),
-                    completion_result: content.clone(),
-                    input_text: input.to_string(),
-                    system_prompt: system_content.clone(),
-                    conversation_context: conversation_context.clone(),
-                    vector_search_results_for_log: vector_search_results_for_log,
-                    canon_name: database_name,
-                    canon_path: database_path,
-                    preferences: preferences.clone(),
-                    
-                }
-            };
-            
-            let new_logger = NewLogger::new(app_handle.clone());
-            
-            new_logger.simple_log_message(
-                timing.to_string(),
-                "completion_time".to_string(),
-                "info".to_string()
-            );
-            
-            // state
-            // .logger
-            // .lock()
-            // .await
-            // .log_completion(entry)
-            // .map_err(|e| e.to_string())?;
-            // Instead of directly failing if logging fails, log the error and continue
-            match state.logger.lock().await.log_completion(entry) {
-                Ok(_) => {
-                    new_logger.simple_log_message(
-                        "Successfully logged completion".to_string(),
-                        "completion_log".to_string(),
-                        "debug".to_string()
-                    );
-                },
-                Err(e) => {
-                    new_logger.simple_log_message(
-                        format!("Failed to log completion: {}", e),
-                        "completion_log".to_string(),
-                        "error".to_string()
-                    );
-                    // Continue execution despite logging failure
-                }
-            };
-            
-            let mut conversation = state.conversation.lock().await;
-            
-            conversation.add_exchange(input.clone(), content.clone(), max_history);
-            
-            new_logger.simple_log_message(format!("History context is {} exchanges and {} characters", conversation.get_history().len(), conversation.get_context().len()), "".to_string(), "info".to_string());
-            //println!("Completion: {}", content);
-            return Ok((content.clone(), timing));
-        }
-        Err("No completion returned.".to_string())
-
+        
+        let entry = Completion {
+            completion: CompletionLogEntry {
+                timestamp: Utc::now(),
+                completion_result: content.clone(),
+                input_text: input.to_string(),
+                system_prompt: system_content.clone(),
+                conversation_context: conversation_context.clone(),
+                vector_search_results_for_log: vector_search_results_for_log,
+                canon_name: database_name,
+                canon_path: database_path,
+                preferences: preferences.clone(),
+                
+            }
+        };
+        
+        let new_logger = NewLogger::new(app_handle.clone());
+        
+        new_logger.simple_log_message(
+            timing.to_string(),
+            "completion_time".to_string(),
+            "info".to_string()
+        );
+        
+        // state
+        // .logger
+        // .lock()
+        // .await
+        // .log_completion(entry)
+        // .map_err(|e| e.to_string())?;
+        // Instead of directly failing if logging fails, log the error and continue
+        match state.logger.lock().await.log_completion(entry) {
+            Ok(_) => {
+                new_logger.simple_log_message(
+                    "Successfully logged completion".to_string(),
+                    "completion_log".to_string(),
+                    "debug".to_string()
+                );
+            },
+            Err(e) => {
+                new_logger.simple_log_message(
+                    format!("Failed to log completion: {}", e),
+                    "completion_log".to_string(),
+                    "error".to_string()
+                );
+                // Continue execution despite logging failure
+            }
+        };
+        
+        let mut conversation = state.conversation.lock().await;
+        
+        conversation.add_exchange(input.clone(), content.clone(), max_history);
+        
+        new_logger.simple_log_message(format!("History context is {} exchanges and {} characters", conversation.get_history().len(), conversation.get_context().len()), "".to_string(), "info".to_string());
+        //println!("Completion: {}", content);
+        return Ok((content.clone(), timing));
     }
+    Err("No completion returned.".to_string())
     
+}
+
 
 fn get_api_key(app_handle: &AppHandle) -> Result<Option<String>, String> {
     match KeychainHandler::retrieve_api_key() {

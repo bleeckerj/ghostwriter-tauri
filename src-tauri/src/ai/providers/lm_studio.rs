@@ -67,7 +67,7 @@ impl ModelProvider for LMStudioProvider {
             let status = response.status();
             let text = response.text().await
                 .unwrap_or_else(|_| "Failed to read response body".to_string());
-                
+            log::debug!("Failed to list models: {}: {}", status, text);  
             return Err(AIProviderError::APIError(format!(
                 "API returned error {}: {}", status, text
             )));

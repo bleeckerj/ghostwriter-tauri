@@ -17,7 +17,7 @@ pub struct OpenAIProvider {
 impl OpenAIProvider {
     /// Create a new OpenAI provider with the given API key
     pub fn new(api_key: &str) -> Self {
-        let config = OpenAIConfig::new().with_api_key(api_key.to_string());
+        let config: OpenAIConfig = OpenAIConfig::new().with_api_key(api_key.to_string());
         OpenAIProvider {
             client: Client::with_config(config)
         }
