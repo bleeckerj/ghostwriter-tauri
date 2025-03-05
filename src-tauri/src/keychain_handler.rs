@@ -21,7 +21,7 @@ impl KeychainHandler {
             Err(e) => {
                 println!("❌ Failed to store OpenAI API Key
                 securely in the keyring: {}", e);
-                log::error!("Failed to store OpenAI API Key securely in the keyring: {}", e);
+                log::error!("❌ Failed to store OpenAI API Key securely in the keyring: {}", e);
                 return Err(e.into());
             }
         }

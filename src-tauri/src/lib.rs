@@ -34,12 +34,16 @@ pub mod ingest;
 pub mod document_store;
 pub mod menu;
 pub mod embeddings;
+pub mod ai;
 
 mod conversations; // Add this line
 use conversations::Conversation;
 
 mod app_state; // Add this line
 use app_state::AppState;
+use crate::ai::providers::{self, ProviderType, Provider};
+use crate::ai::models::{ChatCompletionRequest, ChatMessage, MessageRole};
+use crate::ai::traits::ChatCompletionProvider;
 
 use async_openai::{
     //config::OpenAIConfig,
@@ -101,8 +105,8 @@ async fn ingest_from_url(
     let store = state.doc_store.lock().await;
     let store_clone = Arc::new(store.clone());
     store_clone.process_url_async(&url, app_handle).await;
-
-
+    
+    
     Ok(())
 }
 
@@ -423,26 +427,14 @@ async fn load_openai_api_key_from_keyring(
         let openai_api_key = get_api_key(&app_handle).map_err(|e| e.to_string())?;
         
         let logger_clone = state.logger.clone();
-        let client = match openai_api_key {
+        
+        let provider = match openai_api_key {
             Some(key) => {
-                Client::with_config(
-                    OpenAIConfig::new()
-                    .with_api_key(key.clone())
-                )
+                providers::create_provider(ProviderType::OpenAI, &key)
             }
             None => {
                 log::warn!("OPENAI_API_KEY not found. No use running without it.");
-                let mut new_logger = NewLogger::new(app_handle.clone());
-                new_logger.simple_log_message(
-                    "OPENAI_API_KEY not found or invalid. No use running without it.".to_string(),
-                    "".to_string(),
-                    "error".to_string()
-                );
-                new_logger.simple_log_message(
-                    "Check preferences and check os keychain".to_string(),
-                    "".to_string(),
-                    "error".to_string()
-                );
+                // Same error handling...
                 return Err("OpenAI API key is required but was not found. Check preferences and/or system keychain.".to_string());
             }
         };
@@ -452,8 +444,15 @@ async fn load_openai_api_key_from_keyring(
         // Time embedding generation
         let start_embedding = Instant::now();
         
-        let embedding_generator = EmbeddingGenerator::new_with_client(client.clone());
-        
+        // Option 1: If using the OpenAI provider for embeddings too
+        let embedding_generator = match &provider {
+            Provider::OpenAI(openai) => {
+                EmbeddingGenerator::new_with_client(openai.get_client().clone())
+            },
+            _ => {
+                EmbeddingGenerator::new() // Or handle differently
+            }
+        };        
         
         let embedding = 
         embedding_generator
@@ -564,123 +563,122 @@ async fn load_openai_api_key_from_keyring(
         Input Text: {input}\
         \
         Answer this in prose using this specific writing style: {prose_style}"
-);
-
-// Create system and user messages for OpenAI
-let system_message = ChatCompletionRequestMessage::System(
-    ChatCompletionRequestSystemMessageArgs::default()
-    .content(system_content.clone())
-    .build()
-    .map_err(|e| e.to_string())?,
-);
-
-let user_message = ChatCompletionRequestMessage::User(
-    ChatCompletionRequestUserMessageArgs::default()
-    .content(input.clone())
-    .build()
-    .map_err(|e| e.to_string())?,
-);
-
-// Create and send the OpenAI request
-let request = CreateChatCompletionRequestArgs::default()
-.model("gpt-4o-mini")
-.messages(vec![system_message, user_message])
-.temperature(temperature)
-.max_completion_tokens(max_tokens as u32)
-.n(1)
-.build()
-.map_err(|e| e.to_string())?;
-
-// Time OpenAI request
-let start_openai = Instant::now();
-//dotenv::dotenv().ok();
-
-
-
-let response = client
-.chat()
-.create(request)
-.await
-.map_err(|e| e.to_string())?;
-let openai_duration = start_openai.elapsed();
-
-let total_duration = start_total.elapsed();
-
-// Process the response
-if let Some(choice) = response.choices.first() {
-    if let Some(content) = &choice.message.content {
-        // Create timing info
-        let timing = CompletionTiming {
-            embedding_generation_ms: embedding_duration.as_millis(),
-            similarity_search_ms: search_duration.as_millis(),
-            openai_request_ms: openai_duration.as_millis(),
-            total_ms: total_duration.as_millis(),
-        };
-        // let store: tokio::sync::MutexGuard<'_, DocumentStore> = state.doc_store.lock().await;
-        // let database_name = store.get_database_name().to_string(); // Just convert &str to String
-        // let database_path = store.get_database_path().to_string(); // Just convert &str to String
-        
-        
-        let entry = Completion {
-            completion: CompletionLogEntry {
-                timestamp: Utc::now(),
-                completion_result: content.clone(),
-                input_text: input.to_string(),
-                system_prompt: system_content.clone(),
-                conversation_context: conversation_context.clone(),
-                vector_search_results_for_log: vector_search_results_for_log,
-                canon_name: database_name,
-                canon_path: database_path,
-                preferences: preferences.clone(),
-                
-            }
-        };
-        
-        let new_logger = NewLogger::new(app_handle.clone());
-        
-        new_logger.simple_log_message(
-            timing.to_string(),
-            "completion_time".to_string(),
-            "info".to_string()
-        );
-        
-        // state
-        // .logger
-        // .lock()
-        // .await
-        // .log_completion(entry)
-        // .map_err(|e| e.to_string())?;
-        // Instead of directly failing if logging fails, log the error and continue
-        match state.logger.lock().await.log_completion(entry) {
-            Ok(_) => {
-                new_logger.simple_log_message(
-                    "Successfully logged completion".to_string(),
-                    "completion_log".to_string(),
-                    "debug".to_string()
-                );
+    );
+    
+    // Create message array in the generic format
+        // Create message array in the generic format
+        let messages = vec![
+            ChatMessage {
+                role: MessageRole::System,
+                content: system_content.clone(),
+                name: None,
             },
-            Err(e) => {
-                new_logger.simple_log_message(
-                    format!("Failed to log completion: {}", e),
-                    "completion_log".to_string(),
-                    "error".to_string()
-                );
-                // Continue execution despite logging failure
-            }
+            ChatMessage {
+                role: MessageRole::User,
+                content: input.clone(),
+                name: None,
+            },
+        ];
+    
+        // Create a provider-agnostic request
+        let chat_request = ChatCompletionRequest {
+            messages,
+            model: "gpt-4o-mini".to_string(),
+            temperature: Some(temperature),
+            max_tokens: Some(max_tokens),
+            stream: false,
         };
-        
-        let mut conversation = state.conversation.lock().await;
-        
-        conversation.add_exchange(input.clone(), content.clone(), max_history);
-        
-        new_logger.simple_log_message(format!("History context is {} exchanges and {} characters", conversation.get_history().len(), conversation.get_context().len()), "".to_string(), "info".to_string());
-        //println!("Completion: {}", content);
-        return Ok((content.clone(), timing));
-    }
-}
+    
+        // Time AI request
+        let start_openai = Instant::now();
+    
+        // Make the request through the provider
+        let chat_response = provider
+            .create_chat_completion(&chat_request)
+            .await
+            .map_err(|e| format!("AI completion failed: {}", e))?;
+    
+        let openai_duration = start_openai.elapsed();
+        let total_duration = start_total.elapsed();
+    
+        // Process the response
+        if let Some(choice) = chat_response.choices.first() {
+            let content = &choice.message.content;
+            
+            // Create timing info
+            let timing = CompletionTiming {
+                embedding_generation_ms: embedding_duration.as_millis(),
+                similarity_search_ms: search_duration.as_millis(),
+                openai_request_ms: openai_duration.as_millis(),
+                total_ms: total_duration.as_millis(),
+            };
 
-Err("No completion returned.".to_string())
-}
+            
+            // let store: tokio::sync::MutexGuard<'_, DocumentStore> = state.doc_store.lock().await;
+            // let database_name = store.get_database_name().to_string(); // Just convert &str to String
+            // let database_path = store.get_database_path().to_string(); // Just convert &str to String
+            
+            
+            let entry = Completion {
+                completion: CompletionLogEntry {
+                    timestamp: Utc::now(),
+                    completion_result: content.clone(),
+                    input_text: input.to_string(),
+                    system_prompt: system_content.clone(),
+                    conversation_context: conversation_context.clone(),
+                    vector_search_results_for_log: vector_search_results_for_log,
+                    canon_name: database_name,
+                    canon_path: database_path,
+                    preferences: preferences.clone(),
+                    
+                }
+            };
+            
+            let new_logger = NewLogger::new(app_handle.clone());
+            
+            new_logger.simple_log_message(
+                timing.to_string(),
+                "completion_time".to_string(),
+                "info".to_string()
+            );
+            
+            // state
+            // .logger
+            // .lock()
+            // .await
+            // .log_completion(entry)
+            // .map_err(|e| e.to_string())?;
+            // Instead of directly failing if logging fails, log the error and continue
+            match state.logger.lock().await.log_completion(entry) {
+                Ok(_) => {
+                    new_logger.simple_log_message(
+                        "Successfully logged completion".to_string(),
+                        "completion_log".to_string(),
+                        "debug".to_string()
+                    );
+                },
+                Err(e) => {
+                    new_logger.simple_log_message(
+                        format!("Failed to log completion: {}", e),
+                        "completion_log".to_string(),
+                        "error".to_string()
+                    );
+                    // Continue execution despite logging failure
+                }
+            };
+            
+            let mut conversation = state.conversation.lock().await;
+            
+            conversation.add_exchange(input.clone(), content.clone(), max_history);
+            
+            new_logger.simple_log_message(format!("History context is {} exchanges and {} characters", conversation.get_history().len(), conversation.get_context().len()), "".to_string(), "info".to_string());
+            //println!("Completion: {}", content);
+            return Ok((content.clone(), timing));
+        }
+        Err("No completion returned.".to_string())
+
+    }
+    
 
 fn get_api_key(app_handle: &AppHandle) -> Result<Option<String>, String> {
     match KeychainHandler::retrieve_api_key() {
