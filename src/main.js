@@ -271,7 +271,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     //   });
     // });
   });
-  
+  let openaiApiKeyEl = document.querySelector("#openai-api-key");
   let actionItem = editor.extensionManager.extensions.find(extension => extension.name === 'inlineActionItem');
   let nudgeButton = document.querySelector("#nudge-inline-action-item");
   if (actionItem) {

@@ -176,12 +176,12 @@ async fn save_json_content(
 #[tauri::command]
 async fn load_openai_api_key_from_keyring(
     app_handle: tauri::AppHandle, 
-    state: tauri::State<'_, AppState>) -> Result<(bool), String> {
+    state: tauri::State<'_, AppState>) -> Result<(String), String> {
         // Create logger instance
         let new_logger = NewLogger::new(app_handle.clone());
         
-        // Returns true if there was a key there (even if it was invalid)
-        // Returns false if there was no key there
+        // Returns the key if there was a key there (even if it was invalid)
+        // Returns error string if there was no key there
         // Returns an error if there was a problem loading the key
         match KeychainHandler::retrieve_api_key() {
             Ok(key) => {
@@ -193,7 +193,7 @@ async fn load_openai_api_key_from_keyring(
                             "keychain".to_string(),
                             "debug".to_string()
                         );
-                        Ok(true)
+                        Ok(k)
                     }
                     None => {
                         log::warn!("No API key found in keychain");
@@ -202,7 +202,7 @@ async fn load_openai_api_key_from_keyring(
                             "keychain".to_string(),
                             "warn".to_string()
                         );
-                        Ok(false)
+                        Ok("Enter API key".to_string())
                     }
                 }
             }

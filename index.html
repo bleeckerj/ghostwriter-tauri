@@ -61,7 +61,7 @@
       </div>
       <!-- Add the side panel -->
       <div id="side-panel" class="side-panel w-11/12">
-        <h2 class="text-[0.8em] font-['ESKlarheitKurrentMono'] mb-1 w-full mx-auto text-center">Incantation Preferences & Parameters</h2>
+        <div class="text-[0.8em] font-['ESKlarheitKurrentMono'] mb-1 w-full mx-auto text-center">Incantation Preferences & Parameters</div>
         <div class="fixed-buttons">
           <div class="grid grid-cols-4 gap-1 w-3/4 mb-0 mx-auto">
             <div id="prefs-load-btn" class="diagnostics-area-button enabled">LOAD</div>
@@ -70,7 +70,7 @@
             <div id="prefs-close-btn" class="diagnostics-area-button enabled">CLOSE</div>
           </div>
         </div>
-        <div class="side-panel-content mx-auto ml-3 mb-20 w-11/12">
+        <div class="side-panel-content mx-auto ml-3 mb-20 w-11/12 bg-gray-400">
           <label class="form-control">
             <div class="label">
               <span class="label-text text-sm font-['Haffer'] ml-1">Main Prompt</span>
@@ -210,7 +210,7 @@
           </label>
         </div>
         <!-- Add this after "Prose Style" section and before the RAG Shuffle toggle -->
-<div class="my-4">
+<div id="llm-preferences" class="mx-10/12 my-4 hidden">
   <div class="label">
     <span class="label-text text-sm font-['Haffer'] ml-1">AI Provider</span>
   </div>
@@ -245,6 +245,7 @@
     </select>
   </div>
 </div>
+
       </div>
     </main>
     
