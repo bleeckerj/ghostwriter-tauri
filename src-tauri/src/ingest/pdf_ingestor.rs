@@ -22,6 +22,7 @@ impl DocumentIngestor for PdfIngestor {
                 .map(|ext| ext.eq_ignore_ascii_case("pdf"))
                 .unwrap_or(false),
             Resource::Url(_) => false, // PDFs aren't handled via URL directly
+            Resource::Database(_) => false,
         }
     }
 
@@ -31,6 +32,9 @@ impl DocumentIngestor for PdfIngestor {
             Resource::FilePath(path) => self.ingest_file(path).await,
             Resource::Url(url) => Err(IngestError::UnsupportedFormat(
                 format!("PdfIngestor cannot process URLs directly: {}", url)
+            )),
+            Resource::Database(_) => Err(IngestError::UnsupportedFormat(
+                "PdfIngestor cannot process database resources".to_string()
             )),
         }
     }

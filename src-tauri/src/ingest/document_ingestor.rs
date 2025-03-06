@@ -42,12 +42,33 @@ pub struct DocumentMetadata {
 pub enum Resource {
     FilePath(PathBuf),
     Url(String),
+    Database(DatabaseQuery),
+}
+
+#[derive(Debug, Clone)]
+pub struct DatabaseQuery {
+    pub connection_string: String,
+    pub database_name: String,
+    pub collection_name: String,
+    pub query_params: QueryParams,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct QueryParams {
+    pub message_id: Option<String>,
+    pub channel_id: Option<String>,
+    pub author_id: Option<String>,
+    pub timestamp_from: Option<i64>,
+    pub timestamp_to: Option<i64>,
+    pub keyword: Option<String>,
+    pub limit: Option<i64>,
 }
 
 impl Resource {
     pub fn as_path(&self) -> Option<&Path> {
         match self {
             Resource::FilePath(path) => Some(path),
+            Resource::Database(_) => None,
             _ => None,
         }
     }
@@ -67,6 +88,9 @@ impl Resource {
             },
             Resource::Url(url) => {
                 Err(IngestError::UnsupportedFormat(format!("Cannot read content directly from URL: {}", url)))
+            },
+            Resource::Database(_) => {
+                Err(IngestError::UnsupportedFormat("Cannot read content directly from Database resource".to_string()))
             }
         }
     }

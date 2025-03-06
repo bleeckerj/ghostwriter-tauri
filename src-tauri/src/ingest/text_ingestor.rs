@@ -23,6 +23,7 @@ impl DocumentIngestor for TextIngestor {
                 .map(|ext| ext.eq_ignore_ascii_case("txt"))
                 .unwrap_or(false),
             Resource::Url(_) => false, // Text ingestor doesn't handle URLs
+            Resource::Database(_) => false,
         }
     }
     
@@ -32,6 +33,9 @@ impl DocumentIngestor for TextIngestor {
             Resource::FilePath(path) => self.ingest_file(path).await,
             Resource::Url(url) => Err(IngestError::UnsupportedFormat(
                 format!("TextIngestor cannot process URLs: {}", url)
+            )),
+            Resource::Database(_) => Err(IngestError::UnsupportedFormat(
+                "TextIngestor cannot process database resources".to_string()
             )),
         }
     }

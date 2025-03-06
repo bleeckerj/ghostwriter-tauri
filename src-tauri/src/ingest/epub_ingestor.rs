@@ -24,6 +24,7 @@ impl DocumentIngestor for EpubIngestor {
                 .map(|ext| ext.eq_ignore_ascii_case("epub"))
                 .unwrap_or(false),
             Resource::Url(_) => false, // This ingestor doesn't handle URLs
+            Resource::Database(_) => false, // This ingestor doesn't handle databases
         }
     }
     
@@ -33,6 +34,9 @@ impl DocumentIngestor for EpubIngestor {
             Resource::FilePath(path) => self.ingest_file(path).await,
             Resource::Url(url) => Err(IngestError::UnsupportedFormat(
                 format!("EpubIngestor cannot process URLs: {}", url)
+            )),
+            Resource::Database(_) => Err(IngestError::UnsupportedFormat(
+                "EpubIngestor cannot process database resources".to_string()
             )),
         }
     }

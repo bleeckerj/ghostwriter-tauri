@@ -6,26 +6,34 @@
       {
         "label": "ui:dev",
         "type": "shell",
-        "isBackground": true,
-        "command": "yarn",
-        "args": [
-          "dev"
-        ]
+        "command": "npm run dev",
+        "group": "build",
+        "problemMatcher": []
       },
       {
         "label": "ui:build",
         "type": "shell",
-        "command": "yarn",
-        "args": [
-          "build"
+        "command": "npm run build",
+        "group": "build",
+        "problemMatcher": []
+      },
+      {
+        "label": "build-mongodb-test",
+        "type": "shell",
+        "command": "cd ${workspaceFolder}/src-tauri && cargo test --no-run --lib",
+        "group": "build",
+        "problemMatcher": [
+          "$rustc"
         ]
       },
       {
-        "type": "npm",
-        "script": "tauri",
-        "problemMatcher": [],
-        "label": "npm: tauri",
-        "detail": "tauri"
+        "label": "build-mongodb-example",
+        "type": "shell",
+        "command": "cd ${workspaceFolder}/src-tauri && cargo build --example mongodb_example",
+        "group": "build",
+        "problemMatcher": [
+          "$rustc"
+        ]
       }
     ]
   }

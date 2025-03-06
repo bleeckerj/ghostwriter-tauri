@@ -18,6 +18,7 @@ impl DocumentIngestor for MarkdownIngestor {
         match resource {
             Resource::FilePath(path) => path.extension().map_or(false, |ext| ext == "md"),
             Resource::Url(_) => false, // This ingestor doesn't handle URLs
+            Resource::Database(_) => false, // This ingestor doesn't handle databases
         }
     }
 
@@ -45,6 +46,9 @@ impl DocumentIngestor for MarkdownIngestor {
             Resource::Url(url) => Err(IngestError::UnsupportedFormat(format!(
                 "URL ingestion not supported for Markdown: {}", url
             ))),
+            Resource::Database(_) => Err(IngestError::UnsupportedFormat(
+                "Database ingestion not supported for Markdown".to_string()
+            )),
         }
     }
 }

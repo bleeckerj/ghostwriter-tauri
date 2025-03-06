@@ -92,6 +92,7 @@ impl DocumentIngestor for UrlDocumentIngestor {
         match resource {
             Resource::FilePath(_) => false,
             Resource::Url(url) => url.starts_with("http"),
+            Resource::Database(_) => false,
         }
     }
 
@@ -100,6 +101,9 @@ impl DocumentIngestor for UrlDocumentIngestor {
             Resource::Url(url) => self.ingest_url(url).await,
             Resource::FilePath(path) => Err(IngestError::UnsupportedFormat(
                 format!("UrlDocumentIngestor cannot process file paths: {}", path.display())
+            )),
+            Resource::Database(_) => Err(IngestError::UnsupportedFormat(
+                "UrlDocumentIngestor cannot process database resources".to_string()
             )),
         }
     }
