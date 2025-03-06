@@ -369,6 +369,92 @@ impl MongoDocumentIngestor {
         log::info!("Found {} digested messages with their original content", results.len());
         Ok(results)
     }
+
+    async fn fetch_messages_with_params(&self, params: &DocumentQueryParams) -> Result<Vec<Document>, IngestError> {
+        log::info!("Connecting to MongoDB");
+        
+        // Get connection string with auth if needed
+        let connection_string = self.config.get_connection_string();
+        
+        // Connect to MongoDB
+        let client_options = ClientOptions::parse(&connection_string).await
+            .map_err(|e| IngestError::Parse(format!("Failed to parse MongoDB connection string: {}", e)))?;
+        
+        let client = MongoClient::with_options(client_options)
+            .map_err(|e| IngestError::Parse(format!("Failed to create MongoDB client: {}", e)))?;
+        
+        // Get database handle
+        let edgar_bob_db = client.database(&self.config.edgar_bob_db_name);
+        
+        // Get collection handle
+        let messages: Collection<Document> = edgar_bob_db.collection("messages");
+        
+        // Build query filter for messages
+        let mut message_filter = doc! {};
+        
+        // Add additional filters based on parameters
+        if let Some(message_id) = &params.message_id {
+            message_filter.insert("id", message_id);
+        }
+        
+        if let Some(channel_id) = &params.channel_id {
+            message_filter.insert("channelId", channel_id);
+        }
+        
+        if let Some(author_id) = &params.author_id {
+            message_filter.insert("authorId", author_id);
+        }
+        
+        if let Some(keyword) = &params.keyword {
+            // Text search (case insensitive)
+            message_filter.insert("content", doc! { 
+                "$regex": keyword, 
+                "$options": "i" 
+            });
+        }
+        
+        // Time range query
+        if params.timestamp_from.is_some() || params.timestamp_to.is_some() {
+            let mut timestamp_filter = doc! {};
+            
+            if let Some(from) = params.timestamp_from {
+                timestamp_filter.insert("$gte", from);
+            }
+            
+            if let Some(to) = params.timestamp_to {
+                timestamp_filter.insert("$lte", to);
+            }
+            
+            if !timestamp_filter.is_empty() {
+                message_filter.insert("createdTimestamp", timestamp_filter);
+            }
+        }
+        
+        // Setup find options (limit, sort, etc)
+        let mut find_options = FindOptions::default();
+        if let Some(limit) = params.limit {
+            find_options.limit = Some(limit);
+        }
+        find_options.sort = Some(doc! { "createdTimestamp": -1 }); // Most recent first
+        
+        // Query messages collection
+        let mut message_cursor = messages.find(message_filter).with_options(find_options).await
+            .map_err(|e| IngestError::Parse(format!("Failed to query messages: {}", e)))?;
+        
+        // Initialize results vector
+        let mut results = Vec::new();
+        
+        // Process results
+        while let Some(message_result) = message_cursor.next().await {
+            let message = message_result
+                .map_err(|e| IngestError::Parse(format!("Error iterating messages: {}", e)))?;
+            
+            results.push(message);
+        }
+        
+        log::info!("Found {} messages", results.len());
+        Ok(results)
+    }
 }
 
 #[async_trait]
@@ -429,8 +515,8 @@ mod tests {
     #[tokio::test]
     async fn test_mongodb_ingestor() {
         // Read password from environment variable to avoid hardcoding
-        let password = "".to_string(); // std::env::var("MONGODB_TEST_PASSWORD")
-            //.expect("Set MONGODB_TEST_PASSWORD env var to run this test");
+        let password = std::env::var("MONGODB_TEST_PASSWORD")
+            .expect("Set MONGODB_TEST_PASSWORD env var to run this test");
         
         // Create MongoDB configuration with test credentials
         let mongo_config = MongoConfig {
@@ -462,17 +548,32 @@ mod tests {
             query_params,
         });
         
-        // Run the test
-        match ingestor.ingest(&resource).await {
+        // Run the test with digest_only = true
+        match ingestor.ingest_with_digest_option(&resource, true).await {
             Ok(doc) => {
-                println!("✅ Successfully ingested document!");
+                println!("✅ Successfully ingested document with digest_only = true!");
                 println!("Title: {}", doc.title);
                 println!("Content length: {} bytes", doc.content.len());
                 println!("First 1024 chars: {}", &doc.content[..1024.min(doc.content.len())]);
                 assert!(!doc.content.is_empty(), "Document content should not be empty");
             },
             Err(e) => {
-                println!("❌ Error ingesting: {}", e);
+                println!("❌ Error ingesting with digest_only = true: {}", e);
+                panic!("Test failed: {}", e); // Fail the test if there's an error
+            }
+        }
+
+        // Run the test with digest_only = false
+        match ingestor.ingest_with_digest_option(&resource, false).await {
+            Ok(doc) => {
+                println!("✅ Successfully ingested document with digest_only = false!");
+                println!("Title: {}", doc.title);
+                println!("Content length: {} bytes", doc.content.len());
+                println!("First 1024 chars: {}", &doc.content[..1024.min(doc.content.len())]);
+                assert!(!doc.content.is_empty(), "Document content should not be empty");
+            },
+            Err(e) => {
+                println!("❌ Error ingesting with digest_only = false: {}", e);
                 panic!("Test failed: {}", e); // Fail the test if there's an error
             }
         }
