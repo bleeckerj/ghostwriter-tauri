@@ -455,6 +455,49 @@ impl MongoDocumentIngestor {
         log::info!("Found {} messages", results.len());
         Ok(results)
     }
+
+    pub async fn ingest_with_digest_option(&self, resource: &Resource, digest_only: bool) -> Result<IngestedDocument, IngestError> {
+        match resource {
+            Resource::Database(query) => {
+                // Handle structured database query
+                let documents = if digest_only {
+                    self.fetch_digested_messages_with_params(&query.query_params).await?
+                } else {
+                    self.fetch_messages_with_params(&query.query_params).await?
+                };
+                self.process_documents(documents, query.query_params.message_id.as_deref()).await
+            },
+            
+            Resource::Url(url) if url.starts_with("mongodb://") => {
+                // Simple connection string with no parameters
+                // Default to retrieving everything
+                let documents = self.fetch_digested_messages_with_params(&DocumentQueryParams::default()).await?;
+                self.process_documents(documents, None).await
+            },
+            
+            Resource::FilePath(path) => {
+                let path_str = path.to_string_lossy();
+                if path_str.starts_with("mongodb:") {
+                    // Format is mongodb:message_id
+                    let message_id = path_str.strip_prefix("mongodb:").unwrap();
+                    
+                    let mut params = DocumentQueryParams::default();
+                    params.message_id = Some(message_id.to_string());
+                    
+                    let documents = self.fetch_digested_messages_with_params(&params).await?;
+                    self.process_documents(documents, Some(message_id)).await
+                } else {
+                    Err(IngestError::UnsupportedFormat(
+                        format!("MongoDocumentIngestor cannot process file path: {}", path.display())
+                    ))
+                }
+            },
+            
+            _ => Err(IngestError::UnsupportedFormat(
+                "MongoDocumentIngestor can only process MongoDB resources".to_string()
+            )),
+        }
+    }
 }
 
 #[async_trait]
