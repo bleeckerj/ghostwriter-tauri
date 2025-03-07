@@ -600,7 +600,6 @@ async fn load_openai_api_key_from_keyring(
     );
     
     // Create message array in the generic format
-    // Create message array in the generic format
     let messages = vec![
     ChatMessage {
         role: MessageRole::System,
@@ -943,7 +942,7 @@ async fn search_similarity(
             app_handle: tauri::AppHandle,
         ) -> Result<String, String> {
             let doc_store = Arc::clone(&app_state.doc_store);
-            println!("Listing canon documents");
+            //println!("Listing canon documents");
             log::debug!("Listing canon documents");
             log::debug!("doc_store is {:?}", doc_store);
             let store = doc_store.lock().await;
@@ -969,6 +968,43 @@ async fn search_similarity(
             } 
         }
         
+        #[tauri::command]
+        async fn toggle_rag_pause(
+            app_state: tauri::State<'_, AppState>,
+            app_handle: tauri::AppHandle,
+            id: String,
+            paused: bool,
+        ) -> Result<String, String> {
+            log::debug!("RAG pause toggled for id: {} to {}", id, paused);
+            
+            // Parse the document ID
+            let doc_id = id.parse::<i64>()
+                .map_err(|e| format!("Invalid document ID: {}", e))?;
+            
+            // Get document store
+            let doc_store = Arc::clone(&app_state.doc_store);
+            
+            // Update the pause state in the database
+            let result = doc_store.lock().await.update_document_pause_state(doc_id, paused).await;
+            match result {
+                Ok(_) => {
+                    // Optionally emit an event to notify UI of the state change
+                    app_handle.emit("rag-pause-state-changed", json!({
+                        "id": doc_id,
+                        "paused": paused
+                    }))
+                    .map_err(|e| format!("Failed to emit event: {}", e))?;
+                    
+                    Ok(format!("RAG pause toggled to {} for document {}", paused, id))
+                },
+                Err(e) => {
+                    let error_msg = format!("Failed to update pause state: {}", e);
+                    log::error!("{}", error_msg);
+                    Err(error_msg)
+                }
+            }
+        }
+
         #[derive(Serialize, Clone)]
         struct CanonInfo {
             name: String,
@@ -1263,7 +1299,8 @@ async fn search_similarity(
                 // app.manage(new_logger.clone());
                 // Load .env file
                 //dotenv::dotenv().ok();
-                
+                let state = app.state::<AppState>();
+                load_preferences(app_handle.clone(), state.clone());
                 Ok(()
             )
         })
@@ -1290,6 +1327,7 @@ async fn search_similarity(
             save_text_content,
             save_json_content,
             ingest_from_url,
+            toggle_rag_pause,
             ])
             .run(tauri::generate_context!())
             .expect("error while running tauri application");

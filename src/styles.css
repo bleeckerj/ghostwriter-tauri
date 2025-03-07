@@ -411,6 +411,7 @@ button {
   @apply font-[0.9em];
 }
 
+/** RICH LOG ENTRY **/
 
 .rich-log-entry {
   @apply rounded-md;
@@ -469,6 +470,23 @@ button {
   transform: scale(1);
   @apply bg-red-600;
 }
+
+.rich-log-pause-rag-btn {
+  flex: 0;
+  @apply bg-slate-200 text-black;
+  @apply border-[0.5px] border-gray-400;
+  @apply rounded-md;
+  @apply px-4;
+  @apply text-[0.8em];
+  transform: scale(0.95);
+  transition: transform 0.2s;
+}
+
+.rich-log-pause-rag-btn:hover {
+  transform: scale(1);
+  @apply bg-slate-300;
+}
+
 .rich-log-level-info {
   background-color: #f8f9fa;
   @apply !text-black;
@@ -487,6 +505,193 @@ button {
 
 
 
+
+/** CANON ENTRY STYLES **/
+.canon-entry {
+  @apply rounded-md;
+  @apply bg-black;
+  @apply text-white;
+  @apply font-bold;
+  @apply px-2 py-1;
+  @apply font-[ESKlarheitKurrentMono];
+  @apply text-[0.7em];
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  @apply shadow-[2px_2px_2px_2px__rgba(0,0,0,0.5)];
+  user-select: none;
+  @apply mb-2;
+  @apply text-pretty;
+  @apply items-start;
+  @apply py-4;
+}
+.canon-entry-timestamp {
+  color: #aaa;
+  font-size: 0.4em;
+  /* min-width: 150px; */
+  @apply font-mono;
+  @apply leading-none;
+  flex: 1;
+}
+.canon-entry-message {
+  flex: 4;
+  @apply leading-normal;
+  @apply text-balance;
+  @apply pt-1;
+  @apply self-start;
+  @apply border-[0.5px] border-gray-400 p-4;
+
+  /*@apply font-[WarblerText];*/
+  @apply font-[ESKlarheitKurrentMono];
+
+  @apply font-light;
+  @apply text-[0.9em];
+  @apply break-all;
+}
+
+
+
+.canon-entry-level-info {
+  background-color: #f8f9fa;
+  @apply !text-black;
+  @apply !text-[0.9em];
+}
+
+.canon-entry-level-warn {
+  background-color: #f8f9fa;
+  @apply !text-black;
+
+}
+
+.canon-entry-level-error {
+  background-color: #f8d7da;
+}
+
+.canon-entry-button {
+  @apply font-['ESKlarheitKurrentMono'];
+  @apply relative w-fit px-1 py-[0.5px] rounded-sm;
+  @apply border border-black;
+  @apply shadow-[3px_3px_0px_0px];
+  @apply min-w-[80px] text-center;
+}
+
+/* .canon-entry-button.del {
+  @apply bg-amber-400 text-black;
+} */
+
+.canon-entry-button.enabled.del:hover {
+  @apply !bg-[#ff1b80];
+  @apply shadow-[inset_1px_1px_0px_0px_#000000];
+  @apply translate-x-[0.25px] translate-y-[0.25px] scale-[0.99];
+  @apply before:content-[''] before:absolute before:left-0 before:top-0;
+  @apply hover:before:border-[1px] hover:before:border-black;
+  transition: transform 180ms ease-in-out, box-shadow 100ms ease-in-out, background-color 100ms ease-in-out, border-color 100ms ease-in-out;
+}
+
+.canon-entry-button.enabled.pause:hover {
+  @apply !bg-[#d1d1d1];
+  @apply shadow-[inset_1px_1px_0px_0px_#000000];
+  @apply translate-x-[0.25px] translate-y-[0.25px] scale-[0.99];
+  @apply before:content-[''] before:absolute before:left-0 before:top-0;
+  @apply hover:before:border-[1px] hover:before:border-black;
+  transition: transform 180ms ease-in-out, box-shadow 100ms ease-in-out, background-color 100ms ease-in-out, border-color 100ms ease-in-out;
+}
+
+.canon-entry-button:hover.button-in {
+  @apply shadow-[inset_1px_1px_0px_0px_#000000];
+  @apply translate-x-[0.25px] translate-y-[0.25px] scale-[0.99];
+  @apply before:content-[''] before:absolute before:left-0 before:top-0;
+  /* @apply before:w-full before:h-full before:border-[0.5px] before:border-black; */
+  @apply hover:before:border-[1px] hover:before:border-black cursor-pointer hover:bg-green-500;
+ 
+  transition: transform 180ms ease-in-out, box-shadow 100ms ease-in-out, background-color 100ms ease-in-out, border-color 100ms ease-in-out; /* Add this line */
+}
+
+
+
+.canon-entry-button.button-in {
+  @apply shadow-none;
+  @apply bg-gray-400 text-white;
+  /*@apply translate-x-[3px] translate-y-[3px];*/
+  /* transition: transform 180ms ease-in-out, box-shadow 100ms ease-in-out, background-color 100ms ease-in-out, border-color 100ms ease-in-out; Add this line */
+}
+
+.canon-entry-button.button-inactive {
+  @apply shadow-[inset_1px_1px_0px_0px_#000000];
+  @apply translate-x-[0.25px] translate-y-[0.25px] scale-[0.99];
+  @apply before:content-[''] before:absolute before:left-0 before:top-0;
+  @apply bg-amber-500;
+  /* @apply before:w-full before:h-full before:border-[0.5px] before:border-black; */
+  @apply hover:before:border-[1px] hover:before:border-black cursor-pointer hover:bg-amber-600;
+  @apply hover:shadow-[inset_2px_2px_0px_0px_#000000];
+  transition: transform 180ms ease-in-out, box-shadow 280ms ease-in-out, background-color 100ms ease-in-out, border-color 100ms ease-in-out; /* Add this line */
+}
+
+.canon-entry-button.button-out {
+  @apply font-['ESKlarheitKurrentMono'];
+  @apply relative w-fit px-1 py-[0.5px] rounded-sm;
+  @apply border border-black;
+  @apply shadow-[3px_3px_0px_0px] shadow-black;
+  @apply bg-green-400;
+  @apply text-black;
+}
+
+
+.canon-entry-button.disabled {
+  @apply font-['ESKlarheitKurrentMono'];
+  @apply relative w-fit px-1 py-[0.5px] rounded-sm;
+  @apply border border-black;
+  @apply shadow-[2px_2px_0px_0px];
+}
+
+.canon-entry-button:hover.enabled {
+  @apply shadow-[inset_1px_1px_0px_0px_#000000];
+  @apply translate-x-[0.25px] translate-y-[0.25px] scale-[0.99];
+  @apply before:content-[''] before:absolute before:left-0 before:top-0;
+  /* @apply before:w-full before:h-full before:border-[0.5px] before:border-black; */
+  @apply hover:before:border-[1px] hover:before:border-black cursor-pointer hover:bg-green-500;
+ 
+  transition: transform 180ms ease-in-out, box-shadow 100ms ease-in-out, background-color 100ms ease-in-out, border-color 100ms ease-in-out; /* Add this line */
+}
+
+.canon-entry-button:hover.disabled {
+  @apply before:content-[''] before:absolute before:left-0 before:top-0;
+  @apply before:w-full before:h-full before:border-[0.5px] before:border-transparent;
+  @apply hover:before:border-l-0 hover:before:border-t-0 hover:before:border-black cursor-pointer hover:bg-red-500;
+  transition: transform 180ms ease-in-out, box-shadow 100ms ease-in-out, background-color 50ms ease-in-out, border-color 100ms ease-in-out; /* Add this line */
+}
+
+.canon-entry-delete-btn {
+  flex: 0;
+  @apply bg-red-500 text-black;
+  @apply border-[0.5px] border-gray-400;
+  @apply rounded-md;
+  @apply px-4;
+  @apply text-[0.8em];
+  transform: scale(0.95);
+  transition: transform 0.2s;
+}
+
+.canon-entry-delete-btn:hover {
+  transform: scale(1);
+  @apply bg-red-600;
+}
+
+.canon-entry-pause-rag-btn {
+  flex: 0;
+  @apply bg-slate-200 text-black;
+  @apply border-[0.5px] border-gray-400;
+  @apply rounded-md;
+  @apply px-4;
+  @apply text-[0.8em];
+  transform: scale(0.95);
+  transition: transform 0.2s;
+}
+
+.canon-entry-pause-rag-btn:hover {
+  transform: scale(1);
+  @apply bg-slate-300;
+}
 
 
 

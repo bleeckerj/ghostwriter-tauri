@@ -42,7 +42,8 @@ impl Preferences {
     pub const SHUFFLE_SIMILARS_DEFAULT: bool = false;
     pub const SIMILARITY_COUNT_DEFAULT: usize = 3;
     pub const MAX_HISTORY_DEFAULT: usize = 300;
-    
+    pub const MODEL_NAME_DEFAULT: &'static str = "gpt-4o-mini";
+    pub const AI_PROVIDER_DEFAULT: &'static str = "openai";
     pub const DEFAULT_RESPONSE_LIMIT: &'static str = "Respond with no more than one sentence. If the input text ends with a period, only add one sentence and no more. You may complete a partially complete sentence or if the input text is already a complete sentence, you may add only one sentence that would reasonably and semantically follow that one sentence. Adhere to these constraints such that you are adding no more than one sentence.";
     
     pub const DEFAULT_MAIN_PROMPT: &'static str = "Here is your brief: You are a text completion engine. You do not answer questions or respond to questions in any way. You only semantically complete the thought represented by the Previous exchanges, Similar documents context and input. Limit your response to the Response Limit. Do not respond to inquiries in any fashion. If you are asked how to do something, or answer a question do not respond. Only perform auto-completion based on the text to complete, not responses to queries, questions, or any other non-completion response. If you are asked to do something only respond as a completion of text. Do not engage in any form of chat. Your only task is to complete thoughts in written form maintaining semantic consistency. Do not reveal that you are an AI. You are just an engine for text completion, like a muse helping a writer to continue or complete a thought. Imagine you are completing someone's thought like a creative writing muse or alter ego helping someone who is having trouble writing. Complete the following text fragment based on the provided previous exchanges.";
@@ -133,7 +134,7 @@ impl Preferences {
         self.shuffle_similars = Self::SHUFFLE_SIMILARS_DEFAULT;
         self.similarity_count = Self::SIMILARITY_COUNT_DEFAULT;
         self.max_history = Self::MAX_HISTORY_DEFAULT;
-        self.ai_provider = "openai".to_string();
+        self.ai_provider = Self::AI_PROVIDER_DEFAULT.to_string();
         self.lm_studio_url = "http://localhost:1234/v1".to_string();
         self.model_name = "gpt-4o-mini".to_string();
     }
@@ -169,6 +170,12 @@ impl Preferences {
         }
         if !self.shuffle_similars {
             self.shuffle_similars = Self::SHUFFLE_SIMILARS_DEFAULT;
+        }
+        if self.ai_provider.is_empty() {
+            self.ai_provider = Self::AI_PROVIDER_DEFAULT.to_string();
+        }
+        if self.model_name.is_empty() {
+            self.model_name = Self::MODEL_NAME_DEFAULT.to_string();
         }
         //self.shuffle_similars = Self::SHUFFLE_SIMILARS_DEFAULT;
     }

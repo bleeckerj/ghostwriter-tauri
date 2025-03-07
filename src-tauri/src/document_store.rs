@@ -59,6 +59,7 @@ pub struct DocumentInfo {
     pub name: String,
     pub file_path: String,
     pub created_at: String,
+    pub paused: bool,
 }
 #[derive(Debug, Clone)]
 pub struct DocumentStore {
@@ -189,7 +190,8 @@ impl DocumentStore {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             created_at TEXT NOT NULL,
-            file_path TEXT NOT NULL UNIQUE
+            file_path TEXT NOT NULL UNIQUE,
+            paused BOOLEAN DEFAULT 0
             )",
             [],
         )?;
@@ -231,7 +233,7 @@ impl DocumentStore {
         
         Ok((conn, canon_path, canon_name, next_id))
     }
-    
+
     pub async fn add_document(
         &mut self,
         mut document: Document,
@@ -264,8 +266,9 @@ impl DocumentStore {
         let conn = self.conn.lock().await;
         let mut stmt = conn.prepare(
             "SELECT d.id, d.name, d.file_path, d.created_at, e.id, e.chunk, e.embedding 
-             FROM documents d 
-             JOIN embeddings e ON d.id = e.doc_id"
+            FROM documents d 
+            JOIN embeddings e ON d.id = e.doc_id
+            WHERE d.paused = 0 OR d.paused IS NULL" 
         )?;  // Use ? directly for rusqlite::Error
         //println!("************************ {}", similarity_threshold);
         let mut similarities = Vec::new();
@@ -343,7 +346,7 @@ impl DocumentStore {
     
     pub async fn fetch_documents(&self) -> Result<DocumentListing, Box<dyn std::error::Error>> {
         let conn = self.conn.lock().await;
-        let mut stmt = conn.prepare("SELECT id, name, file_path, created_at FROM documents")?;
+        let mut stmt = conn.prepare("SELECT id, name, file_path, created_at, paused FROM documents")?;
         
         let rows = stmt.query_map([], |row| {
             Ok(DocumentInfo {
@@ -351,6 +354,7 @@ impl DocumentStore {
                 name: row.get(1)?,
                 file_path: row.get(2)?,
                 created_at: row.get(3)?,
+                paused: row.get(4).unwrap_or(false),
             })
         })?;
         
@@ -728,6 +732,64 @@ impl DocumentStore {
                     Err(Box::new(e))
                 }
             }
+        }
+        // pub async fn update_document_pause_state(&self, doc_id: i64, paused: bool) -> Result<(), String> {
+
+        pub async fn update_document_pause_state(&self, doc_id: i64, paused: bool) -> Result<(), Box<dyn std::error::Error>> {
+            let conn = self.conn.lock().await;
+            
+            // Check if paused column exists in documents table
+            let has_paused_column = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM pragma_table_info('documents') WHERE name='paused'",
+                    [],
+                    |row| row.get::<_, i64>(0)
+                )?;
+                
+            // Add the column if it doesn't exist (handles migration for older databases)
+            if has_paused_column == 0 {
+                log::info!("Adding paused column to documents table");
+                conn.execute(
+                    "ALTER TABLE documents ADD COLUMN paused BOOLEAN DEFAULT 0",
+                    [],
+                )?;
+            }
+            
+            // Now we can safely update the pause state
+            conn.execute(
+                "UPDATE documents SET paused = ?1 WHERE id = ?2",
+                params![paused, doc_id],
+            )?;
+            
+            log::info!("Updated pause state for document {}: paused = {}", doc_id, paused);
+            Ok(())
+        }
+        
+        // Get the current pause state for a document
+        pub async fn is_document_paused(&self, doc_id: i64) -> Result<bool, Box<dyn std::error::Error>> {
+            let conn = self.conn.lock().await;
+            
+            // Check if paused column exists (just to be safe)
+            let has_paused_column = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM pragma_table_info('documents') WHERE name='paused'",
+                    [],
+                    |row| row.get::<_, i64>(0)
+                )?;
+                
+            if has_paused_column == 0 {
+                // Column doesn't exist, so nothing is paused
+                return Ok(false);
+            }
+            
+            // Get the paused state
+            let paused: bool = conn.query_row(
+                "SELECT paused FROM documents WHERE id = ?1",
+                params![doc_id],
+                |row| row.get(0),
+            )?;
+            
+            Ok(paused)
         }
         
         // Add this method
