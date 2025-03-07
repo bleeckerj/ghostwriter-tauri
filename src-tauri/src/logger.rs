@@ -9,6 +9,7 @@ use std::io::{self, BufReader, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use chrono::Local;
 use crate::preferences::Preferences;
+use crate::NewLogger;
 
 const MAX_ENTRIES: usize = 50;
 
@@ -42,12 +43,13 @@ pub struct Completion {
 pub struct Logger {
     pub log_file: Option<File>,
     pub log_path: PathBuf,
+    pub app_handle: tauri::AppHandle,
 }
 
 impl Logger {
-    pub fn new(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(path: &str, app_handle: tauri::AppHandle) -> Result<Self, Box<dyn std::error::Error>> {
         let log_path = PathBuf::from(path);
-
+        let app_handle = app_handle;
         // Create parent directories if they don't exist
         if let Some(parent) = log_path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
@@ -56,24 +58,28 @@ impl Logger {
                 format!("Failed to create parent directories: {}", e)
             })?;
         }
-
+        
         let file = std::fs::OpenOptions::new()
-            .create(true)
-            .read(true)
-            .write(true)
-            .open(&log_path)?;
-
+        .create(true)
+        .read(true)
+        .write(true)
+        .open(&log_path)?;
+        
         // Initialize empty array if file is empty
         let metadata = file.metadata()?;
         if metadata.len() == 0 {
             serde_json::to_writer(&file, &Vec::<Completion>::new())?;
         }
-
+        
         println!("** Opened log file at {:?}", log_path);
         log::debug!("** Opened log file at {:?}", log_path);
-        Ok(Logger { log_file: Some(file), log_path })
+        Ok(Logger { 
+            log_file: Some(file), 
+            log_path, 
+            app_handle: app_handle // Always Some
+        })
     }
-
+    
     pub fn get_logger_path(&self) -> &Path {
         &self.log_path
     }
@@ -83,32 +89,32 @@ impl Logger {
         let timestamp = Local::now().format("%m%d%y_%H%M%S");
         let parent = self.log_path.parent().unwrap_or_else(|| Path::new(""));
         let file_stem = self.log_path.file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("log");
+        .and_then(|s| s.to_str())
+        .unwrap_or("log");
         let extension = self.log_path.extension()
-            .and_then(|s| s.to_str())
-            .unwrap_or("json");
-
+        .and_then(|s| s.to_str())
+        .unwrap_or("json");
+        
         // Create backup file name with timestamp
         let backup_path = parent.join(format!("{}_{}.{}", file_stem, timestamp, extension));
-
+        
         // Close current file
         if let Some(mut log_file) = self.log_file.take() {
             log_file.flush()?;
             // Rename current file to backup name
             std::fs::rename(&self.log_path, &backup_path)?;
         }
-
+        
         // Create new empty log file
         let file = std::fs::OpenOptions::new()
-            .create(true)
-            .read(true)
-            .write(true)
-            .open(&self.log_path)?;
-
+        .create(true)
+        .read(true)
+        .write(true)
+        .open(&self.log_path)?;
+        
         // Initialize with empty array
         serde_json::to_writer(&file, &Vec::<Completion>::new())?;
-
+        
         self.log_file = Some(file);
         log::info!("Rotated log file to {:?}", backup_path);
         Ok(())
@@ -120,11 +126,15 @@ impl Logger {
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Ensure log_file is Some
         let mut log_file = self.log_file.take().ok_or("Log file is None")?;
-    
+        
         // Read existing entries
         log_file.seek(SeekFrom::Start(0))?;
-        println!("Log file is at {:?}", log_file);
-        log::debug!("Log file is at {:?}", log_file);
+        let msg = format!("Log file is at {:?}", self.log_path);
+        println!("{}", msg);
+        log::debug!("{}", msg);
+        let app_handle_clone = self.app_handle.clone();
+        let new_logger = NewLogger::new(self.app_handle.clone());  
+        new_logger.simple_log_message(msg, "".to_string(), "info".to_string());
         let entries: Vec<Completion> = match serde_json::from_reader(BufReader::new(&log_file)) {
             Ok(entries) => entries,
             Err(e) => {
@@ -132,25 +142,25 @@ impl Logger {
                 Vec::new()
             }
         };
-    
+        
         let mut updated_entries = entries;
         updated_entries.push(entry);
-    
+        
         // Check if we need to rotate
         if updated_entries.len() > MAX_ENTRIES {
             self.rotate_log_file()?;
             updated_entries = vec![updated_entries.last().unwrap().clone()];
         }
-    
+        
         // Write back all entries
         log_file.seek(SeekFrom::Start(0))?;
         log_file.set_len(0)?;
         serde_json::to_writer_pretty(&log_file, &updated_entries)?;
         log_file.flush()?;
-    
+        
         // Set log_file back to Some
         self.log_file = Some(log_file);
-    
+        
         Ok(())
     }
 }

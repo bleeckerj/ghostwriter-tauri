@@ -943,13 +943,13 @@ async fn search_similarity(
         ) -> Result<String, String> {
             let doc_store = Arc::clone(&app_state.doc_store);
             //println!("Listing canon documents");
-            log::debug!("Listing canon documents");
-            log::debug!("doc_store is {:?}", doc_store);
+            //log::debug!("Listing canon documents");
+            //log::debug!("doc_store is {:?}", doc_store);
             let store = doc_store.lock().await;
-            log::debug!("store (locked doc_store) is {:?}", store);
+            //log::debug!("store (locked doc_store) is {:?}", store);
             match store.fetch_documents().await {
                 Ok(listing) => {
-                    log::debug!("listing is {:?}", listing);
+                    //log::debug!("listing is {:?}", listing);
                     let json_string = serde_json::to_string(&listing).map_err(|e| e.to_string())?;
                     app_handle.emit("canon-list", json_string).map_err(|e| e.to_string())?;
                     Ok("Canon list emitted".to_string())
@@ -1139,7 +1139,7 @@ async fn search_similarity(
                         eprintln!("Failed to emit simple log: {}", e);
                     }
                 }
-                log::debug!("{}", message);
+                //log::debug!("{}", message);
             }
             
             fn rich_log_message(&self, message: String, data: String, level: String) {
@@ -1281,14 +1281,15 @@ async fn search_similarity(
                 let app_state = AppState::new(
                     doc_store,
                     embedding_generator_clone,
-                    "/tmp/gh-log.json"
+                    "/tmp/gh-log.json",
+                    app_handle.clone()
                 ).expect("Failed to create AppState");
                 
                 
                 app.manage(app_state);
-                let foo = app.state::<AppState>();
+                //let foo = app.state::<AppState>();
                 
-                log::debug!("AppState managed? {:?}", foo);
+                //log::debug!("AppState managed? {:?}", foo);
                 
                 
                 let new_logger = NewLogger::new(app_handle.clone());

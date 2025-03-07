@@ -57,8 +57,9 @@ impl AppState {
         doc_store: DocumentStore,
         embedding_generator: EmbeddingGenerator,
         initial_log_path: &str,
+        app_handle: AppHandle
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let logger = Logger::new(initial_log_path)?;
+        let logger = Logger::new(initial_log_path, app_handle.clone())?;
         
         // Create AppState first without preferences
         let app_state = Self {
@@ -69,7 +70,7 @@ impl AppState {
             //buffer: Mutex::new(String::new()),
             api_key: Arc::new(Mutex::new(String::new())),
             preferences: Mutex::new(Preferences::default()), // Start with default preferences
-            app_handle: None,
+            app_handle: Some(app_handle),
         };
         Ok(app_state)
     }
@@ -97,8 +98,9 @@ impl AppState {
         let path_str = path.clone().into_os_string().into_string().map_err(|_| AppError::InvalidPath("Invalid UTF-8 path".to_string()))?;
     
         // Create new logger first to ensure it's valid
+        let app_handle_clone = self.app_handle.as_ref().unwrap().clone();
         let new_logger = task::spawn_blocking(move || {
-            let logger_result = Logger::new(&path_str);
+            let logger_result = Logger::new(&path_str, app_handle_clone);
             match logger_result {
                 Ok(logger) => Ok(logger),
                 Err(e) => {
