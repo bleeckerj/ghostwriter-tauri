@@ -6,6 +6,8 @@ import DynamicTextMark from './extensions/DynamicTextMark'
 import SimpleLogEntryNode from './extensions/SimpleLogEntryNode'
 import { listen } from '@tauri-apps/api/event';
 import RichLogEntryNode from './extensions/RichLogEntryNode'
+import CanonEntryNode from './extensions/CanonEntryNode'
+
 import { ProgressExtension } from './extensions/ProgressNode';
 //import { Placeholder } from '@tiptap/extension-placeholder'
 import { InlineActionItem } from './extensions/InlineActionItem';
@@ -271,7 +273,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     //   });
     // });
   });
-  
+  let openaiApiKeyEl = document.querySelector("#openai-api-key");
   let actionItem = editor.extensionManager.extensions.find(extension => extension.name === 'inlineActionItem');
   let nudgeButton = document.querySelector("#nudge-inline-action-item");
   if (actionItem) {
@@ -677,11 +679,12 @@ window.addEventListener("DOMContentLoaded", async () => {
           // console.log(`  Created At: ${doc.created_at}`);
           
           // You can now use the 'doc' object to create a rich log entry, for example:
-          addRichLogEntry({
+          addCanonEntry({
             id: ""+doc.id,
             timestamp: doc.created_at,
             message: doc.name,
-            data: doc.id, // Or any other data you want to include
+            data: doc.id, 
+            paused: doc.paused,// Or any other data you want to include
             level: 'info',
           });
         });
@@ -859,6 +862,41 @@ const handleRichLogEntryDelete = ({ node, getPos, editor }) => {
   });
 };
 
+
+// Function to handle the onDelete logic
+const handleCanonEntryDelete = ({ node, getPos, editor }) => {
+  const pos = getPos(); // Get the position immediately
+  const doc_id = node.attrs.id; // Get the ID of the node which should be the doc_id
+  
+  // Show confirmation dialog
+  confirm("Delete "+node.attrs.message, "Confirmation")
+  .then((confirmed) => {
+    if (confirmed) {
+      // User confirmed, proceed with deletion
+      invoke("delete_canon_entry", { docid: doc_id })
+      .then((res) => {
+        // Deletion successful
+      })
+      .catch((error) => {
+        console.error("Failed to delete canon entry:", error);
+        // Handle error
+      });
+      
+      // Check if the position is valid and the node is still in the document
+      if (typeof pos === 'number' && pos >= 0 && pos < editor.state.doc.content.size) {
+        // The position is valid, so proceed with deleting the node
+        editor.chain().focus().deleteRange({ from: pos, to: pos + 1 }).run();
+      } else {
+        // The position is invalid, so log an error and do nothing
+        console.error('Invalid position for node:', node, pos);
+      }
+    } else {
+      // User cancelled, do nothing
+      console.log("Deletion cancelled by user");
+    }
+  });
+};
+
 const editor = new Editor({
   element: document.querySelector('.element'),
   autofocus: true,
@@ -908,6 +946,28 @@ const diagnostics = new Editor({
     RichLogEntryNode.configure({
       onDelete: handleRichLogEntryDelete,
     }),
+    CanonEntryNode.configure({
+      onDelete: ({ node, getPos, editor }) => {
+        // Your existing delete handling code
+        console.log('Deleting canon with ID:', node.attrs.id)
+        editor.commands.deleteNode('canonEntry')
+      },
+      // Add this new handler
+      onTogglePause: ({ node, isPaused }) => {
+        console.log('Toggle pause state:', isPaused, 'for node ID:', node.attrs.id)
+        
+        // Add any additional logic needed when pause state changes
+        // For example, if you need to call a Tauri function:
+        // invoke('toggle_rag_pause', { id: node.attrs.id, paused: isPaused })
+        invoke('toggle_rag_pause', { id: node.attrs.id, paused: isPaused })
+        .then((res) => {
+          console.log('Toggle pause state:', isPaused, 'for canon with ID:', node.attrs.id, 'Response:', res)
+        })
+        .catch((error) => {
+          console.error('Failed to toggle pause state:', error)
+        });
+      }
+    }),
     DynamicTextMark,
     ProgressExtension,
   ],
@@ -915,9 +975,9 @@ const diagnostics = new Editor({
 
 async function showCanonList() {
   try {
-    await invoke("list_canon_docs", { limit: 10 });
-    let pluginKey = new PluginKey('inlineActionItem');
-    console.log('Plugin Key:', pluginKey);
+    await invoke("list_canon_docs", { limit: 99 });
+    //let pluginKey = new PluginKey('inlineActionItem');
+    //console.log('Plugin Key:', pluginKey);
     // const tr = view.state.tr.setMeta(pluginKey, { disabled: true });
     // view.dispatch(tr);
   } catch (error) {
@@ -998,6 +1058,27 @@ function addRichLogEntry(entry) {
   }, 0);
 }
 
+function addCanonEntry(entry) {
+  let pos = diagnostics.state.selection.from + 2
+  diagnostics.commands.setTextSelection(pos)
+  diagnostics.commands.insertContent({
+    type: 'canonEntry',
+    attrs: {
+      id: entry.id,
+      timestamp: entry.timestamp,
+      message: entry.message,
+      data: entry.data,
+      paused: entry.paused,
+      level: entry.level,
+    }
+  })
+  console.log('Added canon entry:', entry);
+  pos = diagnostics.state.selection.from + 2
+  diagnostics.commands.setTextSelection(pos)
+  setTimeout(() => {
+    diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, 0);
+}
 
 
 // Function to update node color

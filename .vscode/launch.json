@@ -1,3 +1,4 @@
+/launch.json
 {
   // Use IntelliSense to learn about possible attributes.
   // Hover to view descriptions of existing attributes.
@@ -27,6 +28,40 @@
       },
       // task for the `beforeBuildCommand` if used, must be configured in `.vscode/tasks.json`
       "preLaunchTask": "ui:build"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug MongoDB Test",
+      "program": "${workspaceFolder}/src-tauri/target/debug/Ghostwriter", // Specify the exact binary name
+      "preLaunchTask": "build-mongodb-test",
+      "args": ["tests::test_mongodb_ingestor", "--exact", "--nocapture"],
+      "cwd": "${workspaceFolder}/src-tauri",
+      "env": {
+        "MONGODB_TEST_PASSWORD": "${input:mongoDbPassword}",
+        "RUST_LOG": "debug"
+      }
+    },
+    {
+      "type": "lldb",
+      "request": "launch", 
+      "name": "Debug MongoDB Example",
+      "program": "${workspaceFolder}/src-tauri/target/debug/examples/mongodb_example",
+      "preLaunchTask": "build-mongodb-example",
+      "args": ["970056966409949284"],
+      "cwd": "${workspaceFolder}/src-tauri",
+      "env": {
+        "MONGODB_TEST_PASSWORD": "${input:mongoDbPassword}", 
+        "RUST_LOG": "debug"
+      }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "mongoDbPassword",
+      "type": "promptString",
+      "description": "MongoDB Password",
+      "password": true
     }
   ]
 }

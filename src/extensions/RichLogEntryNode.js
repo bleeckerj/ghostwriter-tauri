@@ -83,11 +83,17 @@ const RichLogEntryNode = Node.create({
         e.preventDefault()
         this.options.onDelete({ node, getPos, editor }) // Pass node, getPos, and editor
       }
+
+      const pauseRagBtn = document.createElement('button')
+      pauseRagBtn.classList.add('diagnostics-area-button')
+      pauseRagBtn.classList.add('enabled')
+      pauseRagBtn.textContent = 'PAUSE'
       
       // Append elements
       dom.appendChild(timestamp)
       dom.appendChild(message)
       dom.appendChild(deleteBtn)
+      dom.appendChild(pauseRagBtn)
       
       return {
         dom,

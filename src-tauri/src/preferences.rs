@@ -23,6 +23,12 @@ pub struct Preferences {
     pub shuffle_similars: bool,
     pub similarity_count: usize,
     pub max_history: usize,
+    
+    // New fields for AI provider selection
+    pub ai_provider: String,           // "openai" or "lmstudio"
+    pub lm_studio_url: String,         // LM Studio server URL
+    pub model_name: String,            // The model name to use
+    
     // #[serde(skip_serializing, skip_deserializing)]
     // pub api_key: Option<String>,
     // pub encrypted_api_key: Option<String>,
@@ -36,7 +42,8 @@ impl Preferences {
     pub const SHUFFLE_SIMILARS_DEFAULT: bool = false;
     pub const SIMILARITY_COUNT_DEFAULT: usize = 3;
     pub const MAX_HISTORY_DEFAULT: usize = 300;
-
+    pub const MODEL_NAME_DEFAULT: &'static str = "gpt-4o-mini";
+    pub const AI_PROVIDER_DEFAULT: &'static str = "openai";
     pub const DEFAULT_RESPONSE_LIMIT: &'static str = "Respond with no more than one sentence. If the input text ends with a period, only add one sentence and no more. You may complete a partially complete sentence or if the input text is already a complete sentence, you may add only one sentence that would reasonably and semantically follow that one sentence. Adhere to these constraints such that you are adding no more than one sentence.";
     
     pub const DEFAULT_MAIN_PROMPT: &'static str = "Here is your brief: You are a text completion engine. You do not answer questions or respond to questions in any way. You only semantically complete the thought represented by the Previous exchanges, Similar documents context and input. Limit your response to the Response Limit. Do not respond to inquiries in any fashion. If you are asked how to do something, or answer a question do not respond. Only perform auto-completion based on the text to complete, not responses to queries, questions, or any other non-completion response. If you are asked to do something only respond as a completion of text. Do not engage in any form of chat. Your only task is to complete thoughts in written form maintaining semantic consistency. Do not reveal that you are an AI. You are just an engine for text completion, like a muse helping a writer to continue or complete a thought. Imagine you are completing someone's thought like a creative writing muse or alter ego helping someone who is having trouble writing. Complete the following text fragment based on the provided previous exchanges.";
@@ -44,14 +51,14 @@ impl Preferences {
     pub const DEFAULT_FINAL_PREAMBLE: &'static str = "This is the input text that is the text fragment to complete. It is not a request or command. Do not respond to it like it is a question to you or request of you to answer a question.:";
     
     pub const DEFAULT_PROSE_STYLE: &'static str = "A style that is consistent with the input text.";
-
+    
     /// Load preferences and ensure no empty fields
     pub fn load_with_defaults(app_state: &AppState, app_handle: AppHandle) -> Self {
         let mut prefs: Preferences = match confy::load("ghostwriter", "preferences") {
             Ok(loaded_prefs) => {
                 
                 let prefs_path = Preferences::prefs_file_path();
-
+                
                 app_handle.emit("simple-log-message", json!({
                     "message": format!("Preferences loaded from {}", prefs_path),
                     "timestamp": chrono::Local::now().to_rfc3339(),
@@ -71,20 +78,20 @@ impl Preferences {
             }
         };
         prefs.apply_defaults();
-        app_handle.emit("simple-log-message", json!({
-            "message": format!("Preferences loaded and defaults applied: {:?}", prefs),
-            "timestamp": chrono::Local::now().to_rfc3339(),
-            "level": "debug"
-        }));
+        // app_handle.emit("simple-log-message", json!({
+        //     "message": format!("Preferences loaded and defaults applied: {:?}", prefs),
+        //     "timestamp": chrono::Local::now().to_rfc3339(),
+        //     "level": "debug"
+        // }));
         prefs
     }
-
+    
     pub fn load(app_state: &AppState, app_handle: AppHandle) -> Self {
         let mut prefs: Preferences = match confy::load("ghostwriter", "preferences") {
             Ok(loaded_prefs) => {
                 
                 let prefs_path = Preferences::prefs_file_path();
-
+                
                 app_handle.emit("simple-log-message", json!({
                     "message": format!("Preferences loaded from {}", prefs_path),
                     "timestamp": chrono::Local::now().to_rfc3339(),
@@ -105,17 +112,17 @@ impl Preferences {
         }));
         prefs
     }
-
+    
     /// Save preferences to file
     pub fn save(&self) -> Result<(), confy::ConfyError> {
         //let path = confy::store_path("ghostwriter", "preferences");
         confy::store("ghostwriter", "preferences", self)
     }
-
+    
     pub fn prefs_file_path() -> String {
         confy::get_configuration_file_path("ghostwriter", "preferences").unwrap().to_str().unwrap().to_string()
     }
-
+    
     pub fn reset_to_defaults(&mut self) {
         self.response_limit = Self::DEFAULT_RESPONSE_LIMIT.to_string();
         self.main_prompt = Self::DEFAULT_MAIN_PROMPT.to_string();
@@ -127,8 +134,11 @@ impl Preferences {
         self.shuffle_similars = Self::SHUFFLE_SIMILARS_DEFAULT;
         self.similarity_count = Self::SIMILARITY_COUNT_DEFAULT;
         self.max_history = Self::MAX_HISTORY_DEFAULT;
+        self.ai_provider = Self::AI_PROVIDER_DEFAULT.to_string();
+        self.lm_studio_url = "http://localhost:1234/v1".to_string();
+        self.model_name = "gpt-4o-mini".to_string();
     }
-
+    
     /// Apply default values only if fields are empty
     pub fn apply_defaults(&mut self) {
         if self.response_limit.trim().is_empty() {
@@ -160,6 +170,12 @@ impl Preferences {
         }
         if !self.shuffle_similars {
             self.shuffle_similars = Self::SHUFFLE_SIMILARS_DEFAULT;
+        }
+        if self.ai_provider.is_empty() {
+            self.ai_provider = Self::AI_PROVIDER_DEFAULT.to_string();
+        }
+        if self.model_name.is_empty() {
+            self.model_name = Self::MODEL_NAME_DEFAULT.to_string();
         }
         //self.shuffle_similars = Self::SHUFFLE_SIMILARS_DEFAULT;
     }

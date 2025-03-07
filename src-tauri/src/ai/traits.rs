@@ -1,0 +1,70 @@
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use std::error::Error;
+use crate::ai::models::AIModel;
+use crate::ai::models::ChatCompletionRequest;
+use crate::ai::models::ChatCompletionResponse;
+use crate::ai::models::ChatCompletionChunk;
+use crate::ai::models::Embedding;
+/// Represents any error that can occur when interacting with AI providers
+#[derive(Debug, thiserror::Error)]
+pub enum AIProviderError {
+    #[error("API error: {0}")]
+    APIError(String),
+    
+    #[error("Rate limit exceeded")]
+    RateLimitExceeded,
+    
+    #[error("Authentication failure: {0}")]
+    AuthError(String),
+    
+    #[error("Model not available: {0}")]
+    ModelNotAvailable(String),
+    
+    #[error("Invalid request: {0}")]
+    InvalidRequest(String),
+    
+    #[error("Generic error: {0}")]
+    Other(String),
+
+    #[error("Not implemented error: {0}")]
+    NotImplemented(String),
+
+}
+
+/// Core trait for retrieving models
+#[async_trait]
+pub trait ModelProvider {
+    /// List available models
+    async fn list_models(&self) -> Result<Vec<AIModel>, AIProviderError>;
+    
+    /// Get information about a specific model
+    async fn get_model(&self, model_id: &str) -> Result<AIModel, AIProviderError>;
+}
+
+/// Core trait for chat completions
+#[async_trait]
+pub trait ChatCompletionProvider {
+    /// Generate chat completion
+    async fn create_chat_completion(
+        &self, 
+        request: &ChatCompletionRequest
+    ) -> Result<ChatCompletionResponse, AIProviderError>;
+    
+    /// Stream chat completions
+    async fn create_streaming_chat_completion(
+        &self,
+        request: &ChatCompletionRequest,
+    ) -> Result<impl futures::Stream<Item = Result<ChatCompletionChunk, AIProviderError>> + Send, AIProviderError>;
+}
+
+/// Core trait for embeddings
+#[async_trait]
+pub trait EmbeddingProvider {
+    /// Generate embeddings for text
+    async fn create_embeddings(
+        &self,
+        texts: &[String],
+        model: &str,
+    ) -> Result<Vec<Embedding>, AIProviderError>;
+}

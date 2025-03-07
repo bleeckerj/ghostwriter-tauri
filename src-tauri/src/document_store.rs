@@ -5,7 +5,7 @@ use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use std::path;
 use std::path::PathBuf;
-use chrono::Local;  // Add this to your imports at the top
+use chrono::Local; 
 use serde_json;
 use crate::ingest::DocumentIngestor;
 use std::path::Path;
@@ -20,12 +20,14 @@ use crate::ingest::{
     markdown_ingestor::MarkdownIngestor,
     epub_ingestor::EpubIngestor,
     text_ingestor::TextIngestor,
+    url_ingestor::UrlDocumentIngestor,
 };
 use tauri::Manager; // Add this import
 use tauri::Emitter;
 use serde_json::json;
 use tokio::runtime::Handle;
 use log::{SetLoggerError, LevelFilter, info};
+use crate::ingest::Resource;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Document {
@@ -57,6 +59,7 @@ pub struct DocumentInfo {
     pub name: String,
     pub file_path: String,
     pub created_at: String,
+    pub paused: bool,
 }
 #[derive(Debug, Clone)]
 pub struct DocumentStore {
@@ -70,16 +73,19 @@ pub struct DocumentStore {
 
 
 impl DocumentStore {
+    pub const DEFAULT_CHUNK_SIZE: usize = 4096;
+    pub const DEFAULT_CHUNK_OVERLAP: usize = 400;
+
     pub fn new(
         store_path: PathBuf,
         embedding_generator: Arc<EmbeddingGenerator>
     ) -> Result<Self, Box<dyn std::error::Error>> {
-
+        
         let (conn, canon_path, canon_name, next_id) = 
-            Self::initialize_database(&store_path)?;
-
-
-
+        Self::initialize_database(&store_path)?;
+        
+        
+        
         let mut doc_store = DocumentStore { 
             conn: Arc::new(Mutex::new(conn)),
             ingestors: Vec::new(),
@@ -88,21 +94,22 @@ impl DocumentStore {
             canon_path,
             canon_name,
         };
-
+        
         log::debug!("3. Why do we crash in production and not in development?");
-
+        
         
         doc_store.register_ingestor(Box::new(MdxIngestor));
         log::debug!("4. Why do we crash in production and not in development?");
-
+        
         doc_store.register_ingestor(Box::new(PdfIngestor));
         doc_store.register_ingestor(Box::new(MarkdownIngestor));
         doc_store.register_ingestor(Box::new(EpubIngestor));
         doc_store.register_ingestor(Box::new(TextIngestor));
+        doc_store.register_ingestor(Box::new(UrlDocumentIngestor));
         
         log::debug!("5. Why do we crash in production and not in development?");
-
-
+        
+        
         Ok(doc_store)
     }
     
@@ -111,7 +118,7 @@ impl DocumentStore {
         store_path: PathBuf,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let (conn, canon_path, canon_name, next_id) = Self::initialize_database(&store_path)?;
-
+        
         self.conn = Arc::new(Mutex::new(conn));
         self.next_id = next_id;
         self.canon_path = canon_path;
@@ -119,7 +126,7 @@ impl DocumentStore {
         
         Ok(())
     }
-
+    
     fn resolve_database_path(store_path: &PathBuf) -> PathBuf {
         if store_path.is_file() {
             // If it's a file, use it directly
@@ -129,21 +136,21 @@ impl DocumentStore {
             store_path.join("ghostwriter.canon")
         }
     }
-
+    
     fn initialize_database(
         store_path: &PathBuf,
     ) -> Result<(Connection, String, String, usize), Box<dyn std::error::Error>> {
-
+        
         if store_path.is_dir() || !store_path.exists() {
             std::fs::create_dir_all(store_path)?;
         }
         
-
+        
         let db_path = Self::resolve_database_path(store_path);
-
+        
         log::debug!("5. db_path: {:?}", db_path);
-
-
+        
+        
         
         let conn = Connection::open(&db_path).map_err(|e| {
             let error_msg = format!(
@@ -171,11 +178,11 @@ impl DocumentStore {
         })?;
         let canon_path = db_path.to_string_lossy().to_string();
         let canon_name = Path::new(&canon_path)
-            .file_name()
-            .map(|name| name.to_string_lossy().to_string())
-            .unwrap_or_else(|| "UnknownDB".to_string());
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_else(|| "UnknownDB".to_string());
         log::debug!("7. conn: {:?}", conn);
-
+        
         // Create tables if they don't exist
         conn.execute(
             "CREATE TABLE IF NOT EXISTS documents 
@@ -183,7 +190,8 @@ impl DocumentStore {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             created_at TEXT NOT NULL,
-            file_path TEXT NOT NULL UNIQUE
+            file_path TEXT NOT NULL UNIQUE,
+            paused BOOLEAN DEFAULT 0
             )",
             [],
         )?;
@@ -216,12 +224,12 @@ impl DocumentStore {
         
         // Get the highest ID for our next_id counter
         let next_id: usize = conn
-            .query_row(
-                "SELECT COALESCE(MAX(id) + 1, 0) FROM documents",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap_or(0);
+        .query_row(
+            "SELECT COALESCE(MAX(id) + 1, 0) FROM documents",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
         
         Ok((conn, canon_path, canon_name, next_id))
     }
@@ -258,8 +266,9 @@ impl DocumentStore {
         let conn = self.conn.lock().await;
         let mut stmt = conn.prepare(
             "SELECT d.id, d.name, d.file_path, d.created_at, e.id, e.chunk, e.embedding 
-             FROM documents d 
-             JOIN embeddings e ON d.id = e.doc_id"
+            FROM documents d 
+            JOIN embeddings e ON d.id = e.doc_id
+            WHERE d.paused = 0 OR d.paused IS NULL" 
         )?;  // Use ? directly for rusqlite::Error
         //println!("************************ {}", similarity_threshold);
         let mut similarities = Vec::new();
@@ -337,7 +346,7 @@ impl DocumentStore {
     
     pub async fn fetch_documents(&self) -> Result<DocumentListing, Box<dyn std::error::Error>> {
         let conn = self.conn.lock().await;
-        let mut stmt = conn.prepare("SELECT id, name, file_path, created_at FROM documents")?;
+        let mut stmt = conn.prepare("SELECT id, name, file_path, created_at, paused FROM documents")?;
         
         let rows = stmt.query_map([], |row| {
             Ok(DocumentInfo {
@@ -345,6 +354,7 @@ impl DocumentStore {
                 name: row.get(1)?,
                 file_path: row.get(2)?,
                 created_at: row.get(3)?,
+                paused: row.get(4).unwrap_or(false),
             })
         })?;
         
@@ -374,42 +384,31 @@ impl DocumentStore {
         self.ingestors.push(Arc::new(ingestor));
     }
     
-    
-    pub async fn process_document_async(
+    pub async fn process_url_async(
         self: Arc<Self>, 
-        path: &Path,
+        url: &str,
         app_handle: tauri::AppHandle, // Add app_handle parameter
     ) -> Result<(), Box<dyn std::error::Error>> {
         let store = self.clone(); // Clone Arc to get a reference
         
+        // Create a Resource::Url from the URL string
+        let url_resource = Resource::Url(url.to_string());
+        
         // Find suitable ingestor
-        let ingestor = match store.ingestors.iter().find(|i| i.can_handle(path)) {
+        let ingestor = match store.ingestors.iter().find(|i| i.can_handle(&url_resource)) {
             Some(ingestor) => ingestor,
             None => {
-                let error_message = "No suitable ingestor found".to_string();
-                println!("{}", error_message);
-                app_handle.emit("error", json!({
-                    "message": error_message,
-                    "timestamp": chrono::Local::now().to_rfc3339(),
-                    "level": "error"
-                }))?;
-                println!("Ingestor not found");
+                let error_message = format!("No suitable ingestor found for URL: {}", url);
                 app_handle.emit("simple-log-message", json!({
-                    "message": format!("No ingestor found for {}", path.to_string_lossy()),
+                    "message": error_message,
                     "timestamp": chrono::Local::now().to_rfc3339(),
                     "level": "warn"
                 }))?;
                 return Err(Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, error_message)));
             }
-        };
-        
-        app_handle.emit("simple-message", json!({
-            "message": format!("Ingestor found: {:?}", ingestor),
-            "timestamp": chrono::Local::now().to_rfc3339(),
-            "level": "debug"
-        }))?;
+        };        
         //println!("Ingestor found");
-        let ingested = ingestor.ingest_file(path).await?;
+        let ingested = ingestor.ingest(&url_resource).await?;
         //println!("Ingested document: {:?}", ingested);
         let document = Document {
             id: 0,
@@ -421,7 +420,7 @@ impl DocumentStore {
         let doc_name = document.name.clone();
         println!("Document created: {:?}", document);
         log::debug!("Document created: {:?}", document);
-
+        
         let doc_id_result = {
             let conn = store.conn.lock().await;
             store.add_document_internal(&conn, document)
@@ -444,228 +443,394 @@ impl DocumentStore {
             }
         };
         drop(doc_id_result); // Release the lock
-        app_handle.emit("simple-message", json!({
+        app_handle.emit("simple-log-message", json!({
             "message": format!("Document added with ID: {}", doc_id),
             "timestamp": chrono::Local::now().to_rfc3339(),
             "level": "info"
         }))?;
-        let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+        let file_name = url.to_string();
         let file_name_clone = file_name.clone();
         // let app_handle_clone = app_handle.clone();
         // let name = file_name.clone();
         match store
-        .process_embeddings(doc_id, ingested.content, file_name, &store.embedding_generator, app_handle.clone())
-        .await
-        {
-            Ok(_) => {
-                println!("Document processed with ID: {}", doc_id);
-                app_handle.emit("simple-message", json!({
-                    "message": format!("Ingestion & embedding complete: {}", file_name_clone),
-                    "timestamp": chrono::Local::now().to_rfc3339(),
-                    "level": "info"
-                })).ok();
+        .process_embeddings(doc_id
+            , ingested.content, file_name, &store.embedding_generator, app_handle.clone())
+            .await
+            {
+                Ok(_) => {
+                    println!("Document processed with ID: {}", doc_id);
+                    app_handle.emit("simple-log-message", json!({
+                        "message": format!("Ingestion & embedding complete: {}", file_name_clone),
+                        "timestamp": chrono::Local::now().to_rfc3339(),
+                        "level": "info"
+                    })).ok();
+                }
+                Err(e) => {
+                    println!("Error processing embeddings: {:?}", e);
+                    app_handle.emit("simple-log-message", json!({
+                        "message": format!("Ingestion & embedding complete: {}", file_name_clone),
+                        "timestamp": chrono::Local::now().to_rfc3339(),
+                        "level": "warn"
+                    }));
+                    log::warn!("Error processing embeddings: {:?}", e);
+                }
             }
-            Err(e) => {
-                println!("Error processing embeddings: {:?}", e);
-                app_handle.emit("simple-message", json!({
-                    "message": format!("Ingestion & embedding complete: {}", file_name_clone),
-                    "timestamp": chrono::Local::now().to_rfc3339(),
-                    "level": "warn"
-                }));
-                log::warn!("Error processing embeddings: {:?}", e);
-            }
+            
+            println!("Document processed with ID: {}", doc_id);
+            
+            
+            
+            Ok(())
         }
         
-        println!("Document processed with ID: {}", doc_id);
         
-        
-        
-        Ok(())
-    }
-    
-    pub async fn delete_document(&self, doc_id: i64) -> Result<(), Box<dyn std::error::Error>> {
-        let mut conn = self.conn.lock().await;
-        
-        // Start a transaction to ensure atomicity
-        let tx = conn.transaction()?;
-        
-        // Delete embeddings associated with the document
-        tx.execute("DELETE FROM embeddings WHERE doc_id = ?1", params![doc_id])?;
-        
-        // Delete the document itself
-        tx.execute("DELETE FROM documents WHERE id = ?1", params![doc_id])?;
-        
-        // Commit the transaction
-        tx.commit()?;
-        
-        Ok(())
-    }
-    
-    pub fn get_database_path(&self) -> &str {
-        &self.canon_path  // ✅ Already stored, just return it
-    }
-    
-    pub fn get_database_name(&self) -> &str {
-        &self.canon_name  // ✅ Already stored, just return it
-    }
-    
-    /***
-    * ## USAGE
-    
-    let canon_id_to_update: i64 = 123; // Replace with the actual canon_id
-    let new_name = "New Canon Name".to_string();
-    let new_owner = "New Owner".to_string();
-    let new_notes = Some("Some new notes".to_string()); // Or None if you want to clear the notes
-    
-    let result = document_store
-    .update_canon(canon_id_to_update, new_name, new_owner, new_notes)
-    .await;
-    
-    match result {
-    Ok(_) => println!("Canon with ID {} updated successfully", canon_id_to_update),
-    Err(e) => eprintln!("Error updating canon with ID {}: {}", canon_id_to_update, e),
-    }
-    */
-    pub async fn update_canon(
-        &self,
-        canon_id: i64,
-        name: String,
-        owner: String,
-        notes: Option<String>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let conn = self.conn.lock().await;
-        let modified_at = Local::now().to_rfc3339();
-        
-        let mut stmt = conn.prepare(
-            "UPDATE canon SET name = ?1, owner = ?2, notes = ?3, modified_at = ?4 WHERE id = ?5",
-        )?;
-        
-        stmt.execute(params![name, owner, notes, modified_at, canon_id])?;
-        
-        Ok(())
-    }
-    
-    
-    async fn process_embeddings(
-        &self, 
-        doc_id: i64, 
-        content: String,
-        file_name: String,
-        embedding_generator: &EmbeddingGenerator,
-        app_handle: tauri::AppHandle,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        //println!("app_handle: {:?}", app_handle);
-        // Chunk the content
-        let chunks = self.embedding_generator.chunk_text(&content, 2048, 0); // adjust size/overlap as needed
-        // Emit progress update
-        //println!("Processing {} chunks", chunks.len());
-        app_handle.emit("progress-indicator-load", json!({
-            "progress_id": format!("embedding_doc_id_{}",doc_id),
-            "current_step": 0,
-            "total_steps": chunks.len() + 1,
-            "current_file": file_name,
-            "meta": content.chars().take(50).collect::<String>(),
-        }))?;
-        // Get embeddings for each chunk
-        for (count, chunk) in chunks.iter().enumerate() {
-            let count = count + 1;
-            app_handle.emit("progress-indicator-update", json!({
-                "progress_id": format!("embedding_doc_id_{}", doc_id),
-                "current_step": count+1,
-                "total_steps": chunks.len() + 1,
-                "current_file": file_name,
-                "meta": chunk,
-            }))?;
-            let embedding = embedding_generator.generate_embedding(&chunk).await?;
+        pub async fn process_document_async(
+            self: Arc<Self>, 
+            path: &Path,
+            app_handle: tauri::AppHandle, // Add app_handle parameter
+        ) -> Result<(), Box<dyn std::error::Error>> {
+            let store = self.clone(); // Clone Arc to get a reference
             
-            // Convert embedding to JSON string
-            let embedding_json = serde_json::to_string(&embedding)?;
-            //println!("Embedding: {}", embedding_json);
-            // Store in database
+            // Find suitable ingestor
+            let resource = Resource::FilePath(path.to_path_buf());
+            let ingestor = match store.ingestors.iter().find(|i| i.can_handle(&resource)) {
+                Some(ingestor) => ingestor,
+                None => {
+                    let error_message = "No suitable ingestor found".to_string();
+                    println!("{}", error_message);
+                    app_handle.emit("error", json!({
+                        "message": error_message,
+                        "timestamp": chrono::Local::now().to_rfc3339(),
+                        "level": "error"
+                    }))?;
+                    println!("Ingestor not found");
+                    app_handle.emit("simple-log-message", json!({
+                        "message": format!("No ingestor found for {}", path.to_string_lossy()),
+                        "timestamp": chrono::Local::now().to_rfc3339(),
+                        "level": "warn"
+                    }))?;
+                    return Err(Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, error_message)));
+                }
+            };
+            
+            app_handle.emit("simple-log-message", json!({
+                "message": format!("Ingestor found: {:?}", ingestor),
+                "timestamp": chrono::Local::now().to_rfc3339(),
+                "level": "debug"
+            }))?;
+            //println!("Ingestor found");
+            let resource = Resource::FilePath(path.to_path_buf());
+            let ingested = ingestor.ingest(&resource).await?;
+            //println!("Ingested document: {:?}", ingested);
+            let document = Document {
+                id: 0,
+                name: ingested.title,
+                created_at: chrono::Local::now().to_rfc3339(),
+                file_path: ingested.metadata.source_path,
+                embedding: vec![],
+            };
+            let doc_name = document.name.clone();
+            println!("Document created: {:?}", document);
+            log::debug!("Document created: {:?}", document);
+            
+            let doc_id_result = {
+                let conn = store.conn.lock().await;
+                store.add_document_internal(&conn, document)
+            };
+            let doc_id = match doc_id_result {
+                Ok(id) => {
+                    println!("Document ID: {}", id);
+                    log::debug!("Document ID: {}", id);
+                    id
+                }
+                Err(e) => {
+                    let error_message = format!("Error adding document to database: {}", e);
+                    println!("Error adding document to database: {:?}", e);
+                    app_handle.emit("simple-log-message", json!({
+                        "message": format!("Couldn't add {} to canon {}", doc_name, error_message),
+                        "timestamp": chrono::Local::now().to_rfc3339(),
+                        "level": "warn"
+                    })).ok();
+                    return Err(e); // Propagate the error
+                }
+            };
+            drop(doc_id_result); // Release the lock
+            app_handle.emit("simple-log-message", json!({
+                "message": format!("Document added with ID: {}", doc_id),
+                "timestamp": chrono::Local::now().to_rfc3339(),
+                "level": "info"
+            }))?;
+            let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+            let file_name_clone = file_name.clone();
+            // let app_handle_clone = app_handle.clone();
+            // let name = file_name.clone();
+            match store
+            .process_embeddings(doc_id, ingested.content, file_name, &store.embedding_generator, app_handle.clone())
+            .await
+            {
+                Ok(_) => {
+                    println!("Document processed with ID: {}", doc_id);
+                    app_handle.emit("simple-log-message", json!({
+                        "message": format!("Ingestion & embedding complete: {}", file_name_clone),
+                        "timestamp": chrono::Local::now().to_rfc3339(),
+                        "level": "info"
+                    })).ok();
+                }
+                Err(e) => {
+                    println!("Error processing embeddings: {:?}", e);
+                    app_handle.emit("simple-log-message", json!({
+                        "message": format!("Ingestion & embedding complete: {}", file_name_clone),
+                        "timestamp": chrono::Local::now().to_rfc3339(),
+                        "level": "warn"
+                    }));
+                    log::warn!("Error processing embeddings: {:?}", e);
+                }
+            }
+            
+            println!("Document processed with ID: {}", doc_id);
+            
+            
+            
+            Ok(())
+        }
+        
+        pub async fn delete_document(&self, doc_id: i64) -> Result<(), Box<dyn std::error::Error>> {
+            let mut conn = self.conn.lock().await;
+            
+            // Start a transaction to ensure atomicity
+            let tx = conn.transaction()?;
+            
+            // Delete embeddings associated with the document
+            tx.execute("DELETE FROM embeddings WHERE doc_id = ?1", params![doc_id])?;
+            
+            // Delete the document itself
+            tx.execute("DELETE FROM documents WHERE id = ?1", params![doc_id])?;
+            
+            // Commit the transaction
+            tx.commit()?;
+            
+            Ok(())
+        }
+        
+        pub fn get_database_path(&self) -> &str {
+            &self.canon_path  // ✅ Already stored, just return it
+        }
+        
+        pub fn get_database_name(&self) -> &str {
+            &self.canon_name  // ✅ Already stored, just return it
+        }
+        
+        /***
+        * ## USAGE
+        
+        let canon_id_to_update: i64 = 123; // Replace with the actual canon_id
+        let new_name = "New Canon Name".to_string();
+        let new_owner = "New Owner".to_string();
+        let new_notes = Some("Some new notes".to_string()); // Or None if you want to clear the notes
+        
+        let result = document_store
+        .update_canon(canon_id_to_update, new_name, new_owner, new_notes)
+        .await;
+        
+        match result {
+        Ok(_) => println!("Canon with ID {} updated successfully", canon_id_to_update),
+        Err(e) => eprintln!("Error updating canon with ID {}: {}", canon_id_to_update, e),
+        }
+        */
+        pub async fn update_canon(
+            &self,
+            canon_id: i64,
+            name: String,
+            owner: String,
+            notes: Option<String>,
+        ) -> Result<(), Box<dyn std::error::Error>> {
             let conn = self.conn.lock().await;
-            conn.execute(
-                "INSERT INTO embeddings (doc_id, chunk, embedding) VALUES (?1, ?2, ?3)",
-                params![doc_id, chunk, embedding_json],
+            let modified_at = Local::now().to_rfc3339();
+            
+            let mut stmt = conn.prepare(
+                "UPDATE canon SET name = ?1, owner = ?2, notes = ?3, modified_at = ?4 WHERE id = ?5",
             )?;
             
-        }
-        // Emit final progress update
-        app_handle.emit("progress-update", json!({
-            "progress_id": "document-processing",
-            "current_step": 3,
-            "total_steps": 3,
-            "current_file": file_name,
-            "meta": "Completed"
-        }))?;
-        println!("Embeddings processed");
-        Ok(())
-    }
-    
-    // Private helper function for database operations
-    fn add_document_internal(&self, conn: &Connection, document: Document) -> Result<i64, Box<dyn std::error::Error>> {
-        match conn.execute(
-            "INSERT INTO documents (name, created_at, file_path) VALUES (?1, ?2, ?3)",
-            params![
-            document.name,
-            document.created_at,
-            document.file_path,
-            ],
-        ) {
-            Ok(_) => {
-                // Get the ID of the last inserted row
-                let id = conn.last_insert_rowid();
-                Ok(id)
-            }
-            Err(e) => {
-                // Handle the error
-                Err(Box::new(e))
-            }
-        }
-    }
-    
-    // Add this method
-    pub fn find_ingestor(&self, path: &Path) -> Option<Arc<Box<dyn DocumentIngestor>>> {
-        self.ingestors
-        .iter()
-        .find(|i| i.can_handle(path))
-        .cloned()
-    }
-    
-    
-    
-    pub async fn test_async_process(&self) -> Result<(), Box<dyn std::error::Error>> {
-        for i in 1..=10 {
-            // First do anything that needs the lock
-            {
-                // Quick operation with lock
-                let _conn = self.conn.lock().await;
-                println!("Starting step {}", i);
-            } // Lock dropped here
+            stmt.execute(params![name, owner, notes, modified_at, canon_id])?;
             
-            // Then do async work without the lock
-            println!("Processing step {}", i);
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            Ok(())
         }
-        Ok(())
+        
+        
+        async fn process_embeddings(
+            &self, 
+            doc_id: i64, 
+            content: String,
+            file_name: String,
+            embedding_generator: &EmbeddingGenerator,
+            app_handle: tauri::AppHandle,
+        ) -> Result<(), Box<dyn std::error::Error>> {
+            //println!("app_handle: {:?}", app_handle);
+            // Chunk the content
+            let chunks = self.embedding_generator.chunk_text(&content, 2048, 0); // adjust size/overlap as needed
+            // Emit progress update
+            //println!("Processing {} chunks", chunks.len());
+            app_handle.emit("progress-indicator-load", json!({
+                "progress_id": format!("embedding_doc_id_{}",doc_id),
+                "current_step": 0,
+                "total_steps": chunks.len() + 1,
+                "current_file": file_name,
+                "meta": content.chars().take(50).collect::<String>(),
+            }))?;
+            // Get embeddings for each chunk
+            for (count, chunk) in chunks.iter().enumerate() {
+                let count = count + 1;
+                app_handle.emit("progress-indicator-update", json!({
+                    "progress_id": format!("embedding_doc_id_{}", doc_id),
+                    "current_step": count+1,
+                    "total_steps": chunks.len() + 1,
+                    "current_file": file_name,
+                    "meta": chunk,
+                }))?;
+                let embedding = embedding_generator.generate_embedding(app_handle.clone(), &chunk).await?;
+                
+                // Convert embedding to JSON string
+                let embedding_json = serde_json::to_string(&embedding)?;
+                //println!("Embedding: {}", embedding_json);
+                // Store in database
+                let conn = self.conn.lock().await;
+                conn.execute(
+                    "INSERT INTO embeddings (doc_id, chunk, embedding) VALUES (?1, ?2, ?3)",
+                    params![doc_id, chunk, embedding_json],
+                )?;
+                
+            }
+            // Emit final progress update
+            app_handle.emit("progress-update", json!({
+                "progress_id": "document-processing",
+                "current_step": 3,
+                "total_steps": 3,
+                "current_file": file_name,
+                "meta": "Completed"
+            }))?;
+            println!("Embeddings processed");
+            Ok(())
+        }
+        
+        // Private helper function for database operations
+        fn add_document_internal(&self, conn: &Connection, document: Document) -> Result<i64, Box<dyn std::error::Error>> {
+            match conn.execute(
+                "INSERT INTO documents (name, created_at, file_path) VALUES (?1, ?2, ?3)",
+                params![
+                document.name,
+                document.created_at,
+                document.file_path,
+                ],
+            ) {
+                Ok(_) => {
+                    // Get the ID of the last inserted row
+                    let id = conn.last_insert_rowid();
+                    Ok(id)
+                }
+                Err(e) => {
+                    // Handle the error
+                    Err(Box::new(e))
+                }
+            }
+        }
+        // pub async fn update_document_pause_state(&self, doc_id: i64, paused: bool) -> Result<(), String> {
+
+        pub async fn update_document_pause_state(&self, doc_id: i64, paused: bool) -> Result<(), Box<dyn std::error::Error>> {
+            let conn = self.conn.lock().await;
+            
+            // Check if paused column exists in documents table
+            let has_paused_column = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM pragma_table_info('documents') WHERE name='paused'",
+                    [],
+                    |row| row.get::<_, i64>(0)
+                )?;
+                
+            // Add the column if it doesn't exist (handles migration for older databases)
+            if has_paused_column == 0 {
+                log::info!("Adding paused column to documents table");
+                conn.execute(
+                    "ALTER TABLE documents ADD COLUMN paused BOOLEAN DEFAULT 0",
+                    [],
+                )?;
+            }
+            
+            // Now we can safely update the pause state
+            conn.execute(
+                "UPDATE documents SET paused = ?1 WHERE id = ?2",
+                params![paused, doc_id],
+            )?;
+            
+            log::info!("Updated pause state for document {}: paused = {}", doc_id, paused);
+            Ok(())
+        }
+        
+        // Get the current pause state for a document
+        pub async fn is_document_paused(&self, doc_id: i64) -> Result<bool, Box<dyn std::error::Error>> {
+            let conn = self.conn.lock().await;
+            
+            // Check if paused column exists (just to be safe)
+            let has_paused_column = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM pragma_table_info('documents') WHERE name='paused'",
+                    [],
+                    |row| row.get::<_, i64>(0)
+                )?;
+                
+            if has_paused_column == 0 {
+                // Column doesn't exist, so nothing is paused
+                return Ok(false);
+            }
+            
+            // Get the paused state
+            let paused: bool = conn.query_row(
+                "SELECT paused FROM documents WHERE id = ?1",
+                params![doc_id],
+                |row| row.get(0),
+            )?;
+            
+            Ok(paused)
+        }
+        
+        // Add this method
+        pub fn find_ingestor(&self, path: &Path) -> Option<Arc<Box<dyn DocumentIngestor>>> {
+            self.ingestors
+            .iter()
+            .find(|i| i.can_handle(&Resource::FilePath(path.to_path_buf())))
+            .cloned()
+        }
+        
+        
+        
+        pub async fn test_async_process(&self) -> Result<(), Box<dyn std::error::Error>> {
+            for i in 1..=10 {
+                // First do anything that needs the lock
+                {
+                    // Quick operation with lock
+                    let _conn = self.conn.lock().await;
+                    println!("Starting step {}", i);
+                } // Lock dropped here
+                
+                // Then do async work without the lock
+                println!("Processing step {}", i);
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
+            Ok(())
+        }
     }
     
-    #[cfg(test)]
-    pub fn get_connection(&self) -> std::sync::MutexGuard<'_, Connection> {
-        self.conn.lock().await
+    // Helper function for cosine similarity
+    fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+        let dot_product: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
+        let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
+        let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
+        
+        if norm_a == 0.0 || norm_b == 0.0 {
+            0.0
+        } else {
+            dot_product / (norm_a * norm_b)
+        }
     }
-}
-
-// Helper function for cosine similarity
-fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
-    let dot_product: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
-    let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
-    let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
     
-    if norm_a == 0.0 || norm_b == 0.0 {
-        0.0
-    } else {
-        dot_product / (norm_a * norm_b)
-    }
-}
-
-
+    
+    

@@ -7,7 +7,8 @@ use super::document_ingestor::{
     DocumentIngestor,
     IngestedDocument,
     DocumentMetadata,
-    IngestError
+    IngestError,
+    Resource  // Add Resource import
 };
 
 #[derive(Debug)]
@@ -15,12 +16,33 @@ pub struct TextIngestor;
 
 #[async_trait]
 impl DocumentIngestor for TextIngestor {
-    fn can_handle(&self, path: &Path) -> bool {
-        path.extension()
-            .map(|ext| ext.eq_ignore_ascii_case("txt"))
-            .unwrap_or(false)
+    // Update can_handle to work with Resource enum
+    fn can_handle(&self, resource: &Resource) -> bool {
+        match resource {
+            Resource::FilePath(path) => path.extension()
+                .map(|ext| ext.eq_ignore_ascii_case("txt"))
+                .unwrap_or(false),
+            Resource::Url(_) => false, // Text ingestor doesn't handle URLs
+            Resource::Database(_) => false,
+        }
     }
+    
+    // Implement the required ingest method
+    async fn ingest(&self, resource: &Resource) -> Result<IngestedDocument, IngestError> {
+        match resource {
+            Resource::FilePath(path) => self.ingest_file(path).await,
+            Resource::Url(url) => Err(IngestError::UnsupportedFormat(
+                format!("TextIngestor cannot process URLs: {}", url)
+            )),
+            Resource::Database(_) => Err(IngestError::UnsupportedFormat(
+                "TextIngestor cannot process database resources".to_string()
+            )),
+        }
+    }
+}
 
+// Move the existing implementation to a helper method
+impl TextIngestor {
     async fn ingest_file(&self, path: &Path) -> Result<IngestedDocument, IngestError> {
         let content = fs::read_to_string(path)
             .map_err(IngestError::Io)?;

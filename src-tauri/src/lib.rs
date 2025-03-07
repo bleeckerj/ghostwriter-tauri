@@ -1,6 +1,7 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
 #![allow(unused)]
+use ai::ModelProvider;
 use epub::doc;
 use pdf_extract::Path;
 use std::io::Stdout;
@@ -34,12 +35,16 @@ pub mod ingest;
 pub mod document_store;
 pub mod menu;
 pub mod embeddings;
+pub mod ai;
 
 mod conversations; // Add this line
 use conversations::Conversation;
 
 mod app_state; // Add this line
 use app_state::AppState;
+use crate::ai::providers::{self, ProviderType, Provider};
+use crate::ai::models::{ChatCompletionRequest, ChatMessage, MessageRole};
+use crate::ai::traits::ChatCompletionProvider;
 
 use async_openai::{
     //config::OpenAIConfig,
@@ -90,6 +95,20 @@ impl fmt::Display for CompletionTiming {
             self.total_ms
         )
     }
+}
+
+#[tauri::command]
+async fn ingest_from_url(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    url: String,
+) -> Result<(), String> {
+    let store = state.doc_store.lock().await;
+    let store_clone = Arc::new(store.clone());
+    store_clone.process_url_async(&url, app_handle).await;
+    
+    
+    Ok(())
 }
 
 #[tauri::command]
@@ -157,395 +176,415 @@ async fn save_json_content(
 #[tauri::command]
 async fn load_openai_api_key_from_keyring(
     app_handle: tauri::AppHandle, 
-    state: tauri::State<'_, AppState>) -> Result<(bool), String> {
-    // Create logger instance
-    let new_logger = NewLogger::new(app_handle.clone());
-
-    // Returns true if there was a key there (even if it was invalid)
-    // Returns false if there was no key there
-    // Returns an error if there was a problem loading the key
-    match KeychainHandler::retrieve_api_key() {
-        Ok(key) => {
-            match key {
-                Some(k) => {
-                    log::info!("API key successfully loaded from keychain");
-                    new_logger.simple_log_message(
-                        format!("{} API key successfully loaded from keychain", k),
-                        "keychain".to_string(),
-                        "debug".to_string()
-                    );
-                    Ok(true)
-                }
-                None => {
-                    log::warn!("No API key found in keychain");
-                    new_logger.simple_log_message(
-                        "No API key not found in keychain".to_string(),
-                        "keychain".to_string(),
-                        "warn".to_string()
-                    );
-                    Ok(false)
+    state: tauri::State<'_, AppState>) -> Result<(String), String> {
+        // Create logger instance
+        let new_logger = NewLogger::new(app_handle.clone());
+        
+        // Returns the key if there was a key there (even if it was invalid)
+        // Returns error string if there was no key there
+        // Returns an error if there was a problem loading the key
+        match KeychainHandler::retrieve_api_key() {
+            Ok(key) => {
+                match key {
+                    Some(k) => {
+                        log::debug!("API key successfully loaded from keychain");
+                        new_logger.simple_log_message(
+                            format!("{} API key successfully loaded from keychain", k),
+                            "keychain".to_string(),
+                            "debug".to_string()
+                        );
+                        Ok(k)
+                    }
+                    None => {
+                        log::warn!("No API key found in keychain");
+                        new_logger.simple_log_message(
+                            "No API key not found in keychain".to_string(),
+                            "keychain".to_string(),
+                            "warn".to_string()
+                        );
+                        Ok("Enter API key".to_string())
+                    }
                 }
             }
+            Err(e) => {
+                let error_msg = format!("Keychain issue? Failed to load API key from keychain: {}", e);
+                log::error!("{}", error_msg);
+                new_logger.simple_log_message(
+                    error_msg.clone(),
+                    "keychain".to_string(),
+                    "error".to_string()
+                );
+                Err(error_msg)
+            }
         }
-        Err(e) => {
-            let error_msg = format!("Keychain issue? Failed to load API key from keychain: {}", e);
-            log::error!("{}", error_msg);
-            new_logger.simple_log_message(
-                error_msg.clone(),
-                "keychain".to_string(),
-                "error".to_string()
-            );
-            Err(error_msg)
-        }
+        
+        
     }
-
     
-}
-
-
-#[tauri::command]
-async fn save_openai_api_key_to_keyring(
-    app_handle: tauri::AppHandle, 
-    state: tauri::State<'_, AppState>, 
-    key: String
-) -> Result<(), String> {
-    // Create logger instance
-    let new_logger = NewLogger::new(app_handle.clone());
-
-    // Attempt to store the key
-    match KeychainHandler::store_api_key(&key) {
-        Ok(_) => {
-            log::info!("API key successfully stored in keychain");
-            new_logger.simple_log_message(
-                "API key successfully stored in keychain".to_string(),
-                "keychain".to_string(),
-                "debug".to_string()
-            );
-            Ok(())
-        }
-        Err(e) => {
-            let error_msg = format!("Failed to store API key in keychain: {}", e);
-            log::error!("{}", error_msg);
-            new_logger.simple_log_message(
-                error_msg.clone(),
-                "keychain".to_string(),
-                "error".to_string()
-            );
-            Err(error_msg)
-        }
-    }
-}
-
-/**
-*  PREFERENCES
-*/
-#[tauri::command]
-async fn get_preferences(state: tauri::State<'_, AppState>) -> Result<Preferences, String> {
-    let preferences = state.preferences.lock().await;
-    Ok(preferences.clone()) // ✅ Send preferences to frontend
-}
-
-
-#[tauri::command]
-async fn load_preferences(app_handle: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<(Preferences), String> {
-    let preferences = Preferences::load_with_defaults(&state, app_handle.clone());
-    *state.preferences.lock().await = preferences.clone();
-    Ok((preferences))
-}
-
-#[tauri::command]
-async fn update_preferences(
-    app_handle: tauri::AppHandle,
-    state: tauri::State<'_, AppState>,
-    responselimit: String,
-    mainprompt: String,
-    finalpreamble: String,
-    prosestyle: String,
-    similaritythreshold: String,
-    shufflesimilars: bool,
-    similaritycount: String,
-    maxhistory: String,
-    maxtokens: String,
-    temperature: String,
-) -> Result<(Preferences), String> {
     
-    println!("update_preferences called with: {}, {}, {}, {} {} {} {} {} {} {}",
-    responselimit, mainprompt, finalpreamble, prosestyle, similaritythreshold, shufflesimilars, similaritycount, maxhistory, maxtokens, temperature);
-    
-    let mut preferences = state.preferences.lock().await;
-    preferences.response_limit = responselimit;
-    preferences.main_prompt = mainprompt;
-    preferences.final_preamble = finalpreamble;
-    preferences.prose_style = prosestyle;
-    preferences.similarity_threshold = similaritythreshold.parse::<f32>().unwrap() / 100.0;
-    preferences.shuffle_similars = shufflesimilars == true;
-    preferences.similarity_count = similaritycount.parse::<usize>().unwrap_or(Preferences::SIMILARITY_COUNT_DEFAULT);
-    preferences.max_history = maxhistory.parse::<usize>().unwrap_or(Preferences::MAX_HISTORY_DEFAULT);
-    preferences.max_output_tokens = maxtokens.parse::<u32>().unwrap_or(Preferences::MAX_OUTPUT_TOKENS_DEFAULT);
-    preferences.temperature = temperature.parse::<f32>().unwrap_or(Preferences::TEMPERATURE_DEFAULT);
-    let prefs_clone = preferences.clone();
-    // Attempt to save preferences and handle any errors
-    if let Err(e) = preferences.save() {
-        let error_message = format!("Failed to save preferences: {}", e);
+    #[tauri::command]
+    async fn save_openai_api_key_to_keyring(
+        app_handle: tauri::AppHandle, 
+        state: tauri::State<'_, AppState>, 
+        key: String
+    ) -> Result<(), String> {
+        // Create logger instance
         let new_logger = NewLogger::new(app_handle.clone());
-        new_logger.simple_log_message(error_message.clone(), "preferences".to_string(), "error".to_string());
-        return Err(error_message);
+        
+        // Attempt to store the key
+        match KeychainHandler::store_api_key(&key) {
+            Ok(_) => {
+                log::info!("API key successfully stored in keychain");
+                new_logger.simple_log_message(
+                    "API key successfully stored in keychain".to_string(),
+                    "keychain".to_string(),
+                    "debug".to_string()
+                );
+                Ok(())
+            }
+            Err(e) => {
+                let error_msg = format!("Failed to store API key in keychain: {}", e);
+                log::error!("{}", error_msg);
+                new_logger.simple_log_message(
+                    error_msg.clone(),
+                    "keychain".to_string(),
+                    "error".to_string()
+                );
+                Err(error_msg)
+            }
+        }
     }
-    let debug_message = format!("Preferences updated: {:?}", preferences);
-    let new_logger = NewLogger::new(app_handle.clone());
-    new_logger.simple_log_message(debug_message.clone(), "preferences".to_string(), "debug".to_string());
-    Ok((prefs_clone))
-}
-
-#[tauri::command]
-async fn reset_preferences(state: tauri::State<'_, AppState>) -> Result<(Preferences), String> {
-    let mut preferences = state.preferences.lock().await;
-    preferences.reset_to_defaults();
-    preferences.save().map_err(|e| e.to_string()); // ✅ Persist preferences
-    Ok(preferences.clone())
-}
-
-#[tauri::command]
-async fn prefs_file_path() -> Result<String, String> {
-    // let mut preferences = state.preferences.lock().await;
-    // *preferences = Preferences::default();
-    // let path = preferences.get_preferences_file_path().map_err(|e| e.to_string());
-    Ok(Preferences::prefs_file_path())
-}
-
-#[tauri::command]
-async fn get_logger_path(state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let logger = state.logger.lock().await;
-    Ok(logger.get_logger_path().to_str().unwrap().to_string())
-}
-
-#[tauri::command]
-async fn set_logger_app_data_path(
-    state: tauri::State<'_, AppState>,
-    app_handle: tauri::AppHandle,
-) -> Result<(), String> {
-    let mut app_data_path: PathBuf = app_handle.path()
-    .app_log_dir()
-    .unwrap_or_else(|_| {
-        // Provide a default path if app_data_dir() returns None
-        // This could be a fallback path in the user's home directory or a temporary directory
-        std::env::temp_dir()
-    });
-    app_data_path.push("ghostwriter_log.json");
     
-    /// PROBLEMATIC
-    state.set_logger_path(app_data_path).await.map_err(|e| e.to_string());
-    Ok(())
-    
-}
-
-#[tauri::command]
-async fn get_log_contents(state: tauri::State<'_, AppState>) -> Result<Vec<Completion>, String> {
-    // Get the logger path from state
-    let logger = state.logger.lock().await;
-    let log_path = logger.get_logger_path();
-    
-    // Read the file contents
-    let file = std::fs::File::open(log_path)
-    .map_err(|e| format!("Failed to open log file: {}", e))?;
-    
-    // Parse JSON contents
-    let contents: Vec<Completion> = serde_json::from_reader(file)
-    .map_err(|e| format!("Failed to parse log contents: {}", e))?;
-    
-    Ok(contents)
-}
-
-#[tauri::command]
-async fn ingestion_from_file_dialog(
-    state: tauri::State<'_, AppState>,
-    app_handle: tauri::AppHandle,
-    file_path: String,
-) -> Result<String, String> {
-    
-    println!("Ingesting file: {}", file_path);
-    log::debug!("Ingesting file: {}", file_path);
-
-    let file_path_buf = PathBuf::from(file_path);
-    let file_name = file_path_buf.clone().as_path().file_name().unwrap().to_str().unwrap().to_string();
+    /**
+    *  PREFERENCES
+    */
+    #[tauri::command]
+    async fn get_preferences(state: tauri::State<'_, AppState>) -> Result<Preferences, String> {
+        let preferences = state.preferences.lock().await;
+        Ok(preferences.clone()) // ✅ Send preferences to frontend
+    }
     
     
-    //let doc_store = state.doc_store.clone();
-    //let embedding_generator = state.embedding_generator.clone();
+    #[tauri::command]
+    async fn load_preferences(app_handle: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<(Preferences), String> {
+        let preferences = Preferences::load_with_defaults(&state, app_handle.clone());
+        *state.preferences.lock().await = preferences.clone();
+        Ok((preferences))
+    }
     
-    let store = state.doc_store.lock().await;
-    let store_clone = Arc::new(store.clone());
-    store_clone.process_document_async(&file_path_buf, app_handle).await;
-    
-    // tokio::spawn(async move {
-    //     if let Err(err) = store.process_document_async(file_path_buf.as_path()).await {
-    //         eprintln!("Error processing document: {}", err);
-    //     }
-    // });
-    
-    //doc_store.lock().unwrap().process_document_async(file_path_buf.as_path()).await;
-    
-    Ok("Ingested file".to_string())
-}
-
-
-// Modify the function return type to include timing
-#[tauri::command]
-async fn completion_from_context(
-    state: tauri::State<'_, AppState>,
-    app_handle: tauri::AppHandle,
-    input: String,
-) -> Result<(String, CompletionTiming), String> {
-    
-    let preferences = state.preferences.lock().await;
-    let max_tokens: u32 = preferences.max_output_tokens;
-    let temperature = preferences.temperature;
-    let shuffle_similars = preferences.shuffle_similars;
-    let similarity_count = preferences.similarity_count;
-    let max_history = preferences.max_history;
-    let similarity_threshold = preferences.similarity_threshold;
-    let mut new_logger = NewLogger::new(app_handle.clone());
-    
-    let openai_api_key = get_api_key(&app_handle).map_err(|e| e.to_string())?;
-
-    let logger_clone = state.logger.clone();
-    let client = match openai_api_key {
-        Some(key) => {
-            Client::with_config(
-                OpenAIConfig::new()
-                .with_api_key(key.clone())
-            )
-        }
-        None => {
-            log::warn!("OPENAI_API_KEY not found. No use running without it.");
-            let mut new_logger = NewLogger::new(app_handle.clone());
-            new_logger.simple_log_message(
-                "OPENAI_API_KEY not found or invalid. No use running without it.".to_string(),
-                "".to_string(),
-                "error".to_string()
-            );
-            new_logger.simple_log_message(
-                "Check preferences and check os keychain".to_string(),
-                "".to_string(),
-                "error".to_string()
-            );
-            return Err("OpenAI API key is required but was not found. Check preferences and/or system keychain.".to_string());
-        }
-    };
-
-    let start_total = Instant::now();
-    
-    // Time embedding generation
-    let start_embedding = Instant::now();
-
-    let embedding_generator = EmbeddingGenerator::new_with_client(client.clone());
-
-    
-    let embedding = 
-    embedding_generator
-    .generate_embedding(&input)
-    .await
-    .map_err(|e| {
-        let error_msg = format!("Embedding generation failed: {}", e);
-        log::error!("{}", error_msg);
+    #[tauri::command]
+    async fn update_preferences(
+        app_handle: tauri::AppHandle,
+        state: tauri::State<'_, AppState>,
+        responselimit: String,
+        mainprompt: String,
+        finalpreamble: String,
+        prosestyle: String,
+        similaritythreshold: String,
+        shufflesimilars: bool,
+        similaritycount: String,
+        maxhistory: String,
+        maxtokens: String,
+        temperature: String,
+    ) -> Result<(Preferences), String> {
         
-        // Also log to frontend via new_logger
-        new_logger.simple_log_message(
-            error_msg.clone(),
-            "embeddings".to_string(),
-            "error".to_string()
-        );
+        println!("update_preferences called with: {}, {}, {}, {} {} {} {} {} {} {}",
+        responselimit, mainprompt, finalpreamble, prosestyle, similaritythreshold, shufflesimilars, similaritycount, maxhistory, maxtokens, temperature);
         
-        error_msg  // Return the formatted error message for propagation
-    })?;
-
-    let embedding_duration = start_embedding.elapsed();
+        let mut preferences = state.preferences.lock().await;
+        preferences.response_limit = responselimit;
+        preferences.main_prompt = mainprompt;
+        preferences.final_preamble = finalpreamble;
+        preferences.prose_style = prosestyle;
+        preferences.similarity_threshold = similaritythreshold.parse::<f32>().unwrap() / 100.0;
+        preferences.shuffle_similars = shufflesimilars == true;
+        preferences.similarity_count = similaritycount.parse::<usize>().unwrap_or(Preferences::SIMILARITY_COUNT_DEFAULT);
+        preferences.max_history = maxhistory.parse::<usize>().unwrap_or(Preferences::MAX_HISTORY_DEFAULT);
+        preferences.max_output_tokens = maxtokens.parse::<u32>().unwrap_or(Preferences::MAX_OUTPUT_TOKENS_DEFAULT);
+        preferences.temperature = temperature.parse::<f32>().unwrap_or(Preferences::TEMPERATURE_DEFAULT);
+        let prefs_clone = preferences.clone();
+        // Attempt to save preferences and handle any errors
+        if let Err(e) = preferences.save() {
+            let error_message = format!("Failed to save preferences: {}", e);
+            let new_logger = NewLogger::new(app_handle.clone());
+            new_logger.simple_log_message(error_message.clone(), "preferences".to_string(), "error".to_string());
+            return Err(error_message);
+        }
+        let debug_message = format!("Preferences updated: {:?}", preferences);
+        let new_logger = NewLogger::new(app_handle.clone());
+        new_logger.simple_log_message(debug_message.clone(), "preferences".to_string(), "debug".to_string());
+        Ok((prefs_clone))
+    }
     
-    // Time similarity search
-    let start_search = Instant::now();
-    let mut similar_docs: Vec<(i64, String, usize, String, f32)> = Vec::new();
-    let database_name: String;
-    let database_path: String;
-    // similar docs get the top 4, which may all be from the same source
-    // fence this off so we can release the lock on the store
-    {
+    #[tauri::command]
+    async fn reset_preferences(state: tauri::State<'_, AppState>) -> Result<(Preferences), String> {
+        let mut preferences = state.preferences.lock().await;
+        preferences.reset_to_defaults();
+        preferences.save().map_err(|e| e.to_string()); // ✅ Persist preferences
+        Ok(preferences.clone())
+    }
+    
+    #[tauri::command]
+    async fn prefs_file_path() -> Result<String, String> {
+        // let mut preferences = state.preferences.lock().await;
+        // *preferences = Preferences::default();
+        // let path = preferences.get_preferences_file_path().map_err(|e| e.to_string());
+        Ok(Preferences::prefs_file_path())
+    }
+    
+    #[tauri::command]
+    async fn get_logger_path(state: tauri::State<'_, AppState>) -> Result<String, String> {
+        let logger = state.logger.lock().await;
+        Ok(logger.get_logger_path().to_str().unwrap().to_string())
+    }
+    
+    #[tauri::command]
+    async fn set_logger_app_data_path(
+        state: tauri::State<'_, AppState>,
+        app_handle: tauri::AppHandle,
+    ) -> Result<(), String> {
+        let mut app_data_path: PathBuf = app_handle.path()
+        .app_log_dir()
+        .unwrap_or_else(|_| {
+            // Provide a default path if app_data_dir() returns None
+            // This could be a fallback path in the user's home directory or a temporary directory
+            std::env::temp_dir()
+        });
+        app_data_path.push("ghostwriter_log.json");
+        
+        /// PROBLEMATIC
+        state.set_logger_path(app_data_path).await.map_err(|e| e.to_string());
+        Ok(())
+        
+    }
+    
+    #[tauri::command]
+    async fn get_log_contents(state: tauri::State<'_, AppState>) -> Result<Vec<Completion>, String> {
+        // Get the logger path from state
+        let logger = state.logger.lock().await;
+        let log_path = logger.get_logger_path();
+        
+        // Read the file contents
+        let file = std::fs::File::open(log_path)
+        .map_err(|e| format!("Failed to open log file: {}", e))?;
+        
+        // Parse JSON contents
+        let contents: Vec<Completion> = serde_json::from_reader(file)
+        .map_err(|e| format!("Failed to parse log contents: {}", e))?;
+        
+        Ok(contents)
+    }
+    
+    #[tauri::command]
+    async fn ingestion_from_file_dialog(
+        state: tauri::State<'_, AppState>,
+        app_handle: tauri::AppHandle,
+        file_path: String,
+    ) -> Result<String, String> {
+        
+        println!("Ingesting file: {}", file_path);
+        log::debug!("Ingesting file: {}", file_path);
+        
+        let file_path_buf = PathBuf::from(file_path);
+        let file_name = file_path_buf.clone().as_path().file_name().unwrap().to_str().unwrap().to_string();
+        
+        
+        //let doc_store = state.doc_store.clone();
+        //let embedding_generator = state.embedding_generator.clone();
+        
         let store = state.doc_store.lock().await;
-        similar_docs = store.search(&embedding, similarity_count, similarity_threshold).await.map_err(|e| e.to_string())?;
-        database_name = (store.get_database_name().to_string()); // Just convert &str to String
-        database_path = store.get_database_path().to_string(); // Just convert &str to String
-    }
-    // lock on store should be released by now
-    
-    let search_duration = start_search.elapsed();
-    
-    // Shuffle similar_docs if shuffle_similars is true
-    if shuffle_similars {
-        new_logger.simple_log_message("Will shuffle similarity docs".to_string(), "".to_string(), "info".to_string());
-        let mut rng = rand::thread_rng();
-        similar_docs.shuffle(&mut rng);
-    }
-    
-
-    if(similar_docs.len() == 0) {
-        new_logger.simple_log_message(
-            "No similar documents found. No emanations will issue.".to_string(),
-            "".to_string(),
-            "info".to_string()
-        );
-        return Err("No similar documents found. No emanations will issue.".to_string());
-    } else {
-        new_logger.simple_log_message(
-            format!("Found {} cosine similar documents ({})", similar_docs.len(), similarity_threshold),
-            "".to_string(),
-            "info".to_string()
-        );
-    }
-    // Prepare the context for the LLM
-    // This has all the document metadata..is that okay?
-    let mut context = String::new();
-    for (i, (doc_id, doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
-        context.push_str(&format!("{}\n", chunk_text));
-    }
-    
-    let mut vector_search_results_for_log: Vec<VectorSearchResult> = Vec::new();
-    
-    for (i, (doc_id, doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
+        let store_clone = Arc::new(store.clone());
+        store_clone.process_document_async(&file_path_buf, app_handle).await;
         
-        let msg = format!("<div>
+        // tokio::spawn(async move {
+        //     if let Err(err) = store.process_document_async(file_path_buf.as_path()).await {
+        //         eprintln!("Error processing document: {}", err);
+        //     }
+        // });
+        
+        //doc_store.lock().unwrap().process_document_async(file_path_buf.as_path()).await;
+        
+        Ok("Ingested file".to_string())
+    }
+    
+    
+    // Modify the function return type to include timing
+    #[tauri::command]
+    async fn completion_from_context(
+        state: tauri::State<'_, AppState>,
+        app_handle: tauri::AppHandle,
+        input: String,
+    ) -> Result<(String, CompletionTiming), String> {
+        
+        let preferences = state.preferences.lock().await;
+        let max_tokens: u32 = preferences.max_output_tokens;
+        let temperature = preferences.temperature;
+        let shuffle_similars = preferences.shuffle_similars;
+        let similarity_count = preferences.similarity_count;
+        let max_history = preferences.max_history;
+        let similarity_threshold = preferences.similarity_threshold;
+        let mut new_logger = NewLogger::new(app_handle.clone());
+        
+        let openai_api_key = get_api_key(&app_handle).map_err(|e| e.to_string())?;
+        let key_clone = openai_api_key.clone().unwrap();
+        let logger_clone = state.logger.clone();
+        
+        // Create provider based on preferences
+        let provider = match preferences.ai_provider.to_lowercase().as_str() {
+            "lmstudio" => {
+                new_logger.simple_log_message(
+                    format!("Using LM Studio provider at: {}", preferences.lm_studio_url),
+                    "provider".to_string(),
+                    "info".to_string()
+                );
+                providers::create_provider(ProviderType::LMStudio, &preferences.lm_studio_url)
+            },
+            "openai" | _ => {
+                // Default to OpenAI if unrecognized
+                let openai_api_key = get_api_key(&app_handle).map_err(|e| e.to_string())?;
+                match openai_api_key {
+                    Some(key) => {
+                        new_logger.simple_log_message(
+                            "Using OpenAI provider".to_string(),
+                            "provider".to_string(),
+                            "info".to_string()
+                        );
+                        providers::create_provider(ProviderType::OpenAI, &key)
+                    },
+                    None => {
+                        log::warn!("OpenAI API key not found. Cannot use OpenAI provider.");
+                        return Err("OpenAI API key is required but was not found. Check preferences and/or system keychain.".to_string());
+                    }
+                }
+            }
+        };
+        
+        let lm_models = provider.list_models().await;
+        lm_models.iter().for_each(|model| {
+            log::debug!("Model: {:?}", model);
+        });
+        
+        let start_total = Instant::now();
+        
+        // Time embedding generation
+        let start_embedding = Instant::now();
+        
+        // Option 1: If using the OpenAI provider for embeddings too
+        let embedding_generator = match &provider {
+            Provider::OpenAI(openai) => {
+                EmbeddingGenerator::new_with_client(openai.get_client().clone())
+            },
+            _ => {
+                //EmbeddingGenerator::new() // Or handle differently
+                EmbeddingGenerator::new_with_api_key(&key_clone)
+            }
+        };        
+        
+        // Option 2: Maintain a separate embedding generator
+        // If embeddings are still using the OpenAI API directly
+        // let embedding_generator = if let Some(key) = &openai_api_key {
+        //     EmbeddingGenerator::new_with_api_key(key)
+        // } else {
+        //     EmbeddingGenerator::new()
+        // };
+        
+        let embedding = 
+        embedding_generator
+        .generate_embedding(app_handle.clone(), &input)
+        .await
+        .map_err(|e| {
+            let error_msg = format!("Embedding generation failed: {}", e);
+            log::error!("{}", error_msg);
+            
+            // Also log to frontend via new_logger
+            new_logger.simple_log_message(
+                error_msg.clone(),
+                "embeddings".to_string(),
+                "error".to_string()
+            );
+            
+            error_msg  // Return the formatted error message for propagation
+        })?;
+        
+        let embedding_duration = start_embedding.elapsed();
+        
+        // Time similarity search
+        let start_search = Instant::now();
+        let mut similar_docs: Vec<(i64, String, usize, String, f32)> = Vec::new();
+        let database_name: String;
+        let database_path: String;
+        // similar docs get the top 4, which may all be from the same source
+        // fence this off so we can release the lock on the store
+        {
+            let store = state.doc_store.lock().await;
+            similar_docs = store.search(&embedding, similarity_count, similarity_threshold).await.map_err(|e| e.to_string())?;
+            database_name = (store.get_database_name().to_string()); // Just convert &str to String
+            database_path = store.get_database_path().to_string(); // Just convert &str to String
+        }
+        // lock on store should be released by now
+        
+        let search_duration = start_search.elapsed();
+        
+        // Shuffle similar_docs if shuffle_similars is true
+        if shuffle_similars {
+            new_logger.simple_log_message("Will shuffle similarity docs".to_string(), "".to_string(), "info".to_string());
+            let mut rng = rand::thread_rng();
+            similar_docs.shuffle(&mut rng);
+        }
+        
+        
+        if(similar_docs.len() == 0) {
+            new_logger.simple_log_message(
+                "No similar documents found. No emanations will issue.".to_string(),
+                "".to_string(),
+                "info".to_string()
+            );
+            return Err("No similar documents found. No emanations will issue.".to_string());
+        } else {
+            new_logger.simple_log_message(
+                format!("Found {} cosine similar documents ({})", similar_docs.len(), similarity_threshold),
+                "".to_string(),
+                "info".to_string()
+            );
+        }
+        // Prepare the context for the LLM
+        // This has all the document metadata..is that okay?
+        let mut context = String::new();
+        for (i, (doc_id, doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
+            context.push_str(&format!("{}\n", chunk_text));
+        }
+        
+        let mut vector_search_results_for_log: Vec<VectorSearchResult> = Vec::new();
+        
+        for (i, (doc_id, doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
+            
+            let msg = format!("<div>
             <div class='border-l-[4px] border-amber-300 pl-2 pr-8 text-pretty leading-tight font-[InputMono]'>{}</div>
             <div class='mt-2 px-2 py-1 rounded-sm bg-gray-700 w-fit'>{}</div>
             <span class='mt-2 font-bold'>{}</span>
           </div>", chunk_text, similarity, doc_name);
+            
+            new_logger.simple_log_message(msg, chunk_id.to_string(), "info".to_string());
+            
+            vector_search_results_for_log.push(VectorSearchResult {
+                similarity: *similarity,
+                name: doc_name.clone(),
+                content: chunk_text.clone(),
+                chunk_id: *chunk_id,
+            });
+        }
         
-        new_logger.simple_log_message(msg, chunk_id.to_string(), "info".to_string());
+        let conversation_context = state.conversation.lock().await.get_context();
         
-        vector_search_results_for_log.push(VectorSearchResult {
-            similarity: *similarity,
-            name: doc_name.clone(),
-            content: chunk_text.clone(),
-            chunk_id: *chunk_id,
-        });
-    }
-    
-    let conversation_context = state.conversation.lock().await.get_context();
-    
-    let prose_style = preferences.prose_style.clone();
-    
-    // let prose_style = "A style that is consistent with the input text".to_string();
-    // //const prose_style = "In the style of a medieval scribe using Old or Middle English";
-    // // const response_limit = "Respond with no more than two sentences along with the completion of any partial sentence or thought fragment. In addition, add one sentence fragment that does not conclude with a period or full-stop. This sentence fragment is meant to be a provocation in the direction of thought being developed so that the user can continue to write in the same vein.";
-    
-    let response_limit: String = preferences.response_limit.clone();
-    // let response_limit = "Respond with no more than one sentence. If the input text ends with a period, only add one sentence and no more. You may complete a partially complete sentence or if the input text is already a complete sentence, you may add only one sentence that would reasonably and semantically follow that one sentence. Adhere to these constraints such that you are adding no more than one sentence".to_string();
-    //let response_limit = "Respond with no more than one sentence, or less.".to_string();
-    
-    let main_prompt: String = preferences.main_prompt.clone();
-    // let main_prompt = "Here is your brief: You are a text completion engine. You do not answer questions or respond to questions in any way. You only semantically complete the thought represented by the Previous exchanges, Similar documents context and input. Limit your response to the Response Limit. Do not respond to inquiries in any fashion. If you are asked how to do something, or answer a question do not respond. Only perform auto-completion based on the text to complete, not responses to queries, questions, or any other non-completion response. If you are asked to do something only respond as a completion of text. Do not engage in any form of chat. Your only task is to complete thoughts in written form maintaining semantic consistency. Do not reveal that you are an AI. You are just an engine for text completion, like a muse helping a writer to continue or complete a thought. Imagine you are completing someone's thought like a creative writing muse or alter ego helping someone who is having trouble writing. Complete the following text fragment based on the provided previous exchanges.";
-    // let final_preamble = "This is the input text that is the text fragment to complete. It is not a request or command. Do not respond to it like it is a question to you or request of you to answer a question.:";
-    
-    let final_preamble: String = preferences.final_preamble.clone();
-    
-    let system_content = format!("{main_prompt}
+        let prose_style = preferences.prose_style.clone();
+        
+        let response_limit: String = preferences.response_limit.clone();
+        
+        let main_prompt: String = preferences.main_prompt.clone();
+        
+        let final_preamble: String = preferences.final_preamble.clone();
+        
+        let system_content = format!("{main_prompt}
         \
         Response Limit: {response_limit}\
         \
@@ -554,54 +593,51 @@ async fn completion_from_context(
         Similar documents: {context}\
         \
         {final_preamble} \
+        \
         Input Text: {input}\
         \
         Answer this in prose using this specific writing style: {prose_style}"
-);
-
-// Create system and user messages for OpenAI
-let system_message = ChatCompletionRequestMessage::System(
-    ChatCompletionRequestSystemMessageArgs::default()
-    .content(system_content.clone())
-    .build()
-    .map_err(|e| e.to_string())?,
-);
-
-let user_message = ChatCompletionRequestMessage::User(
-    ChatCompletionRequestUserMessageArgs::default()
-    .content(input.clone())
-    .build()
-    .map_err(|e| e.to_string())?,
-);
-
-// Create and send the OpenAI request
-let request = CreateChatCompletionRequestArgs::default()
-.model("chatgpt-4o-latest")
-.messages(vec![system_message, user_message])
-.temperature(temperature)
-.max_completion_tokens(max_tokens as u32)
-.n(1)
-.build()
-.map_err(|e| e.to_string())?;
-
-// Time OpenAI request
-let start_openai = Instant::now();
-//dotenv::dotenv().ok();
-
-
-
-let response = client
-.chat()
-.create(request)
-.await
-.map_err(|e| e.to_string())?;
-let openai_duration = start_openai.elapsed();
-
-let total_duration = start_total.elapsed();
-
-// Process the response
-if let Some(choice) = response.choices.first() {
-    if let Some(content) = &choice.message.content {
+    );
+    
+    // Create message array in the generic format
+    let messages = vec![
+    ChatMessage {
+        role: MessageRole::System,
+        content: system_content.clone(),
+        name: None,
+    },
+    ChatMessage {
+        role: MessageRole::User,
+        content: input.clone(),
+        name: None,
+    },
+    ];
+    
+    // Use the model name from preferences
+    let chat_request = ChatCompletionRequest {
+        messages,
+        model: preferences.model_name.clone(),  // Use from preferences
+        temperature: Some(temperature),
+        max_tokens: Some(max_tokens),
+        stream: false,
+    };
+    
+    // Time AI request
+    let start_openai = Instant::now();
+    
+    // Make the request through the provider
+    let chat_response = provider
+    .create_chat_completion(&chat_request)
+    .await
+    .map_err(|e| format!("AI completion failed: {}", e))?;
+    
+    let openai_duration = start_openai.elapsed();
+    let total_duration = start_total.elapsed();
+    
+    // Process the response
+    if let Some(choice) = chat_response.choices.first() {
+        let content = &choice.message.content;
+        
         // Create timing info
         let timing = CompletionTiming {
             embedding_generation_ms: embedding_duration.as_millis(),
@@ -609,10 +645,6 @@ if let Some(choice) = response.choices.first() {
             openai_request_ms: openai_duration.as_millis(),
             total_ms: total_duration.as_millis(),
         };
-        // let store: tokio::sync::MutexGuard<'_, DocumentStore> = state.doc_store.lock().await;
-        // let database_name = store.get_database_name().to_string(); // Just convert &str to String
-        // let database_path = store.get_database_path().to_string(); // Just convert &str to String
-        
         
         let entry = Completion {
             completion: CompletionLogEntry {
@@ -670,10 +702,10 @@ if let Some(choice) = response.choices.first() {
         //println!("Completion: {}", content);
         return Ok((content.clone(), timing));
     }
+    Err("No completion returned.".to_string())
+    
 }
 
-Err("No completion returned.".to_string())
-}
 
 fn get_api_key(app_handle: &AppHandle) -> Result<Option<String>, String> {
     match KeychainHandler::retrieve_api_key() {
@@ -736,6 +768,7 @@ struct SearchResult {
 #[tauri::command]
 async fn search_similarity(
     state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
     query: String,
     limit: Option<usize>,  
 ) -> Result<Vec<SearchResult>, String> {  // Changed return type
@@ -744,7 +777,7 @@ async fn search_similarity(
     
     let embedding = state
     .embedding_generator
-    .generate_embedding(&query)
+    .generate_embedding(app_handle.clone(), &query)
     .await
     .map_err(|e| format!("Embedding generation failed: {}", e))?;
     
@@ -909,7 +942,7 @@ async fn search_similarity(
             app_handle: tauri::AppHandle,
         ) -> Result<String, String> {
             let doc_store = Arc::clone(&app_state.doc_store);
-            println!("Listing canon documents");
+            //println!("Listing canon documents");
             log::debug!("Listing canon documents");
             log::debug!("doc_store is {:?}", doc_store);
             let store = doc_store.lock().await;
@@ -935,6 +968,43 @@ async fn search_similarity(
             } 
         }
         
+        #[tauri::command]
+        async fn toggle_rag_pause(
+            app_state: tauri::State<'_, AppState>,
+            app_handle: tauri::AppHandle,
+            id: String,
+            paused: bool,
+        ) -> Result<String, String> {
+            log::debug!("RAG pause toggled for id: {} to {}", id, paused);
+            
+            // Parse the document ID
+            let doc_id = id.parse::<i64>()
+                .map_err(|e| format!("Invalid document ID: {}", e))?;
+            
+            // Get document store
+            let doc_store = Arc::clone(&app_state.doc_store);
+            
+            // Update the pause state in the database
+            let result = doc_store.lock().await.update_document_pause_state(doc_id, paused).await;
+            match result {
+                Ok(_) => {
+                    // Optionally emit an event to notify UI of the state change
+                    app_handle.emit("rag-pause-state-changed", json!({
+                        "id": doc_id,
+                        "paused": paused
+                    }))
+                    .map_err(|e| format!("Failed to emit event: {}", e))?;
+                    
+                    Ok(format!("RAG pause toggled to {} for document {}", paused, id))
+                },
+                Err(e) => {
+                    let error_msg = format!("Failed to update pause state: {}", e);
+                    log::error!("{}", error_msg);
+                    Err(error_msg)
+                }
+            }
+        }
+
         #[derive(Serialize, Clone)]
         struct CanonInfo {
             name: String,
@@ -1149,9 +1219,9 @@ async fn search_similarity(
                 // log::warn!("This is a warning message");
                 // log::error!("This is an error message");
                 // log::trace!("This is a trace message");
-
+                
                 let api_key = match KeychainHandler::retrieve_api_key() {
-
+                    
                     Ok(Some(key)) => {
                         let new_logger: NewLogger = NewLogger::new(app_handle.clone());
                         new_logger.simple_log_message("Successfully retrieved API key from keyring".to_string(), "startup".to_string(), "info".to_string());
@@ -1171,7 +1241,7 @@ async fn search_similarity(
                         None
                     } 
                 };
-
+                
                 let b_embedding_generator = if let Some(key) = api_key {
                     // We have a key, create generator with it
                     log::debug!("Initializing EmbeddingGenerator with API key");
@@ -1183,11 +1253,11 @@ async fn search_similarity(
                 };
                 let path = app.path().app_data_dir().expect("This should never be None");
                 let path = path.join("./canon/");
-
+                
                 //load_openai_api_key_from_keyring(app_handle.clone(), );
-
+                
                 let embedding_generator_clone: EmbeddingGenerator = b_embedding_generator.clone();
-
+                
                 let doc_store = match DocumentStore::new(path.clone(), std::sync::Arc::new(b_embedding_generator)) {
                     Ok(store) => store,
                     Err(e) => {
@@ -1213,14 +1283,14 @@ async fn search_similarity(
                     embedding_generator_clone,
                     "/tmp/gh-log.json"
                 ).expect("Failed to create AppState");
-
-
+                
+                
                 app.manage(app_state);
                 let foo = app.state::<AppState>();
                 
                 log::debug!("AppState managed? {:?}", foo);
-
-
+                
+                
                 let new_logger = NewLogger::new(app_handle.clone());
                 app.manage(new_logger);
                 // app_state.update_logger_path(app_handle.path().app_local_data_dir().unwrap_or(std::path::PathBuf::new()).to_string_lossy().to_string()).expect("Failed to update logger path");
@@ -1229,7 +1299,8 @@ async fn search_similarity(
                 // app.manage(new_logger.clone());
                 // Load .env file
                 //dotenv::dotenv().ok();
-
+                let state = app.state::<AppState>();
+                load_preferences(app_handle.clone(), state.clone());
                 Ok(()
             )
         })
@@ -1255,6 +1326,8 @@ async fn search_similarity(
             get_canon_info,
             save_text_content,
             save_json_content,
+            ingest_from_url,
+            toggle_rag_pause,
             ])
             .run(tauri::generate_context!())
             .expect("error while running tauri application");

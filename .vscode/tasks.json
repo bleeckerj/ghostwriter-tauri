@@ -1,31 +1,49 @@
 {
-    // See https://go.microsoft.com/fwlink/?LinkId=733558
-    // for the documentation about the tasks.json format
-    "version": "2.0.0",
-    "tasks": [
-      {
-        "label": "ui:dev",
-        "type": "shell",
-        "isBackground": true,
-        "command": "yarn",
-        "args": [
-          "dev"
-        ]
-      },
-      {
-        "label": "ui:build",
-        "type": "shell",
-        "command": "yarn",
-        "args": [
-          "build"
-        ]
-      },
-      {
-        "type": "npm",
-        "script": "tauri",
-        "problemMatcher": [],
-        "label": "npm: tauri",
-        "detail": "tauri"
-      }
-    ]
-  }
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ui:dev",
+      "type": "shell",
+      "isBackground": true,
+      "command": "yarn",
+      "args": [
+        "dev"
+      ]
+    },
+    {
+      "label": "ui:build",
+      "type": "shell",
+      "command": "yarn",
+      "args": [
+        "build"
+      ]
+    },
+    {
+      "type": "npm",
+      "script": "tauri",
+      "problemMatcher": [],
+      "label": "npm: tauri",
+      "detail": "tauri"
+    },
+    {
+      "label": "build-mongodb-test",
+      "type": "shell",
+      "command": "cd ${workspaceFolder}/src-tauri && cargo test --no-run --lib",
+      "group": "build",
+      "problemMatcher": [
+        "$rustc"
+      ]
+    },
+    {
+      "label": "build-mongodb-example",
+      "type": "shell",
+      "command": "cd ${workspaceFolder}/src-tauri && cargo build --example mongodb_example",
+      "group": "build",
+      "problemMatcher": [
+        "$rustc"
+      ]
+    }
+  ]
+}

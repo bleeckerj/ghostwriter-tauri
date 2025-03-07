@@ -2,8 +2,17 @@
 #![allow(dead_code)]
 // src/embeddings.rs
 
-use async_openai::{config::OpenAIConfig, types::CreateEmbeddingRequestArgs, Client};
+use async_openai::{
+    config::OpenAIConfig, 
+    types::CreateEmbeddingRequestArgs, 
+    Client,
+    error::OpenAIError
+};
 use reqwest::header::AUTHORIZATION;
+use tokio::time::timeout;
+use std::time::Duration;
+use serde_json::json;
+use tauri::Emitter;
 
 #[derive(Debug, Clone)]
 pub struct EmbeddingGenerator {
@@ -17,11 +26,11 @@ impl EmbeddingGenerator {
             client: Client::new() 
         }
     }
-
+    
     pub fn new_with_client(client: Client<OpenAIConfig>) -> Self {
         EmbeddingGenerator { client: client }
     }
-
+    
     pub fn new_with_api_key(api_key: &str) -> Self {
         let config = OpenAIConfig::new()
         .with_api_key(api_key.to_string());
@@ -36,14 +45,14 @@ impl EmbeddingGenerator {
         let client = Client::with_config(config);
         EmbeddingGenerator { client }
     }
-
+    
     pub fn set_api_key(&mut self, api_key: &str) {
         let config = OpenAIConfig::new()
         .with_api_key(api_key.to_string());
         let client = Client::with_config(config);
         self.client = client;
     }
-
+    
     /// Chunks text into segments with optional overlap
     /// 
     /// * `text` - The text to chunk
@@ -83,6 +92,7 @@ impl EmbeddingGenerator {
     
     pub async fn generate_embeddings(
         &self,
+        app_handle: tauri::AppHandle,
         text: &str,
         chunk_size: usize,
         overlap: usize,
@@ -91,7 +101,7 @@ impl EmbeddingGenerator {
         let mut embeddings = Vec::new();
         
         for chunk in chunks {
-            let embedding = self.generate_embedding(&chunk).await?;
+            let embedding = self.generate_embedding(app_handle.clone(), &chunk).await?;
             embeddings.push(embedding);
         }
         
@@ -100,6 +110,7 @@ impl EmbeddingGenerator {
     
     pub async fn generate_embedding(
         &self,
+        app_handle: tauri::AppHandle,
         text: &str,
     ) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
         let request = CreateEmbeddingRequestArgs::default()
@@ -107,8 +118,49 @@ impl EmbeddingGenerator {
         .input(text.to_string())
         .build()?;
         
-        let response = self.client.embeddings().create(request).await?;
-        
+        // Wrap the API call with a timeout (e.g., 30 seconds)
+        let response = match timeout(Duration::from_secs(8), self.client.embeddings().create(request)).await {
+            Ok(result) => {
+                // Handle actual API response or errors
+                match result {
+                    Ok(response) => response,
+                    Err(err) => {
+                        // Check if it's a quota error
+                        if let async_openai::error::OpenAIError::ApiError(api_err) = &err {
+                            if api_err.code.as_deref() == Some("insufficient_quota") {
+                                let error_message = "OpenAI API quota exceeded. Please check your billing details.";
+                                log::error!("{}: {}", error_message, api_err.message);
+                                app_handle.emit("simple-log-message", json!({
+                                    "message": error_message,
+                                    "timestamp": chrono::Local::now().to_rfc3339(),
+                                    "level": "error"
+                                }))?;
+                                return Err(error_message.into());
+                            }
+                        }
+                        
+                        // Generic error handling for other API errors
+                        let error_message = format!("OpenAI API error: {}", err);
+                        log::error!("{}", error_message);
+                        app_handle.emit("simple-log-message", json!({
+                            "message": error_message,
+                            "timestamp": chrono::Local::now().to_rfc3339(),
+                            "level": "error"
+                        }))?;
+                        return Err(err.into());
+                    }
+                }
+            },
+            Err(_) => {
+                log::error!("OpenAI API call timed out after 8 seconds");
+                app_handle.emit("simple-log-message", json!({
+                    "message": format!("OpenAI API call timed out after 8 seconds"),
+                    "timestamp": chrono::Local::now().to_rfc3339(),
+                    "level": "error"
+                }))?;
+                return Err("OpenAI API call timed out after 8 seconds".into())
+            }
+        };        
         if let Some(embedding) = response.data.first() {
             Ok(embedding.embedding.clone())
         } else {
@@ -136,13 +188,5 @@ mod tests {
             assert!(chunks[1].starts_with(overlap_text));
         }
     }
-    #[test]
-    fn test_has_api_key() {
-        let generator_with_key = EmbeddingGenerator::from_api_key("dummy-key");
-        assert!(generator_with_key.has_api_key());
-
-        let generator_no_key = EmbeddingGenerator::new(Client::new());
-        assert!(!generator_no_key.has_api_key());
-    }
-
+    
 }
