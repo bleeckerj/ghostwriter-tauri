@@ -14,4 +14,4 @@ pub use models::{
 };
 
 // If you want to expose a default provider implementation:
-pub use providers::openai::OpenAIProvider;
+pub use providers::openai_provider::OpenAIProvider;

@@ -1,10 +1,10 @@
 // Declare the modules - these reference the .rs files in this directory
-pub mod openai;
-pub mod lm_studio;
+pub mod openai_provider;
+pub mod lm_studio_provider;
 
 // Re-export the provider structs so they can be used directly from ai::providers
-pub use openai::OpenAIProvider;
-pub use lm_studio::LMStudioProvider;
+pub use openai_provider::OpenAIProvider;
+pub use lm_studio_provider::LMStudioProvider;
 
 use crate::ai::{
     traits::{ModelProvider, ChatCompletionProvider, EmbeddingProvider, AIProviderError},
