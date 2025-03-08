@@ -444,7 +444,7 @@ impl DocumentStore {
         };
         drop(doc_id_result); // Release the lock
         app_handle.emit("simple-log-message", json!({
-            "message": format!("Document added with ID: {}", doc_id),
+            "message": format!("Document added to the Canon with ID: {}", doc_id),
             "timestamp": chrono::Local::now().to_rfc3339(),
             "level": "info"
         }))?;
@@ -556,7 +556,7 @@ impl DocumentStore {
             };
             drop(doc_id_result); // Release the lock
             app_handle.emit("simple-log-message", json!({
-                "message": format!("Document added with ID: {}", doc_id),
+                "message": format!("Document added to the Canon with ID: {}", doc_id),
                 "timestamp": chrono::Local::now().to_rfc3339(),
                 "level": "info"
             }))?;
