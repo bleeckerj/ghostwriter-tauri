@@ -951,6 +951,7 @@ const diagnostics = new Editor({
         // Your existing delete handling code
         console.log('Deleting canon with ID:', node.attrs.id)
         editor.commands.deleteNode('canonEntry')
+        handleCanonEntryDelete({ node, getPos, editor })
       },
       // Add this new handler
       onTogglePause: ({ node, isPaused }) => {

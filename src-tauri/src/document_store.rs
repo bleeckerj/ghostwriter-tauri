@@ -93,22 +93,15 @@ impl DocumentStore {
             embedding_generator,
             canon_path,
             canon_name,
-        };
-        
-        log::debug!("3. Why do we crash in production and not in development?");
-        
+        };        
         
         doc_store.register_ingestor(Box::new(MdxIngestor));
-        log::debug!("4. Why do we crash in production and not in development?");
         
         doc_store.register_ingestor(Box::new(PdfIngestor));
         doc_store.register_ingestor(Box::new(MarkdownIngestor));
         doc_store.register_ingestor(Box::new(EpubIngestor));
         doc_store.register_ingestor(Box::new(TextIngestor));
-        doc_store.register_ingestor(Box::new(UrlDocumentIngestor));
-        
-        log::debug!("5. Why do we crash in production and not in development?");
-        
+        doc_store.register_ingestor(Box::new(UrlDocumentIngestor));        
         
         Ok(doc_store)
     }

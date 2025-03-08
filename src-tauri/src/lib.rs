@@ -1300,6 +1300,7 @@ async fn search_similarity(
                 // app.manage(new_logger.clone());
                 // Load .env file
                 //dotenv::dotenv().ok();
+                
                 let state = app.state::<AppState>();
                 load_preferences(app_handle.clone(), state.clone());
                 Ok(()
