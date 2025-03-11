@@ -3,12 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <link rel="stylesheet" href="/src/view-log-styles.css" />
-    <link rel="stylesheet" href="/src/fonts.css" />
-  
+    <link rel="stylesheet" href="/fonts.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ghostwriter Log Viewer</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.0/jsoneditor.min.css" rel="stylesheet">
-    <script type="module" src="./src/view-log.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@json-editor/json-editor@latest/dist/jsoneditor.min.js"></script>
+    <link rel="styleshet"  href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.0/jsoneditor.min.css">
+    <!-- <script type="module" src="/src/view-log.js" defer></script> -->
+
+    <!-- <script type="module" script-src="unsafe-inline" src="/src/view-log.js" defer></script> -->
+    <script>
+        const { invoke } = window.__TAURI__.core;
+
+
+window.addEventListener("DOMContentLoaded", async () => {
+    const logContents = await invoke('get_log_contents');
+    //document.getElementById('log').textContent = logContents;
+    console.log(logContents);
+    
+    const container = document.getElementById("jsoneditor");
+    const editor = new JSONEditor(container, { mode: "tree" });
+    editor.set(logContents);
+    invoke("get_logger_path", {}).then((res) => {
+        console.log('Logger Path:', res);
+        document.getElementById("log-file-path").textContent = res
+    });
+});
+    </script>
     <style>
         .jsoneditor {
             height: 100%;
@@ -21,9 +41,5 @@
     <div id="log-file-path" class="font-mono text-[0.8em] text-center my-4"></div>
     <div id="jsoneditor"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.0/jsoneditor.min.js"></script>
-    <script>
-
-        
-    </script>
 </body>
 </html>

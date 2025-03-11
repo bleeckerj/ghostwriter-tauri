@@ -75,7 +75,7 @@ pub struct DocumentStore {
 impl DocumentStore {
     pub const DEFAULT_CHUNK_SIZE: usize = 4096;
     pub const DEFAULT_CHUNK_OVERLAP: usize = 400;
-
+    
     pub fn new(
         store_path: PathBuf,
         embedding_generator: Arc<EmbeddingGenerator>
@@ -226,7 +226,7 @@ impl DocumentStore {
         
         Ok((conn, canon_path, canon_name, next_id))
     }
-
+    
     pub async fn add_document(
         &mut self,
         mut document: Document,
@@ -513,7 +513,44 @@ impl DocumentStore {
             }))?;
             //println!("Ingestor found");
             let resource = Resource::FilePath(path.to_path_buf());
-            let ingested = ingestor.ingest(&resource).await?;
+
+            //
+            // let ingested = ingestor.ingest(&resource).await?;
+            //
+            
+            // With this more detailed error handling:
+            let ingested = match ingestor.ingest(&resource).await {
+                Ok(result) => result,
+                Err(e) => {
+                    // Log the error with details
+                    log::error!("Document ingestion failed for {}: {}", path.display(), e);
+                    
+                    // Send error to frontend for user feedback
+                    app_handle.emit("simple-log-message", json!({
+                        "message": format!("Failed to process '{}': {}", path.file_name().unwrap_or_default().to_string_lossy(), e),
+                        "timestamp": chrono::Local::now().to_rfc3339(),
+                        "level": "error"
+                    }))?;
+                    
+                    // Add specific handling for PDF-related errors
+                    if path.extension().map_or(false, |ext| ext.eq_ignore_ascii_case("pdf")) {
+                        let pdf_help = "This might be due to missing PDFium library. \
+                Make sure the application resources include libpdfium for your platform.";
+                        
+                        app_handle.emit("simple-log-message", json!({
+                            "message": pdf_help,
+                            "timestamp": chrono::Local::now().to_rfc3339(),
+                            "level": "warn"
+                        }))?;
+                        
+                        log::warn!("{}", pdf_help);
+                    }
+                    
+                    // Still return the error to be handled upstream
+                    return Err(Box::new(e));
+                }
+            };
+            
             //println!("Ingested document: {:?}", ingested);
             let document = Document {
                 id: 0,
@@ -727,18 +764,18 @@ impl DocumentStore {
             }
         }
         // pub async fn update_document_pause_state(&self, doc_id: i64, paused: bool) -> Result<(), String> {
-
+        
         pub async fn update_document_pause_state(&self, doc_id: i64, paused: bool) -> Result<(), Box<dyn std::error::Error>> {
             let conn = self.conn.lock().await;
             
             // Check if paused column exists in documents table
             let has_paused_column = conn
-                .query_row(
-                    "SELECT COUNT(*) FROM pragma_table_info('documents') WHERE name='paused'",
-                    [],
-                    |row| row.get::<_, i64>(0)
-                )?;
-                
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('documents') WHERE name='paused'",
+                [],
+                |row| row.get::<_, i64>(0)
+            )?;
+            
             // Add the column if it doesn't exist (handles migration for older databases)
             if has_paused_column == 0 {
                 log::info!("Adding paused column to documents table");
@@ -764,12 +801,12 @@ impl DocumentStore {
             
             // Check if paused column exists (just to be safe)
             let has_paused_column = conn
-                .query_row(
-                    "SELECT COUNT(*) FROM pragma_table_info('documents') WHERE name='paused'",
-                    [],
-                    |row| row.get::<_, i64>(0)
-                )?;
-                
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('documents') WHERE name='paused'",
+                [],
+                |row| row.get::<_, i64>(0)
+            )?;
+            
             if has_paused_column == 0 {
                 // Column doesn't exist, so nothing is paused
                 return Ok(false);

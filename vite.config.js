@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
-import tailwindcss from '@tailwindcss/vite'
+import tailwindcss from '@tailwindcss/vite';
+import { resolve } from 'path';
 
 const host = process.env.TAURI_DEV_HOST;
 
@@ -29,5 +30,20 @@ export default defineConfig({
     minify: !process.env.TAURI_ENV_DEBUG ? 'esbuild' : false,
     // produce sourcemaps for debug builds
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
+    outDir: 'dist',
+    rollupOptions: {
+      input: {
+        // this was just at /index.html and index.html was in the root of the project
+        main: resolve(__dirname, '/index.html'),
+        api_key: resolve(__dirname, 'public/api_key.html'),
+        view_log: resolve(__dirname, '/view-log.html')
+      }
+    }
   },
+  publicDir: 'public',
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src')
+    }
+  }
 });

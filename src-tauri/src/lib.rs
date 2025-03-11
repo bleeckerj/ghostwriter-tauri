@@ -20,7 +20,7 @@ extern crate log;
 use syslog::{Facility, Formatter3164, BasicLogger};
 use log::{SetLoggerError, LevelFilter, info};
 use serde_json::json;
-
+use tauri::path::{BaseDirectory};
 mod preferences;
 use preferences::Preferences;
 mod keychain_handler;
@@ -65,12 +65,22 @@ lazy_static! {
         dotenv::dotenv().ok();
         env::var("OPENAI_API_KEY").ok()
     };
+    static ref PDF_LIB_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
+    static ref RESOURCE_DIR_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
     static ref API_KEY_MISSING: Mutex<bool> = Mutex::new(false);
 }
 
 // At the top of your file with other constants
 const MENU_FILE_NEW: &str = "file-new";
 const MENU_FILE_QUIT: &str = "file-quit";
+
+pub fn get_pdf_lib_path() -> Option<PathBuf> {
+    PDF_LIB_PATH.lock().unwrap().clone()
+}
+
+pub fn get_resource_dir_path() -> Option<PathBuf> {
+    RESOURCE_DIR_PATH.lock().unwrap().clone()
+}
 
 #[derive(Serialize)]
 struct CompletionTiming {
@@ -335,7 +345,9 @@ async fn load_openai_api_key_from_keyring(
     #[tauri::command]
     async fn get_logger_path(state: tauri::State<'_, AppState>) -> Result<String, String> {
         let logger = state.logger.lock().await;
-        Ok(logger.get_logger_path().to_str().unwrap().to_string())
+        let logger_path = logger.get_logger_path().to_str().unwrap().to_string();
+        log::debug!("Logger path: {:?}", logger_path);
+        Ok(logger_path)
     }
     
     #[tauri::command]
@@ -383,7 +395,7 @@ async fn load_openai_api_key_from_keyring(
     ) -> Result<String, String> {
         
         println!("Ingesting file: {}", file_path);
-        log::debug!("Ingesting file: {}", file_path);
+        log::info!("Ingesting file: {}", file_path);
         
         let file_path_buf = PathBuf::from(file_path);
         let file_name = file_path_buf.clone().as_path().file_name().unwrap().to_str().unwrap().to_string();
@@ -1166,7 +1178,7 @@ async fn search_similarity(
                 let _ = WebviewWindowBuilder::new(
                     app_handle,
                     "api_key_window", 
-                    WebviewUrl::App("api_key.html".into()) // ✅ Provide a valid URL
+                    WebviewUrl::App("/api_key.html".into()) // ✅ Provide a valid URL
                 )
                 .title("Enter OpenAI API Key")
                 .resizable(false)
@@ -1213,6 +1225,42 @@ async fn search_similarity(
                 let app_handle = app.handle();
                 log::info!("Ghostwriter starting up");
                 log::info!("Initializing components...");
+
+// Get and store resource paths globally
+if let Ok(resource_path) = app.path().resolve("./resources/libpdfium.dylib", BaseDirectory::Resource) {
+    log::debug!("Resource path: {:?}", resource_path);
+    *PDF_LIB_PATH.lock().unwrap() = Some(resource_path);
+}
+
+if let Ok(resource_dir) = app.path().resource_dir() {
+    log::debug!("Resource directory: {}", resource_dir.display());
+    *RESOURCE_DIR_PATH.lock().unwrap() = Some(resource_dir);
+    
+    // List all files in the resource directory
+    // ...rest of your existing code...
+}
+
+                log::debug!("BaseDirectory::Resource is {:?}", BaseDirectory::Resource);
+                //let resource_path = app.path().resolve("./resources/libpdfium.dylib", BaseDirectory::Resource)?;
+                log::debug!("Resource path: {:?}", get_resource_dir_path());
+                log::debug!("libpdfium.dylib path: {:?}", get_pdf_lib_path());
+                let resource_dir = app.path().resource_dir()?;
+                log::debug!("Resource directory: {}", resource_dir.display());
+                
+                // List all files in the resource directory
+                let entries = std::fs::read_dir(&resource_dir)?;
+                for entry in entries {
+                    if let Ok(entry) = entry {
+                        log::debug!("Found resource: {}", entry.path().display());
+                        
+                        // // If you want to recursively list directories
+                        // if entry.path().is_dir() {
+                        //     // You could implement a recursive function here
+                        //     dog::debug!("  (Directory)");
+                        // }
+                    }
+                }
+
                 // Now these log messages will work
                 // log::debug!("This is a debug message");
                 // log::info!("This is an info message");

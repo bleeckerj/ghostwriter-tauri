@@ -585,7 +585,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       const logPath = res;
       const encodedLogPath = encodeURIComponent(logPath);
       const webview = new WebviewWindow('view-log-window-label', {
-        url: `view-log.html?logPath=${encodedLogPath}`, // URL to load
+        url: `/view-log.html?logPath=${encodedLogPath}`, // URL to load
         title: 'Ghostwriter Log Viewer',
         width: 820,
         height: 640,
