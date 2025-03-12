@@ -1,5 +1,6 @@
 #![allow(unused_imports)]
 #![allow(unused)]
+use async_openai::types::AudioInput;
 // src/document_store.rs
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
@@ -21,6 +22,7 @@ use crate::ingest::{
     epub_ingestor::EpubIngestor,
     text_ingestor::TextIngestor,
     url_ingestor::UrlDocumentIngestor,
+    audio_ingestor::WhisperIngestor,
 };
 use tauri::Manager; // Add this import
 use tauri::Emitter;
@@ -106,6 +108,7 @@ impl DocumentStore {
         doc_store.register_ingestor(Box::new(EpubIngestor));
         doc_store.register_ingestor(Box::new(TextIngestor));
         doc_store.register_ingestor(Box::new(UrlDocumentIngestor));
+        doc_store.register_ingestor(Box::new(AudioIngestor));
         
         log::debug!("5. Why do we crash in production and not in development?");
         
