@@ -472,8 +472,15 @@ async fn load_openai_api_key_from_keyring(
         };
         
         let lm_models = provider.list_models().await;
-        lm_models.iter().for_each(|model| {
-            log::debug!("Model: {:?}", model);
+        lm_models.iter().for_each(|models| {
+            models.iter().for_each(|model| {
+                log::debug!("Model: {:?}", model.name);
+                new_logger.simple_log_message(
+                    format!("Model: {:?}", model.name),
+                    "models".to_string(),
+                    "debug".to_string()
+                );
+            });
         });
         
         let start_total = Instant::now();
@@ -991,7 +998,7 @@ async fn search_similarity(
             
             // Parse the document ID
             let doc_id = id.parse::<i64>()
-                .map_err(|e| format!("Invalid document ID: {}", e))?;
+            .map_err(|e| format!("Invalid document ID: {}", e))?;
             
             // Get document store
             let doc_store = Arc::clone(&app_state.doc_store);
@@ -1016,7 +1023,7 @@ async fn search_similarity(
                 }
             }
         }
-
+        
         #[derive(Serialize, Clone)]
         struct CanonInfo {
             name: String,
@@ -1225,21 +1232,21 @@ async fn search_similarity(
                 let app_handle = app.handle();
                 log::info!("Ghostwriter starting up");
                 log::info!("Initializing components...");
-
-// Get and store resource paths globally
-if let Ok(resource_path) = app.path().resolve("./resources/libpdfium.dylib", BaseDirectory::Resource) {
-    log::debug!("Resource path: {:?}", resource_path);
-    *PDF_LIB_PATH.lock().unwrap() = Some(resource_path);
-}
-
-if let Ok(resource_dir) = app.path().resource_dir() {
-    log::debug!("Resource directory: {}", resource_dir.display());
-    *RESOURCE_DIR_PATH.lock().unwrap() = Some(resource_dir);
-    
-    // List all files in the resource directory
-    // ...rest of your existing code...
-}
-
+                
+                // Get and store resource paths globally
+                if let Ok(resource_path) = app.path().resolve("./resources/libpdfium.dylib", BaseDirectory::Resource) {
+                    log::debug!("Resource path: {:?}", resource_path);
+                    *PDF_LIB_PATH.lock().unwrap() = Some(resource_path);
+                }
+                
+                if let Ok(resource_dir) = app.path().resource_dir() {
+                    log::debug!("Resource directory: {}", resource_dir.display());
+                    *RESOURCE_DIR_PATH.lock().unwrap() = Some(resource_dir);
+                    
+                    // List all files in the resource directory
+                    // ...rest of your existing code...
+                }
+                
                 log::debug!("BaseDirectory::Resource is {:?}", BaseDirectory::Resource);
                 //let resource_path = app.path().resolve("./resources/libpdfium.dylib", BaseDirectory::Resource)?;
                 log::debug!("Resource path: {:?}", get_resource_dir_path());
@@ -1260,7 +1267,7 @@ if let Ok(resource_dir) = app.path().resource_dir() {
                         // }
                     }
                 }
-
+                
                 // Now these log messages will work
                 // log::debug!("This is a debug message");
                 // log::info!("This is an info message");

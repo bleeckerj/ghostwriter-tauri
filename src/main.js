@@ -231,8 +231,14 @@ async function completionFromContext() {
       },
       {
         type: 'text',
-        text: ' '
+        text: '\u00A0'
       }
+    ]).run();
+    editor.chain().focus().insertContent([
+      {
+        type: 'text',
+        text: '    '
+      },
     ]).run();
     if (wasDisabled === false) {
       setTimeout(() => {
@@ -587,13 +593,13 @@ window.addEventListener("DOMContentLoaded", async () => {
       const webview = new WebviewWindow('view-log-window-label', {
         url: `/view-log.html?logPath=${encodedLogPath}`, // URL to load
         title: 'Ghostwriter Log Viewer',
-        width: 820,
-        height: 640,
+        width: 800,
+        height: 600,
         resizable: true,
         fullscreen: false,
         decorations: true, // window decorations (title bar, borders)
         transparent: false,
-        center: true
+        center: false
       })
       webview.once('tauri://created', function () {
         // webview successfully created
