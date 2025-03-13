@@ -79,6 +79,8 @@ button {
   font-family: inherit;
   color: #0f0f0f;
   background-color: #ffffff;
+  @apply dark:text-white dark:bg-black;
+
   transition: border-color 0.25s;
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
 }
@@ -118,9 +120,11 @@ button {
   button {
     color: #ffffff;
     background-color: #0f0f0f98;
+    @apply dark:text-white dark:bg-black;
   }
   button:active {
     background-color: #0f0f0f69;
+    @apply dark:bg-black dark:text-white;
   }
 }
 

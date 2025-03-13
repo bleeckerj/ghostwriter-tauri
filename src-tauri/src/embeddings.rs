@@ -9,7 +9,7 @@ use async_openai::{
     error::OpenAIError
 };
 use reqwest::header::AUTHORIZATION;
-use tokio::time::timeout;
+use tokio::time::{timeout, sleep};
 use std::time::Duration;
 use serde_json::json;
 use tauri::Emitter;
@@ -118,54 +118,69 @@ impl EmbeddingGenerator {
         .input(text.to_string())
         .build()?;
         
-        // Wrap the API call with a timeout (e.g., 30 seconds)
-        let response = match timeout(Duration::from_secs(8), self.client.embeddings().create(request)).await {
-            Ok(result) => {
-                // Handle actual API response or errors
-                match result {
-                    Ok(response) => response,
-                    Err(err) => {
-                        // Check if it's a quota error
-                        if let async_openai::error::OpenAIError::ApiError(api_err) = &err {
-                            if api_err.code.as_deref() == Some("insufficient_quota") {
-                                let error_message = "OpenAI API quota exceeded. Please check your billing details.";
-                                log::error!("{}: {}", error_message, api_err.message);
-                                app_handle.emit("simple-log-message", json!({
-                                    "message": error_message,
-                                    "timestamp": chrono::Local::now().to_rfc3339(),
-                                    "level": "error"
-                                }))?;
-                                return Err(error_message.into());
+        let mut retries = 12;
+        let mut delay = Duration::from_secs(5);
+
+        while retries > 0 {
+            let response = match timeout(Duration::from_secs(60), self.client.embeddings().create(request.clone())).await {
+                Ok(result) => {
+                    // Handle actual API response or errors
+                    match result {
+                        Ok(response) => response,
+                        Err(err) => {
+                            // Check if it's a quota error
+                            if let async_openai::error::OpenAIError::ApiError(api_err) = &err {
+                                if api_err.code.as_deref() == Some("insufficient_quota") {
+                                    let error_message = "OpenAI API quota exceeded. Please check your billing details.";
+                                    log::error!("{}: {}", error_message, api_err.message);
+                                    app_handle.emit("simple-log-message", json!({
+                                        "message": error_message,
+                                        "timestamp": chrono::Local::now().to_rfc3339(),
+                                        "level": "error"
+                                    }))?;
+                                    return Err(error_message.into());
+                                }
                             }
+                            
+                            // Generic error handling for other API errors
+                            let error_message = format!("OpenAI API error: {}", err);
+                            log::error!("{}", error_message);
+                            app_handle.emit("simple-log-message", json!({
+                                "message": error_message,
+                                "timestamp": chrono::Local::now().to_rfc3339(),
+                                "level": "error"
+                            }))?;
+                            return Err(err.into());
                         }
-                        
-                        // Generic error handling for other API errors
-                        let error_message = format!("OpenAI API error: {}", err);
-                        log::error!("{}", error_message);
-                        app_handle.emit("simple-log-message", json!({
-                            "message": error_message,
-                            "timestamp": chrono::Local::now().to_rfc3339(),
-                            "level": "error"
-                        }))?;
-                        return Err(err.into());
+                    }
+                },
+                Err(_) => {
+                    log::error!("OpenAI API call timed out after 60 seconds");
+                    app_handle.emit("simple-log-message", json!({
+                        "message": format!("OpenAI API call timed out after 60 seconds"),
+                        "timestamp": chrono::Local::now().to_rfc3339(),
+                        "level": "error"
+                    }))?;
+                    retries -= 1;
+                    if retries > 0 {
+                        log::info!("Retrying in {} seconds...", delay.as_secs());
+                        sleep(delay).await;
+                        delay *= 2; // Exponential backoff
+                        continue;
+                    } else {
+                        return Err("OpenAI API call timed out after 60 seconds".into());
                     }
                 }
-            },
-            Err(_) => {
-                log::error!("OpenAI API call timed out after 8 seconds");
-                app_handle.emit("simple-log-message", json!({
-                    "message": format!("OpenAI API call timed out after 8 seconds"),
-                    "timestamp": chrono::Local::now().to_rfc3339(),
-                    "level": "error"
-                }))?;
-                return Err("OpenAI API call timed out after 8 seconds".into())
+            };
+
+            if let Some(embedding) = response.data.first() {
+                return Ok(embedding.embedding.clone());
+            } else {
+                return Err("No embedding generated".into());
             }
-        };        
-        if let Some(embedding) = response.data.first() {
-            Ok(embedding.embedding.clone())
-        } else {
-            Err("No embedding generated".into())
         }
+
+        Err("Failed to generate embedding after retries".into())
     }
 }
 
