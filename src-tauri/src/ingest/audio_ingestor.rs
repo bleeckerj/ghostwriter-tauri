@@ -13,10 +13,10 @@ use super::document_ingestor::{
 use chrono::Utc;
 
 #[derive(Debug)]
-pub struct WhisperIngestor;
+pub struct AudioIngestor;
 
 #[async_trait]
-impl DocumentIngestor for WhisperIngestor {
+impl DocumentIngestor for AudioIngestor {
     fn can_handle(&self, resource: &Resource) -> bool {
         match resource {
             Resource::FilePath(path) => {
@@ -41,7 +41,7 @@ impl DocumentIngestor for WhisperIngestor {
     }
 }
 
-impl WhisperIngestor {
+impl AudioIngestor {
     async fn ingest_file(&self, path: &Path) -> Result<IngestedDocument, IngestError> {
         // Initialize the Whisper library
         let m = model_handler::ModelHandler::new("tiny", "models/").await;

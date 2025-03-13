@@ -22,7 +22,7 @@ use crate::ingest::{
     epub_ingestor::EpubIngestor,
     text_ingestor::TextIngestor,
     url_ingestor::UrlDocumentIngestor,
-    audio_ingestor::WhisperIngestor,
+    audio_ingestor::AudioIngestor,
 };
 use tauri::Manager; // Add this import
 use tauri::Emitter;
@@ -104,7 +104,7 @@ impl DocumentStore {
         doc_store.register_ingestor(Box::new(EpubIngestor));
         doc_store.register_ingestor(Box::new(TextIngestor));
         doc_store.register_ingestor(Box::new(UrlDocumentIngestor));
-        doc_store.register_ingestor(Box::new(AudioIngestor));
+        //doc_store.register_ingestor(Box::new(AudioIngestor));
         
         log::debug!("5. Why do we crash in production and not in development?");
         
