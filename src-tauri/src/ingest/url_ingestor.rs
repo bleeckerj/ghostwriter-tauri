@@ -18,31 +18,31 @@ impl UrlDocumentIngestor {
     pub async fn ingest_url(&self, url: &str) -> Result<IngestedDocument, IngestError> {
         // 1. Construct the Jina Reader URL
         let encoded_url = reqwest::Url::parse(url)
-            .map_err(|e| IngestError::Parse(format!("Invalid URL: {}", e)))?;
+        .map_err(|e| IngestError::Parse(format!("Invalid URL: {}", e)))?;
         let jina_api_url = format!("https://r.jina.ai/{}", encoded_url);
         
         log::info!("Fetching content from URL: {} via Jina Reader", url);
         
         // 2. Create a client with a timeout
         let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(30))
-            // .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
-            .build()
-            .map_err(|e| IngestError::Parse(format!("Failed to build HTTP client: {}", e)))?;
+        .timeout(std::time::Duration::from_secs(30))
+        // .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+        .build()
+        .map_err(|e| IngestError::Parse(format!("Failed to build HTTP client: {}", e)))?;
         
         // 3. Send GET request
         log::debug!("Sending request to: {}", jina_api_url);
         let response = client.get(&jina_api_url)
-            .send()
-            .await
-            .map_err(|e| {
-                log::error!("Failed to connect to Jina Reader API: {}", e);
-                IngestError::Io(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Failed to connect to Jina Reader API: {}", e)
-                ))
-            })?;
-
+        .send()
+        .await
+        .map_err(|e| {
+            log::error!("Failed to connect to Jina Reader API: {}", e);
+            IngestError::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to connect to Jina Reader API: {}", e)
+            ))
+        })?;
+        
         // 4. Check status before getting content
         if !response.status().is_success() {
             let status = response.status();
@@ -51,10 +51,10 @@ impl UrlDocumentIngestor {
             log::error!("{}", error_msg);
             return Err(IngestError::Parse(error_msg));
         }
-
+        
         // 5. Get the Markdown/text response
         let response_text = response.text().await
-            .map_err(|e| IngestError::Parse(format!("Failed to read response body: {}", e)))?;
+        .map_err(|e| IngestError::Parse(format!("Failed to read response body: {}", e)))?;
         
         // 6. Clean any HTML tags from the Markdown
         let re = Regex::new(r"<[^>]*>").unwrap(); // Regex to match HTML tags
@@ -71,9 +71,15 @@ impl UrlDocumentIngestor {
             }
         }
         
+        // Generate current timestamp in RFC 3339 format
+        let current_time: String = chrono::Local::now().to_rfc3339();
+        
         // 8. Create document
         let mut frontmatter = HashMap::new();
         frontmatter.insert("url".to_string(), Pod::String(url.to_string()));
+        frontmatter.insert("source".to_string(), Pod::String("Jina Reader".to_string()));
+        frontmatter.insert(current_time.clone(), Pod::String("ingested".to_string()));
+        
         
         Ok(IngestedDocument {
             title,  // Use extracted title or URL
@@ -82,13 +88,13 @@ impl UrlDocumentIngestor {
                 source_type: "URL".to_string(),
                 source_path: url.to_string(),
                 author: None,
-                created_date: None,
-                modified_date: None,
+                created_date: Some(current_time.clone()),  // Add current time as creation date
+                modified_date: Some(current_time),         // Same for modification date    
                 frontmatter,
             },
         })
     }
-
+    
     /// Save the ingested document to a file
     /// 
     /// This method serializes the document content along with its metadata
@@ -117,7 +123,7 @@ impl UrlDocumentIngestor {
         
         // Add the date this was saved
         front_matter.insert("saved_date".to_string(), 
-                           serde_json::Value::String(chrono::Local::now().to_rfc3339()));
+        serde_json::Value::String(chrono::Local::now().to_rfc3339()));
         
         // Convert custom frontmatter from HashMap<String, Pod> to serde_json::Value
         for (key, value) in &document.metadata.frontmatter {
@@ -158,35 +164,35 @@ impl UrlDocumentIngestor {
         log::info!("Saved URL document to {}", file_path);
         Ok(())
     }
-
-// Helper function to convert Pod to serde_json::Value
-fn pod_to_json(pod: &Pod) -> serde_json::Value {
-    match pod {
-        Pod::Boolean(b) => serde_json::Value::Bool(*b),
-        Pod::Integer(i) => serde_json::Value::Number(serde_json::Number::from(*i)),
-        Pod::Float(f) => {
-            if let Some(num) = serde_json::Number::from_f64(*f) {
-                serde_json::Value::Number(num)
-            } else {
-                serde_json::Value::Null
-            }
-        },
-        Pod::String(s) => serde_json::Value::String(s.clone()),
-        Pod::Array(arr) => {
-            let json_arr = arr.iter().map(|p| Self::pod_to_json(p)).collect::<Vec<_>>();
-            serde_json::Value::Array(json_arr)
-        },
-        Pod::Hash(map) => {
-            let mut json_map = serde_json::Map::new();
-            for (k, v) in map {
-                json_map.insert(k.clone(), Self::pod_to_json(v));
-            }
-            serde_json::Value::Object(json_map)
-        },
-        Pod::Null => serde_json::Value::Null,
+    
+    // Helper function to convert Pod to serde_json::Value
+    fn pod_to_json(pod: &Pod) -> serde_json::Value {
+        match pod {
+            Pod::Boolean(b) => serde_json::Value::Bool(*b),
+            Pod::Integer(i) => serde_json::Value::Number(serde_json::Number::from(*i)),
+            Pod::Float(f) => {
+                if let Some(num) = serde_json::Number::from_f64(*f) {
+                    serde_json::Value::Number(num)
+                } else {
+                    serde_json::Value::Null
+                }
+            },
+            Pod::String(s) => serde_json::Value::String(s.clone()),
+            Pod::Array(arr) => {
+                let json_arr = arr.iter().map(|p| Self::pod_to_json(p)).collect::<Vec<_>>();
+                serde_json::Value::Array(json_arr)
+            },
+            Pod::Hash(map) => {
+                let mut json_map = serde_json::Map::new();
+                for (k, v) in map {
+                    json_map.insert(k.clone(), Self::pod_to_json(v));
+                }
+                serde_json::Value::Object(json_map)
+            },
+            Pod::Null => serde_json::Value::Null,
+        }
     }
-}
-
+    
 }
 
 
@@ -200,7 +206,7 @@ impl DocumentIngestor for UrlDocumentIngestor {
             Resource::Database(_) => false,
         }
     }
-
+    
     async fn ingest(&self, resource: &Resource) -> Result<IngestedDocument, IngestError> {
         match resource {
             Resource::Url(url) => self.ingest_url(url).await,
@@ -212,7 +218,7 @@ impl DocumentIngestor for UrlDocumentIngestor {
             )),
         }
     }
-
+    
     fn as_any(&self) -> &dyn Any {
         self // This returns a reference to self as a type-erased &dyn Any
     }

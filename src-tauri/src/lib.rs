@@ -3,6 +3,7 @@
 #![allow(unused)]
 use ai::ModelProvider;
 use epub::doc;
+use futures::FutureExt;
 use pdf_extract::Path;
 use std::io::Stdout;
 use std::path::PathBuf;
@@ -45,6 +46,91 @@ use app_state::AppState;
 use crate::ai::providers::{self, ProviderType, Provider};
 use crate::ai::models::{ChatCompletionRequest, ChatMessage, MessageRole};
 use crate::ai::traits::ChatCompletionProvider;
+
+// Define log levels as constants
+pub const LOG_INFO: &str = "info";
+pub const LOG_DEBUG: &str = "debug";
+pub const LOG_ERROR: &str = "error";
+pub const LOG_WARN: &str = "warn";
+
+
+/// Logs a message using the application's logging system and returns the message string.
+///
+/// This macro creates a structured log entry, sends it to the frontend via event emission,
+/// and returns the formatted message for further use.
+///
+/// # Parameters
+///
+/// The macro supports three different calling patterns:
+///
+/// ## Basic version (with default INFO level):
+/// - `$app_handle`: A reference to the tauri::AppHandle
+/// - `$fmt`: A format string literal, similar to format!()
+/// - `$($arg)*`: Format arguments
+///
+/// ## With custom log level:
+/// - `$app_handle`: A reference to the tauri::AppHandle
+/// - `$level`: Log level constant (LOG_INFO, LOG_DEBUG, LOG_ERROR, LOG_WARN)
+/// - `$fmt`: A format string literal
+/// - `$($arg)*`: Format arguments
+///
+/// ## With custom log level and ID:
+/// - `$app_handle`: A reference to the tauri::AppHandle
+/// - `$level`: Log level constant (LOG_INFO, LOG_DEBUG, LOG_ERROR, LOG_WARN)
+/// - `$id`: String identifier for the log message (for grouping/filtering)
+/// - `$fmt`: A format string literal
+/// - `$($arg)*`: Format arguments
+///
+/// # Returns
+///
+/// Returns the formatted message string
+///
+/// # Examples
+///
+/// ```rust
+/// // Basic usage (INFO level)
+/// let msg = log_message!(app_handle, "Processing file: {}", filename);
+///
+/// // With custom log level
+/// let error = log_message!(app_handle, LOG_ERROR, "Failed to process: {}", e);
+/// return Err(error);
+///
+/// // With ID for grouping related logs
+/// log_message!(app_handle, LOG_WARN, "file-processing", "Issue with file {}: {}", filename, issue);
+/// ```
+#[macro_export]
+macro_rules! log_message {
+    // Basic version: message, level
+    ($app_handle:expr, $fmt:literal, $($arg:tt)*) => {{
+        let message = format!($fmt, $($arg)*);
+        let logger = NewLogger::new($app_handle.clone());
+        logger.simple_log_message(message.clone(), "".to_string(), LOG_INFO.to_string());
+        message
+    }};
+    
+    ($app_handle:expr, $level:expr, $fmt:literal) => {{
+        let message = format!($fmt);
+        let logger = NewLogger::new($app_handle.clone());
+        logger.simple_log_message(message.clone(), "".to_string(), $level.to_string());
+        message
+    }};
+    
+    // Version with custom level - specifying $fmt must be a literal
+    ($app_handle:expr, $level:expr, $fmt:literal, $($arg:tt)*) => {{
+        let message = format!($fmt, $($arg)*);
+        let logger = NewLogger::new($app_handle.clone());
+        logger.simple_log_message(message.clone(), "".to_string(), $level.to_string());
+        message
+    }};
+    
+    // Version with level and ID
+    ($app_handle:expr, $level:expr, $id:expr, $fmt:literal, $($arg:tt)*) => {{
+        let message = format!($fmt, $($arg)*);
+        let logger = NewLogger::new($app_handle.clone());
+        logger.simple_log_message(message.clone(), $id.to_string(), $level.to_string());
+        message
+    }};
+}
 
 use async_openai::{
     //config::OpenAIConfig,
@@ -115,10 +201,75 @@ async fn ingest_from_url(
 ) -> Result<(), String> {
     let store = state.doc_store.lock().await;
     let store_clone = Arc::new(store.clone());
-    store_clone.process_url_async(&url, app_handle).await;
     
+    match store_clone.process_url_async(&url, app_handle.clone()).await {
+        Ok(ingested_document) => {
+            log::info!("Ingested URL: {}", url);
+            log_message!(app_handle, LOG_INFO, "Ingested URL: {}", url);
+            
+            // Get current date/time and format it as mmddyy_hhmmss
+            let now = chrono::Local::now();
+            let date_time_str = now.format("%m%d%y_%H%M%S").to_string();
+            
+            // Create the filename with date_time prefix and then sanitize
+            let title_with_date = format!("{}_{}", date_time_str, &ingested_document.title);
+            let suggested_filename = sanitize_filename(&title_with_date);
+            
+            // Use tauri's dialog to show a save dialog
+            app_handle.dialog()
+            .file()
+            .add_filter("Markdown", &["md", "mdx"])
+            .set_file_name(&suggested_filename)  // Set suggested filename
+            .save_file(move |file_path| {
+                if let Some(path) = file_path {
+                    // User selected a path - now save the file
+                    let content = format!(
+                        "---\ntitle: {}\nurl: {}\ncreated_date: {}\n---\n\n{}",
+                        ingested_document.title,
+                        ingested_document.metadata.source_path,
+                        ingested_document.metadata.created_date.unwrap_or_default(),
+                        ingested_document.content
+                    );
+                    log_message!(app_handle, LOG_INFO, "Saving document to {}", path.to_string());
+                    // Since we're in a closure, we need to spawn a task to do the async write
+                    let app_handle_clone = app_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        match tokio::fs::write(path.as_path().unwrap(), content).await {
+                            Ok(_) => {
+                                log_message!(app_handle_clone, LOG_INFO, "Saved document to {}", path.to_string());
+                            },
+                            Err(e) => {
+                                log_message!(app_handle_clone, LOG_ERROR, "Failed to save document: {}", e);
+                            }
+                        }
+                    });
+                } else {
+                    // User cancelled the dialog
+                    log_message!(app_handle, LOG_INFO, "Save cancelled by user");
+                }
+            });
+            Ok(())
+        },
+        Err(e) => {
+            log_message!(app_handle, LOG_ERROR, "Failed to ingest url: {}", e);
+            log::error!("Failed to ingest url: {}", e);
+            Err(format!("Failed to ingest url: {}", e))
+        }
+    }
+}
+
+// Helper function to create a valid filename
+fn sanitize_filename(filename: &str) -> String {
+    // Replace invalid filename characters
+    let filename = filename.replace(&['/','\\',':','*','?','"','<','>','|'][..], "_");
     
-    Ok(())
+    // Trim and add extension if needed
+    let filename = filename.trim();
+    if !filename.ends_with(".md") {
+        format!("{}.md", filename)
+    } else {
+        filename.to_string()
+    }
 }
 
 #[tauri::command]
@@ -133,15 +284,17 @@ async fn save_text_content(
     match result {
         Ok(_) => {
             log::debug!("Saved to file: {}", path.to_string_lossy());
-            let message = format!("Saved to file: {}", path.to_string_lossy());
-            let new_logger = NewLogger::new(app_handle.clone());
-            new_logger.simple_log_message(message.clone(), "".to_string(), "info".to_string());
+            // let message = format!("Saved to file: {}", path.to_string_lossy());
+            // let new_logger = NewLogger::new(app_handle.clone());
+            // new_logger.simple_log_message(message.clone(), "".to_string(), "info".to_string());
+            log_message!(app_handle, LOG_INFO, "Saved to file: {}", path.to_string_lossy());
             Ok(())
         }
         Err(e) => {
             let message = format!("Failed to save to file: {}", e);
-            let new_logger = NewLogger::new(app_handle.clone());
-            new_logger.simple_log_message(message.clone(), "".to_string(), "error".to_string());
+            // let new_logger = NewLogger::new(app_handle.clone());
+            // new_logger.simple_log_message(message.clone(), "".to_string(), "error".to_string());
+            log_message!(app_handle, LOG_ERROR, "Failed to save to file: {}", e);
             Err(message)
         }
     }

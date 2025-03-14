@@ -8,7 +8,7 @@ use std::path;
 use std::path::PathBuf;
 use chrono::Local; 
 use serde_json;
-use crate::ingest::DocumentIngestor;
+use crate::ingest::{DocumentIngestor, IngestedDocument};
 use std::path::Path;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -417,7 +417,7 @@ impl DocumentStore {
         self: Arc<Self>, 
         url: &str,
         app_handle: tauri::AppHandle, // Add app_handle parameter
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(IngestedDocument), Box<dyn std::error::Error>> {
         let store = self.clone(); // Clone Arc to get a reference
         
         // Create a Resource::Url from the URL string
@@ -436,20 +436,29 @@ impl DocumentStore {
                 return Err(Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, error_message)));
             }
         };        
-        //println!("Ingestor found");
         let ingested = ingestor.ingest(&url_resource).await?;
         //println!("Ingested document: {:?}", ingested);
+        log::debug!("Ingested document: {:?}", ingested);
+        app_handle.emit("simple-log-message", json!({
+            "message": format!("Ingested document: {}", ingested.title),
+            "timestamp": chrono::Local::now().to_rfc3339(),
+            "level": "debug"
+        }))?;
         let document = Document {
             id: 0,
-            name: ingested.title,
+            name: ingested.title.clone(),
             created_at: chrono::Local::now().to_rfc3339(),
-            file_path: ingested.metadata.source_path,
+            file_path: ingested.metadata.source_path.clone(),
             embedding: vec![],
         };
         let doc_name = document.name.clone();
         println!("Document created: {:?}", document);
         log::debug!("Document created: {:?}", document);
-        
+        app_handle.emit("simple-log-message", json!({
+            "message": format!("Document created: {}", doc_name),
+            "timestamp": chrono::Local::now().to_rfc3339(),
+            "level": "debug"
+        }))?;
         let doc_id_result = {
             let conn = store.conn.lock().await;
             store.add_document_internal(&conn, document)
@@ -483,7 +492,7 @@ impl DocumentStore {
         // let name = file_name.clone();
         match store
         .process_embeddings(doc_id
-            , ingested.content, file_name, &store.embedding_generator, app_handle.clone())
+            , ingested.content.clone(), file_name, &store.embedding_generator, app_handle.clone())
             .await
             {
                 Ok(_) => {
@@ -509,7 +518,7 @@ impl DocumentStore {
             
             
             
-            Ok(())
+            Ok((ingested))
         }
         
         
