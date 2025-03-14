@@ -5,6 +5,7 @@ use super::*;
 use std::path::Path;
 use std::fs;
 use std::collections::HashMap;
+use std::any::Any;
 
 use async_trait::async_trait;
 use tokio::fs::metadata;
@@ -50,5 +51,8 @@ impl DocumentIngestor for MarkdownIngestor {
                 "Database ingestion not supported for Markdown".to_string()
             )),
         }
+    }
+    fn as_any(&self) -> &dyn Any {
+        self // This returns a reference to self as a type-erased &dyn Any
     }
 }

@@ -10,6 +10,7 @@ use super::document_ingestor::{
     IngestError,
     Resource
 };
+use std::any::Any;
 use gray_matter::Pod;
 
 #[derive(Debug)]
@@ -39,6 +40,9 @@ impl DocumentIngestor for EpubIngestor {
                 "EpubIngestor cannot process database resources".to_string()
             )),
         }
+    }
+    fn as_any(&self) -> &dyn Any {
+        self // This returns a reference to self as a type-erased &dyn Any
     }
 }
 

@@ -20,6 +20,7 @@ use std::path::Path;
 use url::Url;
 use std::sync::Arc;
 use log;
+use std::any::Any;
 
 // #[derive(Debug, Default)]
 // pub struct QueryParams {
@@ -547,6 +548,9 @@ impl DocumentIngestor for MongoDocumentIngestor {
                 "MongoDocumentIngestor can only process MongoDB resources".to_string()
             )),
         }
+    }
+    fn as_any(&self) -> &dyn Any {
+        self // This returns a reference to self as a type-erased &dyn Any
     }
 }
 

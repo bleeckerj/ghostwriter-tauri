@@ -6,6 +6,7 @@ use std::fs;
 use std::collections::HashMap;
 use async_trait::async_trait;
 use gray_matter::{Matter, engine::YAML, Pod};
+use std::any::Any;
 
 use super::document_ingestor::{DocumentIngestor, IngestedDocument, DocumentMetadata, IngestError, Resource};
 
@@ -52,6 +53,9 @@ impl DocumentIngestor for MdxIngestor {
                 "MdxIngestor cannot process database resources".to_string()
             )),
         }
+    }
+    fn as_any(&self) -> &dyn Any {
+        self // This returns a reference to self as a type-erased &dyn Any
     }
 }
 

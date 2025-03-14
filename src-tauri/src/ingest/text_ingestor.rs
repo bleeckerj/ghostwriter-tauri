@@ -10,6 +10,7 @@ use super::document_ingestor::{
     IngestError,
     Resource  // Add Resource import
 };
+use std::any::Any;
 
 #[derive(Debug)]
 pub struct TextIngestor;
@@ -38,6 +39,9 @@ impl DocumentIngestor for TextIngestor {
                 "TextIngestor cannot process database resources".to_string()
             )),
         }
+    }
+    fn as_any(&self) -> &dyn Any {
+        self // This returns a reference to self as a type-erased &dyn Any
     }
 }
 

@@ -105,9 +105,7 @@ impl DocumentStore {
         doc_store.register_ingestor(Box::new(TextIngestor));
         doc_store.register_ingestor(Box::new(UrlDocumentIngestor));
         //doc_store.register_ingestor(Box::new(AudioIngestor));
-        
-        log::debug!("5. Why do we crash in production and not in development?");
-        
+            
         
         Ok(doc_store)
     }
@@ -383,6 +381,38 @@ impl DocumentStore {
         self.ingestors.push(Arc::new(ingestor));
     }
     
+    pub async fn save_document_to_file(
+        &self,
+        resource: &Resource,
+        file_path: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        // Find suitable ingestor
+        let ingestor = match self.ingestors.iter().find(|i| i.can_handle(resource)) {
+            Some(ingestor) => ingestor,
+            None => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    "No suitable ingestor found",
+                )));
+            }
+        };
+
+        // Ingest the document
+        let ingested_document = ingestor.ingest(resource).await?;
+
+        // Check if the ingestor is UrlDocumentIngestor and call save_to_file
+        if let Some(url_ingestor) = ingestor.as_any().downcast_ref::<UrlDocumentIngestor>() {
+            url_ingestor.save_to_file(&ingested_document, file_path)?;
+        } else {
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Unsupported,
+                "Ingestor does not support saving to file",
+            )));
+        }
+
+        Ok(())
+    }
+
     pub async fn process_url_async(
         self: Arc<Self>, 
         url: &str,
@@ -526,7 +556,17 @@ impl DocumentStore {
             
             // With this more detailed error handling:
             let ingested = match ingestor.ingest(&resource).await {
-                Ok(result) => result,
+                Ok(result) => {
+                    app_handle.emit("simple-log-message", json!({
+                        "message": "Performing special handling for URL document",
+                        "timestamp": chrono::Local::now().to_rfc3339(),
+                        "level": "debug"
+                    }))?;
+                    if let Some(url_ingestor) = ingestor.as_any().downcast_ref::<UrlDocumentIngestor>() {
+                        url_ingestor.save_to_file(&result, path.to_str().unwrap())?;
+                    }
+                    result
+                },
                 Err(e) => {
                     // Log the error with details
                     log::error!("Document ingestion failed for {}: {}", path.display(), e);

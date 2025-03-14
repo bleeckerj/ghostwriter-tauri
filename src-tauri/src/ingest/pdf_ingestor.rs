@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use pdfium_render::prelude::*;
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
-
+use std::any::Any;
 use super::document_ingestor::{
     DocumentIngestor,
     IngestedDocument,
@@ -40,6 +40,9 @@ impl DocumentIngestor for PdfIngestor {
                 "PdfIngestor cannot process database resources".to_string()
             )),
         }
+    }
+    fn as_any(&self) -> &dyn Any {
+        self // This returns a reference to self as a type-erased &dyn Any
     }
 }
 

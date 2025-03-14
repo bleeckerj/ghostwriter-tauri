@@ -11,6 +11,7 @@ use super::document_ingestor::{
     Resource
 };
 use chrono::Utc;
+use std::any::Any;
 
 #[derive(Debug)]
 pub struct AudioIngestor;
@@ -38,6 +39,9 @@ impl DocumentIngestor for AudioIngestor {
                 "WhisperIngestor cannot process database resources".to_string()
             )),
         }
+    }
+    fn as_any(&self) -> &dyn Any {
+        self // This returns a reference to self as a type-erased &dyn Any
     }
 }
 

@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use gray_matter::Pod;
 use url::Url;  // Add the url crate to your Cargo.toml
 use std::fs;
+use std::any::Any;
 
 #[derive(Error, Debug)]
 pub enum IngestError {
@@ -103,4 +104,6 @@ pub trait DocumentIngestor: Send + Sync + std::fmt::Debug {
     
     /// Process a single resource and return its content
     async fn ingest(&self, resource: &Resource) -> Result<IngestedDocument, IngestError>;
+    // Add this method to enable downcasting
+    fn as_any(&self) -> &dyn Any;
 }
