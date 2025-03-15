@@ -32,7 +32,6 @@ export class Timer {
     start(onTick = null, onComplete = null) {
         this.onTick = onTick;
         this.onComplete = onComplete;
-        this.element.classList.remove('hidden');
         
         if (this.intervalId) return;
 
@@ -49,6 +48,9 @@ export class Timer {
                 if (this.onComplete) this.onComplete();
             }
         }, 1000);
+        
+        this.element.classList.remove('hidden');
+
     }
 
     stop() {

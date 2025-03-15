@@ -75,12 +75,14 @@ async function toggleVibeMode(enabled) {
     if (enabled) {
       
       await WebviewWindow.getCurrent().setTitle("Vibewriter"); // Change title when vibe mode is enabled
+      document.querySelector('.element').classList.add('bg-gradient-animated');
       vibeMode = true; // Set vibeMode to true
       timer.show();
       addSimpleLogEntry({ "id": "", "timestamp": Date.now(), "message": "Vibe Mode On", "level": "info" });
       restartVibeMode(); // Start the vibe mode timer
     } else {
       await WebviewWindow.getCurrent().setTitle("Ghostwriter"); // Change title back when vibe mode is disabled
+      document.querySelector('.element').classList.remove('bg-gradient-animated');
       vibeMode = false; // Set vibeMode to false
       timer.stop();
       timer.hide();
@@ -96,8 +98,8 @@ async function toggleVibeMode(enabled) {
 async function restartVibeMode() {
   if (vibeMode) {
     let seconds = prefsGameTimeSecondsValue; // default to 10 seconds if not specified
-    invoke("load_preferences").then((res) => {
-      seconds = res.game_timer_ms / 1000;
+    //invoke("load_preferences").then((res) => {
+      seconds = prefsGameTimeSecondsValue;
     
     timer.show();
     timer.setTime(seconds);
@@ -139,7 +141,7 @@ async function restartVibeMode() {
           editor.setEditable(true);
         });
       });
-    });
+    //});
   }
 }
   
@@ -303,7 +305,7 @@ function emanateCharacterToEditor(character) {
       type: 'text',
       text: character,
       attrs: {
-        textColor: 'text-gray-800',
+        textColor: 'text-blue-800',
       },
       //   marks: [{
       //     type: 'dynamicTextMark',
@@ -405,6 +407,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (vibemButton.classList.contains("button-in")) {
       vibemButton.classList.remove("button-in");
       toggleVibeMode(false);
+      
     } else {
       // otherwise vibe mode ON
       toggleVibeMode(true);
@@ -924,10 +927,10 @@ window.addEventListener("DOMContentLoaded", async () => {
           meta: "Completed Ingestion"
         })
         greetMsgEl.textContent = 'Ingestion Completed for '+event.payload.current_file+' with '+event.payload.total_steps+' chunks.';
-        window.timeout(() => {
+        setTimeout(() => {
           greetMsgEl.textContent = 'Ingestion Completed';
         }
-        , 5000);
+        , 2000);
       }
     });
   } catch (error) {
@@ -935,8 +938,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
   
   invoke("load_preferences").then((res) => {
-    //console.log('Preferences Loaded:', res);
-    prefsGameTimeSecondsValue = res.game_time_milliseconds / 1000;
+    console.log('Preferences Loaded:', res);
+    prefsGameTimeSecondsValue = res.game_timer_ms / 1000;
   });
   
   invoke("simple_log_message", { message: 'Ghostwriter Is Up.', id: "tracker", level: "info" }).then((res) => {

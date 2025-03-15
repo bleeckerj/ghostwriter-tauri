@@ -976,9 +976,9 @@ button {
 }
 
 .floating-timer.flash {
-  @apply bg-black/50;
-  @apply text-amber-400;
-  text-shadow: 0 0 10px rgba(251, 191, 36, 0.7);
+  @apply bg-blue-700/80;
+  @apply text-white;
+  text-shadow: 0 0 10px rgba(251, 36, 233, 0.7);
   animation: timer-pulse 1s ease-in-out;
 }
 
