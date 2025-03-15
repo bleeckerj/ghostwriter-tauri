@@ -12,8 +12,11 @@
 </head>
 
 <body>
-  <main class="container">
 
+  <main class="container">
+    <div id="floating-timer" class="floating-timer">
+      00:00
+    </div>
 <!-- URL Top Panel -->
 <div id="url-panel" class="url-panel-hidden border-[0.5px] relative w-full z-50 rounded-sm">
   <div class="flex items-center gap-2 p-2">
@@ -22,6 +25,8 @@
     <span id="url-close-btn" class="diagnostics-area-button enabled min-w-[2.5rem] text-center">×</span>
   </div>
 </div>
+
+
 
       <div class="scroll-area">
         <div class="editor-content h-full">
@@ -44,6 +49,8 @@
           <span id="panel-toggle-btn" class="diagnostics-area-button enabled">PREFS</span>
           <span id="similarity-search-btn" class="diagnostics-area-button enabled">SSRCH</span>
           <span id="nudge-inline-action-item" class="diagnostics-area-button enabled">NUDGE</span>
+          <span id="vibem-inline-action-item" class="diagnostics-area-button enabled">VIBEM</span>
+
           <span id="open-log-btn" class="diagnostics-area-button enabled">LOGJS</span>
           <!-- <span id="openai-api-key-btn" class="diagnostics-area-button enabled">OPNAI</span> -->
           <span id="ingest-url-btn" class="diagnostics-area-button enabled">NGSTU</span>

@@ -16,7 +16,9 @@ import { PluginKey } from 'prosemirror-state';
 
 import { open, save, confirm } from '@tauri-apps/plugin-dialog';
 import { getCurrentWebviewWindow, WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { list } from 'postcss';
+//import { list } from 'postcss';
+import { Timer } from './timer.js';
+import { Webview } from '@tauri-apps/api/webview';
 
 
 let w = getCurrentWebviewWindow();
@@ -61,86 +63,109 @@ let prefsMaxOutputTokensValue;
 let prefsShuffleSimilars;
 let closePreferencesBtnEl;
 
-async function greet() {
-  // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-  //greetMsgEl.textContent = await invoke("greet", { name: greetInputEl.value });
-  invoke("greet", { name: greetInputEl.value }).then(res => {
-    greetMsgEl.textContent =  'And this is JS Frontend saying hello!';
-    //openDialogTest();
-    editor.chain()
-    .focus()
-    .insertContent([
-      {
-        type: 'text',
-        text: ' '
-      },
-      {
-        type: 'text',
-        text: res,
-        marks: [{
-          type: 'dynamicTextMark',
-          attrs: { 
-            textColor: 'black',
-            backgroundColor: '#f3f4f6',
-            twMisc: 'rounded animated-highlight',
-            id: 'backend-id-123',
-            timestamp: Date.now(),
-            raw: res
-          }  
-        }]
-      },
-      {
-        type: 'text',
-        text: ' '
-      }
-    ]).run()
-    
-    const pos = editor.state.selection.from + 3
-    console.log(pos)
-    editor.commands.setTextSelection(pos)   
-    
-  });
+let vibeMode = false;
+let timer = new Timer();
+
+
+async function toggleVibeMode(enabled) {
+  try {
+    if (enabled) {
+      
+      await WebviewWindow.getCurrent().setTitle("Vibe Writer"); // Change title when vibe mode is enabled
+      vibeMode = true; // Set vibeMode to true
+      timer.show();
+      addSimpleLogEntry({ "id": "", "timestamp": Date.now(), "message": "Vibe Mode On", "level": "info" });
+      restartVibeMode(); // Start the vibe mode timer
+    } else {
+      await WebviewWindow.getCurrent().setTitle("Ghostwriter"); // Change title back when vibe mode is disabled
+      vibeMode = false; // Set vibeMode to false
+      timer.stop();
+      timer.hide();
+      editor.setEditable(true);
+      addSimpleLogEntry({ "id": "", "timestamp": Date.now(), "message": "Vibe Mode Off", "level": "info" });
+    }
+  } catch (err) {
+    console.error('Failed to toggle vibe mode:', err);
+    addSimpleLogEntry({ "id": "", "timestamp": Date.now(), "message": "Failed to toggle vibe mode: " + err, "level": "error" });
+  }
 }
 
-async function openDialogForFileSave(options) {
-  // Open a dialog
-  
-  const file = await save(options);
-  const fileWithoutExt = file.replace(/\.\w+$/, '');
-  await invoke("save_json_content", {
-    filePath: fileWithoutExt + ".json",
-    content: editor.getJSON()
-  }).then((res) => {
-    console.log(res);
-    //return res;
-  });
-  await invoke("save_text_content", {
-    filePath: file,
-    content: editor.getText()
-  }).then((res) => {
-    console.log(res);
-    //return res;
-  });
-}
-/** need to handle this asynchronously and the menu handler in Rust is synchronous
-* so we have to have Rust tell the frontend to open the dialog
-* and then we get the file path and send it back to Rust for ingestion
-*/
-async function openDialogForIngestion() {
-  // Open a dialog
-  const file = await open({
-    multiple: false,
-    directory: false,
-  });
-  //console.log(file);
-  const foo = await invoke("ingestion_from_file_dialog", {
-    filePath: file
-  }).then((res) => {
-    console.log(res);
-    return res;
+async function restartVibeMode() {
+  if (vibeMode) {
+    const seconds = 10; // default to 10 seconds if not specified
+    timer.setTime(seconds);
+    timer.start(
+      (remainingTime) => {
+        // Called every second
+        //invoke("update_vibe_time", { timeRemaining: remainingTime });
+      },
+      () => {
+        // Called when timer completes
+        editor.setEditable(false);
+        invoke("completion_from_context", { input: editor.getText() }).then((content) => {
+          console.log(content);
+          greetMsgEl.textContent = 'Vibe Emanation Complete';
+          addSimpleLogEntry({ "id": "", "timestamp": Date.now(), "message": "Vibe Emanation Complete", "level": "info" });
+          addSimpleLogEntry({ "id": "", "timestamp": Date.now(), "message": content, "level": "info" });
+          editor.setEditable(true);
+
+          //emanateToEditor(content);
+          emanateStringToEditor(content[0], 30, () => {
+            editor.setEditable(true);
+            restartVibeMode(); // Restart the vibe mode timer
+          });
+        })
+        .catch((err) => {
+          console.error(err);
+          greetMsgEl.textContent = 'Error occurred ' + err;
+          editor.setEditable(true);
+        });
+      });
   }
-);
-console.log("ingestion result ", foo);
+}
+  
+  
+  
+  
+  async function openDialogForFileSave(options) {
+    // Open a dialog
+    
+    const file = await save(options);
+    const fileWithoutExt = file.replace(/\.\w+$/, '');
+    await invoke("save_json_content", {
+      filePath: fileWithoutExt + ".json",
+      content: editor.getJSON()
+    }).then((res) => {
+      console.log(res);
+      //return res;
+    });
+    await invoke("save_text_content", {
+      filePath: file,
+      content: editor.getText()
+    }).then((res) => {
+      console.log(res);
+      //return res;
+    });
+  }
+  /** need to handle this asynchronously and the menu handler in Rust is synchronous
+  * so we have to have Rust tell the frontend to open the dialog
+  * and then we get the file path and send it back to Rust for ingestion
+  */
+  async function openDialogForIngestion() {
+    // Open a dialog
+    const file = await open({
+      multiple: false,
+      directory: false,
+    });
+    //console.log(file);
+    const foo = await invoke("ingestion_from_file_dialog", {
+      filePath: file
+    }).then((res) => {
+      console.log(res);
+      return res;
+    }
+  );
+  console.log("ingestion result ", foo);
 }
 
 async function searchSimilarity() {
@@ -207,39 +232,11 @@ async function completionFromContext() {
     
     greetMsgEl.textContent = 'Emanation Complete';
     //console.log("Completion content:", content);
-    editor.chain()
-    .focus()
-    .insertContent([
-      // {
-      //   type: 'text',
-      //   text: ''
-      // },
-      {
-        type: 'text',
-        text: content,
-        marks: [{
-          type: 'dynamicTextMark',
-          attrs: { 
-            textColor: 'blue',
-            backgroundColor: '#f3f4f6',
-            twMisc: 'rounded animated-highlight',
-            id: 'backend-id-123',
-            timestamp: Date.now(),
-            raw: content
-          }  
-        }]
-      },
-      {
-        type: 'text',
-        text: '\u00A0'
-      }
-    ]).run();
-    editor.chain().focus().insertContent([
-      {
-        type: 'text',
-        text: '    '
-      },
-    ]).run();
+    emanateToEditor(content);
+    
+    //emanateStringToEditor(content);
+    
+    
     if (wasDisabled === false) {
       setTimeout(() => {
         actionItem.options.disabled = false;
@@ -260,8 +257,94 @@ async function completionFromContext() {
   });
 }
 
+function emanateStringToEditor(content, timeout = 30, onComplete = null) {
+  let index = 0;
+  
+  function sendNextCharacter() {
+    if (index < content.length) {
+      emanateCharacterToEditor(content[index]);
+      index++;
+      setTimeout(sendNextCharacter, timeout); // Call the function again after timeout milliseconds
+    } else {
+      emanateCharacterToEditor('\u00A0'); // Add a space after the string
+      if (onComplete) {
+        onComplete(); // Call the completion handler if provided
+      }
+    }
+  }
+  
+  sendNextCharacter(); // Start the process
+}
+
+function emanateCharacterToEditor(character) {
+  editor.chain()
+  .focus()
+  .insertContent([
+    {
+      type: 'text',
+      text: character,
+      attrs: {
+        textColor: 'text-gray-800',
+      },
+      //   marks: [{
+      //     type: 'dynamicTextMark',
+      //     attrs: { 
+      //       textColor: 'blue',
+      //       backgroundColor: '#f3f4f6',
+      //       twMisc: 'rounded animated-highlight',
+      //       id: 'backend-id-123',
+      //       timestamp: Date.now(),
+      //       raw: content
+      //     }  
+      //   }]
+    }
+    // {
+    //   type: 'text',
+    //   text: '\u00A0'
+    // }
+  ]).run();
+}
+
+function emanateToEditor(content) {
+  editor.chain()
+  .focus()
+  .insertContent([
+    // {
+    //   type: 'text',
+    //   text: ''
+    // },
+    {
+      type: 'text',
+      text: content,
+      marks: [{
+        type: 'dynamicTextMark',
+        attrs: { 
+          textColor: 'blue',
+          backgroundColor: '#f3f4f6',
+          twMisc: 'rounded animated-highlight',
+          id: 'backend-id-123',
+          timestamp: Date.now(),
+          raw: content
+        }  
+      }]
+    },
+    {
+      type: 'text',
+      text: '\u00A0'
+    }
+  ]).run();
+  editor.chain().focus().insertContent([
+    {
+      type: 'text',
+      text: '    '
+    },
+  ]).run();
+}
+
 window.addEventListener("DOMContentLoaded", async () => {
   //create();
+  console.log('Timer:', timer);
+  timer.hide();
   invoke("set_logger_app_data_path", {}).then((res) => {
     //console.log('Logger App Data Path:', res);
     // invoke("simple_log_message", { message: 'Logger App Data Path: '+res, id: "tracker", level: "info" }).then((res) => {
@@ -279,9 +362,37 @@ window.addEventListener("DOMContentLoaded", async () => {
     //   });
     // });
   });
+  
+  // timer.setTime(120);
+  // timer.start(
+  //   (remainingTime) => {
+    //     addSimpleLogEntry({
+  //       id: "",
+  //       timestamp: Date.now(),
+  //       message: 'Timer Rick: '+remainingTime,
+  //       level: 'debug'
+  //     });
+  //   }
+  // )
+  
   let openaiApiKeyEl = document.querySelector("#openai-api-key");
   let actionItem = editor.extensionManager.extensions.find(extension => extension.name === 'inlineActionItem');
   let nudgeButton = document.querySelector("#nudge-inline-action-item");
+  let vibemButton = document.querySelector("#vibem-inline-action-item");
+  vibemButton.classList.add("enabled");
+  vibemButton.addEventListener("click", () => {
+    // Check if button is currently enabled
+    // If so, turn vibe mode OFF
+    if (vibemButton.classList.contains("button-in")) {
+      vibemButton.classList.remove("button-in");
+      toggleVibeMode(false);
+    } else {
+      // otherwise vibe mode ON
+      toggleVibeMode(true);
+      vibemButton.classList.add("button-in");
+    }    
+  });
+  
   if (actionItem) {
     const disabledOption = actionItem.options.disabled;
     if (disabledOption) {
@@ -412,8 +523,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   
   // openaiApiKeyBtnEl = document.querySelector("#openai-api-key-btn");
   // openaiApiKeyBtnEl.addEventListener("click", () => {
-  //   invoke("load_openai_api_key_from_keyring", {}).then((res) => {
-  //     openaiApiKeyBtnEl.value = res;
+    //   invoke("load_openai_api_key_from_keyring", {}).then((res) => {
+      //     openaiApiKeyBtnEl.value = res;
   //     addSimpleLogEntry({
   //       id: "",
   //       timestamp: Date.now(),
@@ -632,7 +743,19 @@ window.addEventListener("DOMContentLoaded", async () => {
   // let unlistenPrefsSaveFn;
   // let unlistenPrefsResetFn;
   let unlistenSaveFileMessageFn;
+  let unlistenVibeRestartFn;
   
+  
+  try {
+    unlistenVibeRestartFn = await listen('vibe-mode-restart', (event) => {
+      console.log('Vibe Mode Restart Event:', event);
+      if (event.payload) {
+        restartVibeMode(); // Restart the vibe mode timer
+      }
+    });
+  } catch (error) {
+    console.error('Failed to setup event listener:', error);
+  }
   
   try {
     unlistenSaveFileMessageFn = await listen('save-file-dialog', (event) => {
@@ -940,6 +1063,11 @@ const editor = new Editor({
       },
     }),
   ],
+  handleTextInput(view, from, to, text) {
+    console.log('User started typing:', text, ' and vibe mode is ', vibeMode);
+    // Perform any custom actions here
+    return false; // Return false to allow the text input to proceed
+  },
 })
 
 const diagnostics = new Editor({

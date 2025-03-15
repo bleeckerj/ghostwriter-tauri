@@ -212,7 +212,7 @@ async fn ingest_from_url(
             let date_time_str = now.format("%m%d%y_%H%M%S").to_string();
             
             // Create the filename with date_time prefix and then sanitize
-            let title_with_date = format!("{}_{}", date_time_str, &ingested_document.title);
+            let title_with_date = format!("{}_{}", &ingested_document.title, date_time_str);
             let suggested_filename = sanitize_filename(&title_with_date);
             
             // Use tauri's dialog to show a save dialog
@@ -1177,6 +1177,16 @@ async fn search_similarity(
             }
         }
         
+        #[tauri::command]
+        async fn shot_clock_complete(
+            app_state: tauri::State<'_, AppState>,
+            app_handle: tauri::AppHandle,
+        ) -> Result<String, String> {
+            log::debug!("Shot clock complete");
+            // what this function does is start the chat completion process    
+            Ok("Shot clock complete".to_string())        
+        }
+
         #[derive(Serialize, Clone)]
         struct CanonInfo {
             name: String,
@@ -1538,6 +1548,7 @@ async fn search_similarity(
             save_json_content,
             ingest_from_url,
             toggle_rag_pause,
+            shot_clock_complete,
             ])
             .run(tauri::generate_context!())
             .expect("error while running tauri application");

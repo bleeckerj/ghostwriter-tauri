@@ -23,6 +23,10 @@ impl UrlDocumentIngestor {
         
         log::info!("Fetching content from URL: {} via Jina Reader", url);
         
+        let url_root = format!("{}{}",
+        encoded_url.origin().unicode_serialization(),
+        encoded_url.path());
+        
         // 2. Create a client with a timeout
         let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
@@ -61,7 +65,7 @@ impl UrlDocumentIngestor {
         let cleaned_content = re.replace_all(&response_text, "").to_string();
         
         // 7. Extract title from first line if possible
-        let mut title = url.to_string();
+        let mut title = url_root.to_string();
         let first_line = cleaned_content.lines().next();
         if let Some(line) = first_line {
             let trimmed = line.trim();
@@ -76,9 +80,10 @@ impl UrlDocumentIngestor {
         
         // 8. Create document
         let mut frontmatter = HashMap::new();
+        frontmatter.insert("url_root".to_string(), Pod::String(url_root.clone()));
         frontmatter.insert("url".to_string(), Pod::String(url.to_string()));
-        frontmatter.insert("source".to_string(), Pod::String("Jina Reader".to_string()));
-        frontmatter.insert(current_time.clone(), Pod::String("ingested".to_string()));
+        frontmatter.insert("source".to_string(), Pod::String(jina_api_url.to_string()));
+        frontmatter.insert("current_time".to_string(), Pod::String(current_time.clone()));
         
         
         Ok(IngestedDocument {
@@ -86,7 +91,7 @@ impl UrlDocumentIngestor {
             content: cleaned_content,
             metadata: DocumentMetadata {
                 source_type: "URL".to_string(),
-                source_path: url.to_string(),
+                source_path: url_root.to_string(),
                 author: None,
                 created_date: Some(current_time.clone()),  // Add current time as creation date
                 modified_date: Some(current_time),         // Same for modification date    
