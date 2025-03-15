@@ -18,7 +18,7 @@ import { open, save, confirm } from '@tauri-apps/plugin-dialog';
 import { getCurrentWebviewWindow, WebviewWindow } from '@tauri-apps/api/webviewWindow';
 //import { list } from 'postcss';
 import { Timer } from './timer.js';
-import { Webview } from '@tauri-apps/api/webview';
+import { debounce } from 'lodash';
 
 
 let w = getCurrentWebviewWindow();
@@ -61,17 +61,20 @@ let prefsMaxHistoryItemsValue;
 let prefsMaxOutputTokens;
 let prefsMaxOutputTokensValue;
 let prefsShuffleSimilars;
+let prefsGameTimeSeconds;
+let prefsGameTimeSecondsValue;
+
 let closePreferencesBtnEl;
 
 let vibeMode = false;
 let timer = new Timer();
-
+let emanationInProgress = false;
 
 async function toggleVibeMode(enabled) {
   try {
     if (enabled) {
       
-      await WebviewWindow.getCurrent().setTitle("Vibe Writer"); // Change title when vibe mode is enabled
+      await WebviewWindow.getCurrent().setTitle("Vibewriter"); // Change title when vibe mode is enabled
       vibeMode = true; // Set vibeMode to true
       timer.show();
       addSimpleLogEntry({ "id": "", "timestamp": Date.now(), "message": "Vibe Mode On", "level": "info" });
@@ -92,7 +95,11 @@ async function toggleVibeMode(enabled) {
 
 async function restartVibeMode() {
   if (vibeMode) {
-    const seconds = 10; // default to 10 seconds if not specified
+    let seconds = prefsGameTimeSecondsValue; // default to 10 seconds if not specified
+    invoke("load_preferences").then((res) => {
+      seconds = res.game_timer_ms / 1000;
+    
+    timer.show();
     timer.setTime(seconds);
     timer.start(
       (remainingTime) => {
@@ -101,6 +108,9 @@ async function restartVibeMode() {
       },
       () => {
         // Called when timer completes
+        emanationInProgress = true;
+        timer.stop();
+        timer.hide();
         editor.setEditable(false);
         invoke("completion_from_context", { input: editor.getText() }).then((content) => {
           console.log(content);
@@ -112,15 +122,24 @@ async function restartVibeMode() {
           //emanateToEditor(content);
           emanateStringToEditor(content[0], 30, () => {
             editor.setEditable(true);
-            restartVibeMode(); // Restart the vibe mode timer
+            emanationInProgress = false;
+            // we restart the vibe mode timer down in the handleTextInput 
+            // so that the timer in vibe mode starts after the user starts 
+            // typing again
+            // setTimeout(() => {
+            //   restartVibeMode(); // Restart the vibe mode timer
+            // }, 4000);
           });
         })
         .catch((err) => {
+          emanationInProgress = false;
+          editor.setEditable(true);
           console.error(err);
           greetMsgEl.textContent = 'Error occurred ' + err;
           editor.setEditable(true);
         });
       });
+    });
   }
 }
   
@@ -473,6 +492,12 @@ window.addEventListener("DOMContentLoaded", async () => {
   prefsTemperature.addEventListener("input", () => {
     prefsTemperatureValue.textContent = (prefsTemperature.value);
   });
+
+  prefsGameTimeSeconds = document.querySelector("#prefs-game-time-secs");
+  prefsGameTimeSecondsValue = document.querySelector("#prefs-game-time-secs-value");
+  prefsGameTimeSeconds.addEventListener("input", () => {
+    prefsGameTimeSecondsValue.textContent = prefsGameTimeSeconds.value;
+  });
   
   prefsSimilarityThreshold = document.querySelector("#prefs-similarity-treashold");
   prefsSimilarityThresholdValue = document.querySelector("#prefs-similarity-treashold-value");
@@ -549,6 +574,9 @@ window.addEventListener("DOMContentLoaded", async () => {
       prefsResponseLimitTextArea.value = res.response_limit;
       prefsFinalPreambleTextArea.value = res.final_preamble;
       prefsProseStyleTextArea.value = res.prose_style;
+      prefsMaxHistoryItems.value = res.max_history;
+      prefsGameTimeSeconds.value = res.game_time_milliseconds / 1000;
+
     });
     
     invoke("prefs_file_path").then((res) => { 
@@ -682,7 +710,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       prefsMaxOutputTokens.value = res.max_output_tokens;
       prefsTemperature.value = res.temperature;
       prefsTemperatureValue.textContent = res.temperature;
-      
+      prefsGameTimeSeconds.value = res.game_time_milliseconds / 1000;
       invoke("load_openai_api_key_from_keyring", {}).then((res) => {
         openaiApiKeyEl.value = res;
       });
@@ -907,7 +935,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
   
   invoke("load_preferences").then((res) => {
-    console.log('Preferences Loaded:', res);
+    //console.log('Preferences Loaded:', res);
+    prefsGameTimeSecondsValue = res.game_time_milliseconds / 1000;
   });
   
   invoke("simple_log_message", { message: 'Ghostwriter Is Up.', id: "tracker", level: "info" }).then((res) => {
@@ -956,6 +985,21 @@ window.addEventListener("DOMContentLoaded", async () => {
   // Initialize the resize handle
   initializeResizeHandle();
 });
+
+// handleTextInput(view, from, to, text) {
+//   console.log('User started typing:', text, ' and vibe mode is ', vibeMode);
+//   addSimpleLogEntry({
+//     id: "",
+//     timestamp: Date.now(),
+//     message: 'User started typing: '+text+' and vibe mode is '+vibeMode,
+//     level: 'debug'
+//   });
+//   if (vibeMode) {
+//     restartVibeMode();
+//   }
+//   // Perform any custom actions here
+//   return false; // Return false to allow the text input to proceed
+// };
 
 // Function to handle the onDelete logic
 const handleRichLogEntryDelete = ({ node, getPos, editor }) => {
@@ -1035,7 +1079,7 @@ const editor = new Editor({
     DynamicTextMark,
     InlineActionItem.configure({
       disabled: true,                // Disables the feature
-      timeout: 5000,                 // Show button after 3 seconds
+      timeout: 5000,                 // Show button after 5 seconds
       onClick: async (view, pos, event) => {
         try {
           // Show loading state in the message element
@@ -1063,12 +1107,21 @@ const editor = new Editor({
       },
     }),
   ],
-  handleTextInput(view, from, to, text) {
-    console.log('User started typing:', text, ' and vibe mode is ', vibeMode);
-    // Perform any custom actions here
-    return false; // Return false to allow the text input to proceed
+  // restart the timer if we're still in vibemode
+  // and the timer isn't running
+  onUpdate: ({ editor }) => {
+    if (vibeMode == true && timer.isRunning() == false && emanationInProgress == false) {
+      //handleTextInput(editor);
+      setTimeout(() => {
+        restartVibeMode();
+      }, 3000);
+    }
   },
 })
+
+const handleTextInput = debounce((editor) => {
+  console.log('Updated text:', editor.getText());
+}, 80); // Wait 300ms before firing the event
 
 const diagnostics = new Editor({
   element: document.querySelector('.diagnostics'),

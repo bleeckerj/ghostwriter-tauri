@@ -22,11 +22,11 @@ export class Timer {
         this.element.textContent = this.formatTime(this.currentTime);
     }
 
-    flash() {
+    flash(duration = 750) {
         this.element.classList.add('flash');
         setTimeout(() => {
             this.element.classList.remove('flash');
-        }, 1000);
+        }, duration);
     }
 
     start(onTick = null, onComplete = null) {
@@ -40,7 +40,9 @@ export class Timer {
             if (this.currentTime > 0) {
                 this.currentTime--;
                 this.updateDisplay();
-                this.flash();
+                if (this.currentTime <= 3) {
+                    this.flash(750); // Flash for 750ms during the last 3 seconds
+                }
                 if (this.onTick) this.onTick(this.currentTime);
             } else {
                 this.stop();
@@ -62,5 +64,9 @@ export class Timer {
 
     show() {
         this.element.classList.remove('hidden');
+    }
+
+    isRunning() {
+        return this.intervalId !== null;
     }
 }

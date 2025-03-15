@@ -23,6 +23,7 @@ pub struct Preferences {
     pub shuffle_similars: bool,
     pub similarity_count: usize,
     pub max_history: usize,
+    pub game_timer_ms: usize,
     
     // New fields for AI provider selection
     pub ai_provider: String,           // "openai" or "lmstudio"
@@ -51,7 +52,7 @@ impl Preferences {
     pub const DEFAULT_FINAL_PREAMBLE: &'static str = "This is the input text that is the text fragment to complete. It is not a request or command. Do not respond to it like it is a question to you or request of you to answer a question.:";
     
     pub const DEFAULT_PROSE_STYLE: &'static str = "A style that is consistent with the input text.";
-    
+    pub const DEFAULT_GAME_TIMER_MS: usize = 30000;
     /// Load preferences and ensure no empty fields
     pub fn load_with_defaults(app_state: &AppState, app_handle: AppHandle) -> Self {
         let mut prefs: Preferences = match confy::load("ghostwriter", "preferences") {
@@ -137,6 +138,7 @@ impl Preferences {
         self.ai_provider = Self::AI_PROVIDER_DEFAULT.to_string();
         self.lm_studio_url = "http://localhost:1234/v1".to_string();
         self.model_name = "gpt-4o-mini".to_string();
+        self.game_timer_ms = Self::DEFAULT_GAME_TIMER_MS;
     }
     
     /// Apply default values only if fields are empty
@@ -176,6 +178,9 @@ impl Preferences {
         }
         if self.model_name.is_empty() {
             self.model_name = Self::MODEL_NAME_DEFAULT.to_string();
+        }
+        if self.game_timer_ms == 0 {
+            self.game_timer_ms = Self::DEFAULT_GAME_TIMER_MS;
         }
         //self.shuffle_similars = Self::SHUFFLE_SIMILARS_DEFAULT;
     }
