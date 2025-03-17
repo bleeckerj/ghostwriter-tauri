@@ -172,7 +172,7 @@ pub fn get_resource_dir_path() -> Option<PathBuf> {
 struct CompletionTiming {
     embedding_generation_ms: u128,
     similarity_search_ms: u128,
-    openai_request_ms: u128,
+    llm_request_time_ms: u128,
     total_ms: u128,
 }
 
@@ -187,7 +187,7 @@ impl fmt::Display for CompletionTiming {
             Total: {} ms",
             self.embedding_generation_ms,
             self.similarity_search_ms,
-            self.openai_request_ms,
+            self.llm_request_time_ms,
             self.total_ms
         )
     }
@@ -795,7 +795,7 @@ async fn load_openai_api_key_from_keyring(
     };
     
     // Time AI request
-    let start_openai = Instant::now();
+    let start_llm_action = Instant::now();
     
     // Make the request through the provider
     let chat_response = provider
@@ -803,7 +803,7 @@ async fn load_openai_api_key_from_keyring(
     .await
     .map_err(|e| format!("AI completion failed: {}", e))?;
     
-    let openai_duration = start_openai.elapsed();
+    let llm_action_duration = start_llm_action.elapsed();
     let total_duration = start_total.elapsed();
     
     // Process the response
@@ -814,7 +814,7 @@ async fn load_openai_api_key_from_keyring(
         let timing = CompletionTiming {
             embedding_generation_ms: embedding_duration.as_millis(),
             similarity_search_ms: search_duration.as_millis(),
-            openai_request_ms: openai_duration.as_millis(),
+            llm_request_time_ms: llm_action_duration.as_millis(),
             total_ms: total_duration.as_millis(),
         };
         
