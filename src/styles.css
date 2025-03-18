@@ -59,6 +59,7 @@ a:hover {
 p {
   @apply text-[0.9em];
   @apply font-[WarblerText];
+  @apply leading-[1.5em];
 }
 
 .dynamic-text-mark {
@@ -345,10 +346,11 @@ button {
 }
 
 @keyframes highlight {
-  0% { background-color: rgb(148 163 184); 
+  0% { 
+    background-color: rgb(148 163 184); 
     filter: blur(2px);
   }
-  100% { background: rgba(139, 118, 232, 0.37); color: inherit; padding: 2px 6px; border-radius:0.2rem; filter: blur(0px);
+  100% { background: rgba(59, 130, 255, 0.2); color: black; padding: 2px 6px; border-radius:0.2rem; filter: blur(0px);
   }
 }
 
@@ -987,3 +989,4 @@ button {
   50% { transform: scale(1.1); }
   100% { transform: scale(1); }
 }
+
