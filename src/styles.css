@@ -350,7 +350,7 @@ button {
     background-color: rgb(148 163 184); 
     filter: blur(2px);
   }
-  100% { background: rgba(59, 130, 255, 0.2); color: black; padding: 2px 6px; border-radius:0.2rem; filter: blur(0px);
+  100% {  background: rgba(59, 130, 255, 0.2); color: black; padding: 2px 6px; border-radius:0.2rem; filter: blur(0px);
   }
 }
 

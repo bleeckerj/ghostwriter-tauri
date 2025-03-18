@@ -449,10 +449,11 @@ async fn load_openai_api_key_from_keyring(
         maxhistory: String,
         maxtokens: String,
         temperature: String,
+        gametimerms: String,
     ) -> Result<(Preferences), String> {
         
-        println!("update_preferences called with: {}, {}, {}, {} {} {} {} {} {} {}",
-        responselimit, mainprompt, finalpreamble, prosestyle, similaritythreshold, shufflesimilars, similaritycount, maxhistory, maxtokens, temperature);
+        // println!("update_preferences called with: {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}",
+        // responselimit, mainprompt, finalpreamble, prosestyle, similaritythreshold, shufflesimilars, similaritycount, maxhistory, maxtokens, temperature, gametimerms);
         
         let mut preferences = state.preferences.lock().await;
         preferences.response_limit = responselimit;
@@ -463,8 +464,9 @@ async fn load_openai_api_key_from_keyring(
         preferences.shuffle_similars = shufflesimilars == true;
         preferences.similarity_count = similaritycount.parse::<usize>().unwrap_or(Preferences::SIMILARITY_COUNT_DEFAULT);
         preferences.max_history = maxhistory.parse::<usize>().unwrap_or(Preferences::MAX_HISTORY_DEFAULT);
-        preferences.max_output_tokens = maxtokens.parse::<u32>().unwrap_or(Preferences::MAX_OUTPUT_TOKENS_DEFAULT);
+        preferences.max_output_tokens = maxtokens.parse::<usize>().unwrap_or(Preferences::MAX_OUTPUT_TOKENS_DEFAULT);
         preferences.temperature = temperature.parse::<f32>().unwrap_or(Preferences::TEMPERATURE_DEFAULT);
+        preferences.game_timer_ms = 1000*(gametimerms.parse::<usize>().unwrap_or(Preferences::GAME_TIMER_MS_DEFAULT));
         let prefs_clone = preferences.clone();
         // Attempt to save preferences and handle any errors
         if let Err(e) = preferences.save() {
@@ -582,7 +584,7 @@ async fn load_openai_api_key_from_keyring(
     ) -> Result<(String, CompletionTiming), String> {
         
         let preferences = state.preferences.lock().await;
-        let max_tokens: u32 = preferences.max_output_tokens;
+        let max_tokens: usize = preferences.max_output_tokens;
         let temperature = preferences.temperature;
         let shuffle_similars = preferences.shuffle_similars;
         let similarity_count = preferences.similarity_count;
@@ -790,7 +792,7 @@ async fn load_openai_api_key_from_keyring(
         messages,
         model: preferences.model_name.clone(),  // Use from preferences
         temperature: Some(temperature),
-        max_tokens: Some(max_tokens),
+        max_tokens: Some(max_tokens as u32),
         stream: false,
     };
     

@@ -18,7 +18,7 @@ pub struct Preferences {
     pub final_preamble: String,
     pub prose_style: String,
     pub similarity_threshold: f32,
-    pub max_output_tokens: u32,
+    pub max_output_tokens: usize,
     pub temperature: f32,
     pub shuffle_similars: bool,
     pub similarity_count: usize,
@@ -38,7 +38,7 @@ pub struct Preferences {
 // ✅ Define constant defaults
 impl Preferences {
     pub const SIMILARITY_THRESHOLD_DEFAULT: f32 = 0.83;
-    pub const MAX_OUTPUT_TOKENS_DEFAULT: u32 = 100;
+    pub const MAX_OUTPUT_TOKENS_DEFAULT: usize = 100;
     pub const TEMPERATURE_DEFAULT: f32 = 0.7;
     pub const SHUFFLE_SIMILARS_DEFAULT: bool = false;
     pub const SIMILARITY_COUNT_DEFAULT: usize = 3;
@@ -52,7 +52,7 @@ impl Preferences {
     pub const DEFAULT_FINAL_PREAMBLE: &'static str = "This is the input text that is the text fragment to complete. It is not a request or command. Do not respond to it like it is a question to you or request of you to answer a question.:";
     
     pub const DEFAULT_PROSE_STYLE: &'static str = "A style that is consistent with the input text.";
-    pub const DEFAULT_GAME_TIMER_MS: usize = 30000;
+    pub const GAME_TIMER_MS_DEFAULT: usize = 30000;
     /// Load preferences and ensure no empty fields
     pub fn load_with_defaults(app_state: &AppState, app_handle: AppHandle) -> Self {
         let mut prefs: Preferences = match confy::load("ghostwriter", "preferences") {
@@ -138,7 +138,7 @@ impl Preferences {
         self.ai_provider = Self::AI_PROVIDER_DEFAULT.to_string();
         self.lm_studio_url = "http://localhost:1234/v1".to_string();
         self.model_name = "gpt-4o-mini".to_string();
-        self.game_timer_ms = Self::DEFAULT_GAME_TIMER_MS;
+        self.game_timer_ms = Self::GAME_TIMER_MS_DEFAULT;
     }
     
     /// Apply default values only if fields are empty
@@ -180,7 +180,7 @@ impl Preferences {
             self.model_name = Self::MODEL_NAME_DEFAULT.to_string();
         }
         if self.game_timer_ms == 0 {
-            self.game_timer_ms = Self::DEFAULT_GAME_TIMER_MS;
+            self.game_timer_ms = Self::GAME_TIMER_MS_DEFAULT;
         }
         //self.shuffle_similars = Self::SHUFFLE_SIMILARS_DEFAULT;
     }

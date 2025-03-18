@@ -97,9 +97,9 @@ async function toggleVibeMode(enabled) {
 
 async function restartVibeMode() {
   if (vibeMode) {
-    let seconds = prefsGameTimeSecondsValue; // default to 10 seconds if not specified
+    let seconds = prefsGameTimeSeconds.value; // default to 10 seconds if not specified
     //invoke("load_preferences").then((res) => {
-      seconds = prefsGameTimeSecondsValue;
+    //seconds = prefsGameTimeSecondsValue;
     
     timer.show();
     timer.setTime(seconds);
@@ -254,8 +254,16 @@ async function completionFromContext() {
     greetMsgEl.textContent = 'Emanation Complete';
     //console.log("Completion content:", content);
     //emanateToEditor(content);
-    emanateNavigableNodeToEditor(content);
+    //emanateNavigableNodeToEditor(content);
     //emanateStringToEditor(content);
+    insertDynamicTextWithTrailingSpace(editor, content, {
+      raw: {
+        twMisc: 'rounded animated-highlight',
+        id: 'backend-id-123',
+        timestamp: Date.now(),
+        raw: content
+      }
+    });
     
     
     if (wasDisabled === false) {
@@ -376,14 +384,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   //create();
   //console.log('Timer:', timer);
   timer.hide();
-  
-  document.addEventListener('highlightClicked', (event) => {
-    const { id, color } = event.detail
-    console.log(`Highlight clicked: ${id} (${color})`)
-    
-    // Do something with the clicked highlight
-    // For example, toggle color or show a popup
-  })
 
   invoke("set_logger_app_data_path", {}).then((res) => {
     //console.log('Logger App Data Path:', res);
@@ -424,8 +424,6 @@ editor.on('node:clicked', ({ id, node }) => {
   let miscTestButton = document.querySelector("#misc-test-btn");
   miscTestButton.addEventListener("click", () => {
     insertDynamicTextWithTrailingSpace(editor, "This is AI-generated text", {
-      textColor: 'white',
-      backgroundColor: 'purple',
       raw: {
         source: 'AI model',
         timestamp: Date.now()
@@ -537,6 +535,7 @@ prefsTemperature.addEventListener("input", () => {
 prefsGameTimeSeconds = document.querySelector("#prefs-game-time-secs");
 prefsGameTimeSecondsValue = document.querySelector("#prefs-game-time-secs-value");
 prefsGameTimeSeconds.addEventListener("input", () => {
+  prefsGameTimeSeconds.value = prefsGameTimeSeconds.value;
   prefsGameTimeSecondsValue.textContent = prefsGameTimeSeconds.value;
 });
 
@@ -616,7 +615,7 @@ prefsLoadBtn.addEventListener("click", () => {
     prefsFinalPreambleTextArea.value = res.final_preamble;
     prefsProseStyleTextArea.value = res.prose_style;
     prefsMaxHistoryItems.value = res.max_history;
-    prefsGameTimeSeconds.value = res.game_time_milliseconds / 1000;
+    prefsGameTimeSeconds.value = res.gametimerms / 1000;
     
   });
   
@@ -683,7 +682,8 @@ prefsSaveBtn.addEventListener("click", () => {
     similaritycount: prefsSimilarityCount.value,
     maxhistory: prefsMaxHistoryItems.value,
     maxtokens: prefsMaxOutputTokens.value,
-    temperature: prefsTemperature.value
+    temperature: prefsTemperature.value,
+    gametimerms: prefsGameTimeSeconds.value
   }).then((res) => {
     console.log('Preferences Saved:', res);
     greetMsgEl.textContent = 'Preferences saved';
@@ -720,6 +720,8 @@ prefsResetBtn.addEventListener("click", () => {
     prefsSimilarityThresholdValue.textContent = res.similarity_threshold;
     prefsSimilarityCount.value = res.similarity_count;
     prefsSimilarityCountValue.textContent = res.similarity_count;
+    prefsGameTimeSeconds.value = res.gametimerms / 1000;
+    prefsGameTimeSecondsValue.textContent = res.gametimerms / 1000;
   });
 });
 
@@ -751,7 +753,8 @@ panelToggleBtn.addEventListener('click', () => {
     prefsMaxOutputTokens.value = res.max_output_tokens;
     prefsTemperature.value = res.temperature;
     prefsTemperatureValue.textContent = res.temperature;
-    prefsGameTimeSeconds.value = res.game_time_milliseconds / 1000;
+    prefsGameTimeSeconds.value = res.game_timer_ms / 1000;
+    prefsGameTimeSecondsValue.textContent = res.game_timer_ms / 1000;
     invoke("load_openai_api_key_from_keyring", {}).then((res) => {
       openaiApiKeyEl.value = res;
     });
@@ -957,7 +960,7 @@ try {
         meta: event.payload.meta
       })
     }
-    if (event.payload && event.payload.current_step === event.payload.total_steps) {
+    if (event.payload && event.payload.current_step >= event.payload.total_steps) {
       window.updateProgressNode(diagnostics, event.payload.progress_id, {
         current_step: event.payload.current_step,
         current_file: event.payload.current_file,
@@ -977,7 +980,7 @@ try {
 
 invoke("load_preferences").then((res) => {
   console.log('Preferences Loaded:', res);
-  prefsGameTimeSecondsValue = res.game_timer_ms / 1000;
+  prefsGameTimeSecondsValue.textContent = res.gametimerms / 1000;
 });
 
 invoke("simple_log_message", { message: 'Ghostwriter Is Up.', id: "tracker", level: "info" }).then((res) => {
@@ -1168,8 +1171,8 @@ const editor = new Editor({
       
       // Search for our mark around the click position
       state.doc.nodesBetween(
-        Math.max(0, pos - 5),  // Look a few chars before click
-        Math.min(state.doc.content.size, pos + 5),  // And a few chars after
+        Math.max(0, pos - 0),  // Look a few chars before click
+        Math.min(state.doc.content.size, pos + 1),  // And a few chars after
         (node, nodePos) => {
           if (hasDynamicMark) return false; // Already found it
           
@@ -1202,12 +1205,12 @@ const editor = new Editor({
         if (markAttrs.raw) {
           try {
             const rawData = JSON.parse(markAttrs.raw);
-            console.log('Metadata:', rawData);
+            console.log('Metadata for the thing clicked:', rawData);
             
             // You could show a tooltip or modal with this data
             // For example:
             //showMarkTooltip(rawData, event.clientX, event.clientY);
-            console.log('Clicked on:', rawData, event.clientX, event.clientY);
+            console.log('More stuff Clicked on:', rawData, "client X,Y ", event.clientX, event.clientY);
           } catch (error) {
             console.error('Error parsing mark metadata:', error);
           }
