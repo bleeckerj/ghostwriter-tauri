@@ -114,6 +114,7 @@ async function restartVibeMode() {
         timer.stop();
         timer.hide();
         editor.setEditable(false);
+        // vibe mode completion
         invoke("completion_from_context", { input: editor.getText() }).then((content) => {
           console.log(content);
           greetMsgEl.textContent = 'Vibe Emanation Complete';
@@ -247,21 +248,25 @@ async function completionFromContext() {
     }
   }  
   
+  // trad ghostwriter mode completion_from_context
   invoke("completion_from_context", { input: editor.getText() })
-  .then(([content, timing]) => {
+  .then(([content, timing, completion]) => {
     clearInterval(loadingInterval);
-    
+    //console.log(completion);
     greetMsgEl.textContent = 'Emanation Complete';
     //console.log("Completion content:", content);
     //emanateToEditor(content);
     //emanateNavigableNodeToEditor(content);
     //emanateStringToEditor(content);
+    let date = new Date(completion.completion.timestamp);
     insertDynamicTextWithTrailingSpace(editor, content, {
-      raw: {
+      metadata: {
         twMisc: 'rounded animated-highlight',
-        id: 'backend-id-123',
-        timestamp: Date.now(),
-        raw: content
+        id: 'emanation-'+date.getTime(),
+        timestamp: date.getTime(),
+        raw: content,
+        rag: completion.completion.vector_search_results_for_log,
+        timing: timing
       }
     });
     
@@ -848,7 +853,7 @@ try {
 
 try {
   unlistenSimpleLogMessageFn = await listen('simple-log-message', (event) => {
-    console.log('Received event:', event);
+    //console.log('Received event:', event);
     if (event.payload) {
       addSimpleLogEntry({
         id: event.payload.id,
@@ -909,7 +914,7 @@ try {
 
 try {
   unlistenOpenFileDialogForIngestFn = await listen('open-canon-list', (event) => {
-    console.log('Hey Received event:', event);
+    //console.log('Hey Received event:', event);
   });  
 } catch (error) {
   console.error('Failed to setup event listener:', error);
@@ -1210,7 +1215,15 @@ const editor = new Editor({
             // You could show a tooltip or modal with this data
             // For example:
             //showMarkTooltip(rawData, event.clientX, event.clientY);
-            console.log('More stuff Clicked on:', rawData, "client X,Y ", event.clientX, event.clientY);
+            console.log('More stuff Clicked on includes client X,Y ', event.clientX, event.clientY);
+          } catch (error) {
+            console.error('Error parsing mark metadata:', error);
+          }
+        }
+        if(markAttrs.rag) {
+          try {
+            const ragData = JSON.parse(markAttrs.rag);
+            console.log("RAG Data for the thing clicked:", ragData);
           } catch (error) {
             console.error('Error parsing mark metadata:', error);
           }
@@ -1368,12 +1381,13 @@ function insertDynamicTextWithTrailingSpace(editor, text, metadata = {}) {
     position,
     position + textWithSpace.length,
     markType.create({
-      id: metadata.id || `dynamic-${Date.now()}`,
-      textColor: metadata.textColor || 'white',
-      backgroundColor: metadata.backgroundColor || 'blue',
-      twMisc: metadata.twMisc || 'animated-highlight bg-amber-500',
-      raw: metadata.raw ? JSON.stringify(metadata.raw) : null,
-      timestamp: metadata.timestamp || Date.now()
+      id: metadata.metadata.id || `dynamic-${Date.now()}`,
+      textColor: metadata.metadata.textColor || 'white',
+      backgroundColor: metadata.metadata.backgroundColor || 'blue',
+      twMisc: metadata.metadata.twMisc || 'animated-highlight bg-amber-500',
+      raw: metadata.metadata.raw ? JSON.stringify(metadata.metadata.raw) : null,
+      rag: metadata.metadata.rag ? JSON.stringify(metadata.metadata.rag) : null,
+      timestamp: metadata.metadata.timestamp || Date.now()
     })
   );
   

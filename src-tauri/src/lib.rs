@@ -9,6 +9,7 @@ use std::io::Stdout;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::fmt;
+use std::collections::HashSet;
 use serde::Serialize;
 use serde_json::Value;
 use tokio::time::{sleep, Duration};
@@ -581,7 +582,7 @@ async fn load_openai_api_key_from_keyring(
         state: tauri::State<'_, AppState>,
         app_handle: tauri::AppHandle,
         input: String,
-    ) -> Result<(String, CompletionTiming), String> {
+    ) -> Result<(String, CompletionTiming, Completion), String> {
         
         let preferences = state.preferences.lock().await;
         let max_tokens: usize = preferences.max_output_tokens;
@@ -729,9 +730,13 @@ async fn load_openai_api_key_from_keyring(
         }
         
         let mut vector_search_results_for_log: Vec<VectorSearchResult> = Vec::new();
+        let mut seen_chunk_ids: HashSet<usize> = HashSet::new();
         
         for (i, (doc_id, doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
-            
+            if seen_chunk_ids.contains(chunk_id) {
+                // Skip this item if the chunk_id is already in the HashSet
+                continue;
+            }
             let msg = format!("<div>
             <div class='border-l-[4px] border-amber-300 pl-2 pr-8 text-pretty leading-tight font-[InputMono]'>{}</div>
             <div class='mt-2 px-2 py-1 rounded-sm bg-gray-700 w-fit'>{}</div>
@@ -746,6 +751,8 @@ async fn load_openai_api_key_from_keyring(
                 content: chunk_text.clone(),
                 chunk_id: *chunk_id,
             });
+            // Add the chunk_id to the HashSet
+            seen_chunk_ids.insert(*chunk_id);
         }
         
         let conversation_context = state.conversation.lock().await.get_context();
@@ -850,7 +857,7 @@ async fn load_openai_api_key_from_keyring(
         // .log_completion(entry)
         // .map_err(|e| e.to_string())?;
         // Instead of directly failing if logging fails, log the error and continue
-        match state.logger.lock().await.log_completion(entry) {
+        match state.logger.lock().await.log_completion(entry.clone()) {
             Ok(_) => {
                 new_logger.simple_log_message(
                     "Successfully logged completion".to_string(),
@@ -874,7 +881,7 @@ async fn load_openai_api_key_from_keyring(
         
         new_logger.simple_log_message(format!("History context is {} exchanges and {} characters", conversation.get_history().len(), conversation.get_context().len()), "".to_string(), "info".to_string());
         //println!("Completion: {}", content);
-        return Ok((content.clone(), timing));
+        return Ok((content.clone(), timing, entry.clone()));
     }
     Err("No completion returned.".to_string())
     
@@ -1188,7 +1195,7 @@ async fn search_similarity(
             // what this function does is start the chat completion process    
             Ok("Shot clock complete".to_string())        
         }
-
+        
         #[derive(Serialize, Clone)]
         struct CanonInfo {
             name: String,

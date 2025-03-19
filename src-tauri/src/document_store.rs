@@ -264,80 +264,75 @@ impl DocumentStore {
         let mut stmt = conn.prepare(
             "SELECT d.id, d.name, d.file_path, d.created_at, e.id, e.chunk, e.embedding 
             FROM documents d 
-            JOIN embeddings e ON d.id = e.doc_id
-            WHERE d.paused = 0 OR d.paused IS NULL" 
+            JOIN (
+                SELECT id, doc_id, chunk, embedding 
+                FROM embeddings
+                GROUP BY id, doc_id, chunk, embedding
+            ) e ON d.id = e.doc_id
+            WHERE d.paused = 0 OR d.paused IS NULL"
         )?;  // Use ? directly for rusqlite::Error
-        //println!("************************ {}", similarity_threshold);
+
         let mut similarities = Vec::new();
-        
+
         let rows = stmt.query_map([], |row| {
             let doc_id: i64 = row.get(0)?;  // Extract the document id
             let name: String = row.get(1)?;  // Use ? directly for rusqlite errors
             let chunk_id: usize = row.get(4)?;
             let chunk: String = row.get(5)?;
             let embedding_json: String = row.get(6)?;
-            
+
             let chunk_embedding: Vec<f32> = serde_json::from_str(&embedding_json)
-            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(
-                6,
-                rusqlite::types::Type::Text,
-                Box::new(e)
-            ))?;
-            
+                .map_err(|e| rusqlite::Error::FromSqlConversionFailure(
+                    6,
+                    rusqlite::types::Type::Text,
+                    Box::new(e)
+                ))?;
+
             let similarity = cosine_similarity(query_embedding, &chunk_embedding);
-            
+
             Ok((doc_id, name, chunk_id, chunk, similarity))
         })?;  // Use ? directly for rusqlite::Error
-        
+
         for row in rows {
             similarities.push(row?);
         }
-        
-        // Log the similarities before filtering
-        //println!("Similarities before filtering: {:?}", similarities.iter().map(|(doc_id, name, _, _, similarity)| (doc_id, name, similarity)).collect::<Vec<_>>());
-        //println!("Similarity threshold: {}", similarity_threshold);
-        
+
         // Filter by min_score and sort by similarity score in descending order
         similarities.retain(|&(doc_id, ref name, _, _, similarity)| {
-            let retain = similarity >= similarity_threshold;
-            // if retain {
-            //     println!("Filtered in: doc_id = {}, name = {}, similarity = {}", doc_id, name, similarity);
-            // }
-            retain
+            similarity >= similarity_threshold
         });
-        
-        // Log the similarities after filtering
-        //println!("Similarities after filtering: {:?}", similarities.iter().map(|(doc_id, name, _, _, similarity)| (doc_id, name, similarity)).collect::<Vec<_>>());
-        
+
         similarities.sort_by(|a, b| {
             b.4.partial_cmp(&a.4)  // Changed from .3 to .4 to access similarity
-            .unwrap_or(std::cmp::Ordering::Equal)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
-        
-        // Collect top results with unique doc_id
+
+        // Collect top results with unique doc_id and unique chunk_id
         let mut unique_results = Vec::new();
         let mut seen_doc_ids = std::collections::HashSet::new();
-        
+        let mut seen_chunk_ids = std::collections::HashSet::new();
+
         for result in &similarities {
             if seen_doc_ids.len() >= similar_docs_count {
                 break;
             }
-            if seen_doc_ids.insert(result.0) {
+            if seen_doc_ids.insert(result.0) && seen_chunk_ids.insert(result.2) {
                 unique_results.push(result.clone());
             }
         }
-        
+
         // If we have fewer than similar_docs_count unique results, add more entries from the remaining items
         if unique_results.len() < similar_docs_count {
             for result in &similarities {
                 if unique_results.len() >= similar_docs_count {
                     break;
                 }
-                unique_results.push(result.clone());
+                if seen_doc_ids.insert(result.0) && seen_chunk_ids.insert(result.2) {
+                    unique_results.push(result.clone());
+                }
             }
         }
-        
-        //println!("Final results: {:?}", unique_results.iter().map(|(doc_id, name, _, _, similarity)| (doc_id, name, similarity)).collect::<Vec<_>>());
+
         Ok(unique_results)
     }
     
@@ -916,6 +911,5 @@ impl DocumentStore {
             dot_product / (norm_a * norm_b)
         }
     }
-    
-    
-    
+
+
