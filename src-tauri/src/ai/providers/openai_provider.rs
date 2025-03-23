@@ -149,7 +149,7 @@ fn infer_model_capabilities(model_id: &str) -> Vec<ModelCapability> {
     }
     
     if model_id.contains("text-embedding") || model_id.contains("-e") {
-        capabilities.push(ModelCapability::Embeddings);
+        capabilities.push(ModelCapability::Embedding);
     }
     
     if model_id.contains("dall-e") {

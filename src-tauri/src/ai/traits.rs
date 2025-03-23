@@ -30,6 +30,11 @@ pub enum AIProviderError {
     #[error("Not implemented error: {0}")]
     NotImplemented(String),
 
+    #[error("Model not found error: {0}")]
+    ModelNotFound(String),
+    
+    #[error("Deserialization error: {0}")]  
+    DeserializationError(String),
 }
 
 /// Core trait for retrieving models

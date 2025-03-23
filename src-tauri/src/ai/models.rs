@@ -15,7 +15,7 @@ pub struct AIModel {
 pub enum ModelCapability {
     Completion,
     ChatCompletion,
-    Embeddings,
+    Embedding,
     ImageGeneration,
     AudioTranscription,
     AudioGeneration,

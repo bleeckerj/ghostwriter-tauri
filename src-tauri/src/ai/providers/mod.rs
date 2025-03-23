@@ -1,10 +1,12 @@
 // Declare the modules - these reference the .rs files in this directory
 pub mod openai_provider;
 pub mod lm_studio_provider;
+pub mod ollama_provider;
 
 // Re-export the provider structs so they can be used directly from ai::providers
 pub use openai_provider::OpenAIProvider;
 pub use lm_studio_provider::LMStudioProvider;
+pub use ollama_provider::OllamaProvider;
 
 use crate::ai::{
     traits::{ModelProvider, ChatCompletionProvider, EmbeddingProvider, AIProviderError},
@@ -17,12 +19,14 @@ use async_trait::async_trait;
 pub enum ProviderType {
     OpenAI,
     LMStudio,
+    Ollama,
 }
 
 /// Enum to wrap different provider implementations
 pub enum Provider {
     OpenAI(OpenAIProvider),
     LMStudio(LMStudioProvider),
+    Ollama(OllamaProvider),
 }
 
 /// Create a provider based on the specified type and configuration
@@ -39,7 +43,10 @@ pub fn create_provider(provider_type: ProviderType, config: &str) -> Provider {
                 config  // Use provided URL if not empty
             };
             Provider::LMStudio(LMStudioProvider::new(url, None))
-        }
+        },
+        ProviderType::Ollama => {
+            Provider::Ollama(OllamaProvider::new(config))
+        },
     }
 }
 
@@ -52,6 +59,7 @@ impl ChatCompletionProvider for Provider {
         match self {
             Provider::OpenAI(provider) => provider.create_chat_completion(request).await,
             Provider::LMStudio(provider) => provider.create_chat_completion(request).await,
+            Provider::Ollama(provider) => provider.create_chat_completion(request).await,
         }
     }
 
@@ -62,6 +70,7 @@ impl ChatCompletionProvider for Provider {
         match self {
             Provider::OpenAI(provider) => provider.create_streaming_chat_completion(request).await,
             Provider::LMStudio(provider) => provider.create_streaming_chat_completion(request).await,
+            Provider::Ollama(provider) => provider.create_streaming_chat_completion(request).await,
         }
     }
 }
@@ -72,6 +81,7 @@ impl ModelProvider for Provider {
         match self {
             Provider::OpenAI(provider) => provider.list_models().await,
             Provider::LMStudio(provider) => provider.list_models().await,
+            Provider::Ollama(provider) => provider.list_models().await,
         }
     }
     
@@ -79,6 +89,7 @@ impl ModelProvider for Provider {
         match self {
             Provider::OpenAI(provider) => provider.get_model(model_id).await,
             Provider::LMStudio(provider) => provider.get_model(model_id).await,
+            Provider::Ollama(provider) => provider.get_model(model_id).await,
         }
     }
 }

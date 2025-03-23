@@ -775,11 +775,16 @@ async fn load_openai_api_key_from_keyring(
         \
         {final_preamble} \
         \
-        Input Text: {input}\
-        \
         Answer this in prose using this specific writing style: {prose_style}"
     );
     
+/**
+ * I used to have this in the System Prompt..I think that's a mistake
+ *
+ * 
+ *          Input Text: {input}
+ */
+
     // Create message array in the generic format
     let messages = vec![
     ChatMessage {
