@@ -109,12 +109,13 @@ impl ChatCompletionProvider for OpenAIProvider {
 impl EmbeddingProvider for OpenAIProvider {
     async fn create_embeddings(
         &self,
-        texts: &[String],
-        model: &str,
+        embedding_request: EmbeddingRequest,
+        // texts: &[String],
+        // model: &str,
     ) -> Result<Vec<Embedding>, AIProviderError> {
         let request = async_openai::types::CreateEmbeddingRequest {
-            model: model.to_string(),
-            input: async_openai::types::EmbeddingInput::StringArray(texts.to_vec()),
+            model: embedding_request.model.to_string(),
+            input: async_openai::types::EmbeddingInput::StringArray(embedding_request.input),
             encoding_format: None,
             user: None,
             dimensions: None,

@@ -299,16 +299,17 @@ impl ChatCompletionProvider for LMStudioProvider {
 impl EmbeddingProvider for LMStudioProvider {
     async fn create_embeddings(
         &self,
-        texts: &[String],
-        model: &str,
+        embedding_request: EmbeddingRequest,
+        // texts: &[String],
+        // model: &str,
     ) -> Result<Vec<Embedding>, AIProviderError> {
         let url = format!("{}/embeddings", self.base_url);
         
         // LM Studio may not support embeddings, but we'll implement the API call
         // in case it does in the future or for compatible models
         let request_body = json!({
-            "model": model,
-            "input": texts,
+            "model": embedding_request.model,
+            "input": embedding_request.input,
         });
         
         let http_request = self.client.post(&url).json(&request_body);

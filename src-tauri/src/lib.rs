@@ -45,8 +45,8 @@ use conversations::Conversation;
 mod app_state; // Add this line
 use app_state::AppState;
 use crate::ai::providers::{self, ProviderType, Provider};
-use crate::ai::models::{ChatCompletionRequest, ChatMessage, MessageRole};
-use crate::ai::traits::ChatCompletionProvider;
+use crate::ai::models::{ChatCompletionRequest, ChatMessage, MessageRole, EmbeddingRequest};
+use crate::ai::traits::{EmbeddingProvider, ChatCompletionProvider};
 
 // Define log levels as constants
 pub const LOG_INFO: &str = "info";
@@ -662,6 +662,15 @@ async fn load_openai_api_key_from_keyring(
         // } else {
         //     EmbeddingGenerator::new()
         // };
+
+        // let m = "text-embedding-ada-002"; // Replace with your model
+        // let e_r = EmbeddingRequest {
+        //     model: m.to_string(),
+        //     input: [input].to_vec(),
+        // };
+        
+        //let embd = provider.create_embeddings(&e_r).await;
+
         
         let embedding = 
         embedding_generator

@@ -98,3 +98,9 @@ pub struct Embedding {
     pub vector: Vec<f32>,
     pub index: usize,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmbeddingRequest {
+    pub model: String,
+    pub input: Vec<String>,
+}

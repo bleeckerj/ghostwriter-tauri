@@ -6,9 +6,14 @@ use async_trait::async_trait;
 use futures::{Stream, StreamExt};
 use std::pin::Pin;
 use ollama_rs::{
-    generation::chat::{request::ChatMessageRequest, ChatMessage},
+    generation::{
+        chat::{request::ChatMessageRequest, ChatMessage}, 
+        embeddings::request::EmbeddingsInput,
+        embeddings::request::GenerateEmbeddingsRequest,
+    },
     Ollama,
 };
+
 use tokio::io::{stdout, AsyncWriteExt};
 
 /// Provider implementation for Ollama API
@@ -167,27 +172,48 @@ fn convert_ollama_message(msg: &ollama_rs::generation::chat::ChatMessage) -> cra
     }
 }
 
-//#[async_trait]
-// impl EmbeddingProvider for OllamaProvider {
-//     async fn create_embeddings(
-//         &self,
-//         texts: &[String],
-//         model: &str,
-//     ) -> Result<Vec<Vec<f32>>, AIProviderError> {
-//         let mut embeddings = Vec::new();
+#[async_trait]
+impl EmbeddingProvider for OllamaProvider {
+    async fn create_embeddings(
+        &self,
+        embedding_request: EmbeddingRequest,
+    ) -> Result<Vec<Embedding>, AIProviderError> {
+        let mut embeddings = Vec::new();
 
-//         for text in texts {
-//             let embedding_request = ollama_rs::generation::embeddings::request::EmbeddingRequest::new(
-//                 model.to_string(),
-//                 text.clone(),
-//             );
+        //let ollama = Ollama::new("https://api.ollama.com");
+        let input = EmbeddingsInput::Multiple(embedding_request.input.clone());
 
-//             let response = self.client.generate_embeddings(embedding_request).await
-//                 .map_err(|e| AIProviderError::APIError(format!("Embedding failed: {}", e)))?;
+        // Create a request to generate embeddings
+        let request = GenerateEmbeddingsRequest::new(
+            embedding_request.model.to_string(),
+            input,
+        );
+        
 
-//             embeddings.push(response.embedding);
-//         }
-
-//         Ok(embeddings)
+// // Call the generate_embeddings function
+// match client.generate_embeddings(request).await {
+//     Ok(response) => {
+//         println!("Embeddings: {:?}", response.embeddings);
 //     }
-//}
+//     Err(e) => {
+//         eprintln!("Error generating embeddings: {:?}", e);
+//     }
+// }
+
+
+
+        // for text in embedding_request.input {
+        //     let ollama_embedding_request = ollama_rs::generation::embeddings::request::EmbeddingRequest::new(
+        //         embedding_request.model.to_string(),
+        //         text.clone(),
+        //     );
+
+        //     let response = self.client.generate_embeddings(ollama_embedding_request).await
+        //         .map_err(|e| AIProviderError::APIError(format!("Embedding failed: {}", e)))?;
+
+        //     embeddings.push(response.embedding);
+        // }
+
+        Ok(embeddings)
+    }
+}

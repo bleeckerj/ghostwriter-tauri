@@ -6,6 +6,8 @@ use crate::ai::models::ChatCompletionRequest;
 use crate::ai::models::ChatCompletionResponse;
 use crate::ai::models::ChatCompletionChunk;
 use crate::ai::models::Embedding;
+use crate::ai::models::EmbeddingRequest;
+
 /// Represents any error that can occur when interacting with AI providers
 #[derive(Debug, thiserror::Error)]
 pub enum AIProviderError {
@@ -69,7 +71,8 @@ pub trait EmbeddingProvider {
     /// Generate embeddings for text
     async fn create_embeddings(
         &self,
-        texts: &[String],
-        model: &str,
+        // texts: &[String],
+        // model: &str,
+        embedding_request: EmbeddingRequest,
     ) -> Result<Vec<Embedding>, AIProviderError>;
 }

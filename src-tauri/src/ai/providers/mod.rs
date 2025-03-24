@@ -76,6 +76,22 @@ impl ChatCompletionProvider for Provider {
 }
 
 #[async_trait]
+impl EmbeddingProvider for Provider {
+    async fn create_embeddings(
+        &self,
+        embedding_request: EmbeddingRequest,
+        // texts: &[String],
+        // model: &str,
+    ) -> Result<Vec<Embedding>, AIProviderError> {
+        match self {
+            Provider::OpenAI(provider) => provider.create_embeddings(embedding_request).await,
+            Provider::LMStudio(provider) => provider.create_embeddings(embedding_request).await,
+            Provider::Ollama(provider) => provider.create_embeddings(embedding_request).await,
+        }
+    }
+}
+
+#[async_trait]
 impl ModelProvider for Provider {
     async fn list_models(&self) -> Result<Vec<AIModel>, AIProviderError> {
         match self {
