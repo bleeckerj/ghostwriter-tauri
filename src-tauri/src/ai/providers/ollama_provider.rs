@@ -191,12 +191,15 @@ impl EmbeddingProvider for OllamaProvider {
         let response = self.client.generate_embeddings(request).await
         .map_err(|e| AIProviderError::APIError(format!("Embedding failed: {}", e)))?;
         
+        let embedding_model_name = PreferredEmbeddingModel::get_preferred_embedding_model(self);
+
         // Extract the embeddings from the response
         let embeddings = response.embeddings.into_iter()
         .enumerate()
         .map(|(index, vector)| Embedding {
             vector,
             index,
+            model_name: Some(embedding_model_name.clone()),
         })
         .collect();
         log::debug!("Embeddings: {:?}", embeddings);

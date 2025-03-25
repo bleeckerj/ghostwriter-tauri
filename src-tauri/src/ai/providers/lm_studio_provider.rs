@@ -348,11 +348,12 @@ impl EmbeddingProvider for LMStudioProvider {
         
         let embedding_response: EmbeddingResponse = response.json().await
             .map_err(|e| AIProviderError::APIError(format!("Failed to parse response: {}", e)))?;
-            
+        let embedding_model_name = PreferredEmbeddingModel::get_preferred_embedding_model(self);
         Ok(embedding_response.data.into_iter()
             .map(|e| Embedding {
                 vector: e.embedding,
                 index: e.index,
+                model_name: Some(embedding_model_name.clone()),
             })
             .collect())
     }

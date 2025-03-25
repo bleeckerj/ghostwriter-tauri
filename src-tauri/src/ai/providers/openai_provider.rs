@@ -124,10 +124,13 @@ impl EmbeddingProvider for OpenAIProvider {
         let response = self.client.embeddings().create(request).await
             .map_err(|e| AIProviderError::APIError(e.to_string()))?;
             
+        let embedding_model_name = PreferredEmbeddingModel::get_preferred_embedding_model(self);
+
         Ok(response.data.into_iter()
             .map(|e| Embedding {
                 vector: e.embedding,
                 index: e.index as usize,
+                model_name: Some(embedding_model_name.clone()),
             })
             .collect())
     }
