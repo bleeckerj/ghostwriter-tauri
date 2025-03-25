@@ -76,3 +76,8 @@ pub trait EmbeddingProvider {
         embedding_request: EmbeddingRequest,
     ) -> Result<Vec<Embedding>, AIProviderError>;
 }
+
+/// Trait to get the preferred embedding model
+pub trait PreferredEmbeddingModel {
+    fn get_preferred_embedding_model(&self) -> String;
+}

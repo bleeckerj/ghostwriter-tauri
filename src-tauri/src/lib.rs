@@ -5,6 +5,7 @@ use ai::ModelProvider;
 use epub::doc;
 use futures::FutureExt;
 use pdf_extract::Path;
+use std::f32::consts::E;
 use std::io::Stdout;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -28,7 +29,7 @@ use preferences::Preferences;
 mod keychain_handler;
 use keychain_handler::KeychainHandler;
 
-
+use crate::ai::AIProviderError;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use embeddings::EmbeddingGenerator;
 use document_store::DocumentStore;
@@ -46,7 +47,7 @@ mod app_state; // Add this line
 use app_state::AppState;
 use crate::ai::providers::{self, ProviderType, Provider};
 use crate::ai::models::{ChatCompletionRequest, ChatMessage, MessageRole, EmbeddingRequest};
-use crate::ai::traits::{EmbeddingProvider, ChatCompletionProvider};
+use crate::ai::traits::{EmbeddingProvider, ChatCompletionProvider, PreferredEmbeddingModel};
 
 // Define log levels as constants
 pub const LOG_INFO: &str = "info";
@@ -451,6 +452,7 @@ async fn load_openai_api_key_from_keyring(
         maxtokens: String,
         temperature: String,
         gametimerms: String,
+        aiprovider: String,
     ) -> Result<(Preferences), String> {
         
         // println!("update_preferences called with: {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}",
@@ -468,6 +470,7 @@ async fn load_openai_api_key_from_keyring(
         preferences.max_output_tokens = maxtokens.parse::<usize>().unwrap_or(Preferences::MAX_OUTPUT_TOKENS_DEFAULT);
         preferences.temperature = temperature.parse::<f32>().unwrap_or(Preferences::TEMPERATURE_DEFAULT);
         preferences.game_timer_ms = 1000*(gametimerms.parse::<usize>().unwrap_or(Preferences::GAME_TIMER_MS_DEFAULT));
+        preferences.ai_provider = aiprovider;
         let prefs_clone = preferences.clone();
         // Attempt to save preferences and handle any errors
         if let Err(e) = preferences.save() {
@@ -599,6 +602,14 @@ async fn load_openai_api_key_from_keyring(
         
         // Create provider based on preferences
         let provider = match preferences.ai_provider.to_lowercase().as_str() {
+            "ollama" => {
+                new_logger.simple_log_message(
+                    format!("Using Ollama provider at: {}", preferences.ollama_url),
+                    "provider".to_string(),
+                    "info".to_string()
+                );
+                providers::create_provider(ProviderType::Ollama, &preferences.ollama_url)
+            },
             "lmstudio" => {
                 new_logger.simple_log_message(
                     format!("Using LM Studio provider at: {}", preferences.lm_studio_url),
@@ -644,53 +655,52 @@ async fn load_openai_api_key_from_keyring(
         // Time embedding generation
         let start_embedding = Instant::now();
         
-        // Option 1: If using the OpenAI provider for embeddings too
-        let embedding_generator = match &provider {
-            Provider::OpenAI(openai) => {
-                EmbeddingGenerator::new_with_client(openai.get_client().clone())
+        // Log which provider is being used
+        match &provider {
+            Provider::OpenAI(_) => {
+                log::debug!("Using OpenAI provider for embeddings");
+                new_logger.simple_log_message(
+                    "Using OpenAI provider for embeddings".to_string(),
+                    "embeddings".to_string(),
+                    "info".to_string()
+                );
             },
-            _ => {
-                //EmbeddingGenerator::new() // Or handle differently
-                EmbeddingGenerator::new_with_api_key(&key_clone)
+            Provider::LMStudio(_) => {
+                log::debug!("Using LM Studio provider for embeddings");
+                new_logger.simple_log_message(
+                    "Using LM Studio provider for embeddings".to_string(),
+                    "embeddings".to_string(),
+                    "info".to_string()
+                );
+            },
+            Provider::Ollama(_) => {
+                log::debug!("Using Ollama provider for embeddings");
+                new_logger.simple_log_message(
+                    "Using Ollama provider for embeddings".to_string(),
+                    "embeddings".to_string(),
+                    "info".to_string()
+                );
             }
-        };        
+        };
         
-        // Option 2: Maintain a separate embedding generator
-        // If embeddings are still using the OpenAI API directly
-        // let embedding_generator = if let Some(key) = &openai_api_key {
-        //     EmbeddingGenerator::new_with_api_key(key)
-        // } else {
-        //     EmbeddingGenerator::new()
-        // };
-
-        // let m = "text-embedding-ada-002"; // Replace with your model
-        // let e_r = EmbeddingRequest {
-        //     model: m.to_string(),
-        //     input: [input].to_vec(),
-        // };
+        // Create the embedding request
+        let embedding_request = EmbeddingRequest {
+            model: provider.get_preferred_embedding_model(),
+            input: vec![input.clone()],
+        };
         
-        //let embd = provider.create_embeddings(&e_r).await;
-
-        
-        let embedding = 
-        embedding_generator
-        .generate_embedding(app_handle.clone(), &input)
-        .await
-        .map_err(|e| {
-            let error_msg = format!("Embedding generation failed: {}", e);
-            log::error!("{}", error_msg);
-            
-            // Also log to frontend via new_logger
-            new_logger.simple_log_message(
-                error_msg.clone(),
-                "embeddings".to_string(),
-                "error".to_string()
-            );
-            
-            error_msg  // Return the formatted error message for propagation
-        })?;
+        // Use the provider directly to create embeddings
+        let embedding_result = Some(provider.create_embeddings(embedding_request).await);
         
         let embedding_duration = start_embedding.elapsed();
+        
+        // Handle the case where embedding_result is None
+        let embedding_result = match embedding_result {
+            Some(result) => result,
+            None => {
+                return Err("Embedding generation failed: No suitable provider found".to_string());
+            }
+        };
         
         // Time similarity search
         let start_search = Instant::now();
@@ -701,7 +711,7 @@ async fn load_openai_api_key_from_keyring(
         // fence this off so we can release the lock on the store
         {
             let store = state.doc_store.lock().await;
-            similar_docs = store.search(&embedding, similarity_count, similarity_threshold).await.map_err(|e| e.to_string())?;
+            similar_docs = store.search(&embedding_result, similarity_count, similarity_threshold).await.map_err(|e| e.to_string())?;
             database_name = (store.get_database_name().to_string()); // Just convert &str to String
             database_path = store.get_database_path().to_string(); // Just convert &str to String
         }
@@ -787,13 +797,13 @@ async fn load_openai_api_key_from_keyring(
         Answer this in prose using this specific writing style: {prose_style}"
     );
     
-/**
- * I used to have this in the System Prompt..I think that's a mistake
- *
- * 
- *          Input Text: {input}
- */
-
+    /**
+    * I used to have this in the System Prompt..I think that's a mistake
+    *
+    * 
+    *          Input Text: {input}
+    */
+    
     // Create message array in the generic format
     let messages = vec![
     ChatMessage {
@@ -960,6 +970,35 @@ struct SearchResult {
     similarity_score: f32,
 }
 
+async fn get_current_provider(state: tauri::State<'_, AppState>) -> Result<Provider, String> {
+    let state_clone = state.clone();
+    let preferences = state.preferences.lock().await;
+    let _app_handle = state_clone.app_handle.clone();
+    let provider = match preferences.ai_provider.to_lowercase().as_str() {
+        "ollama" => {
+            let ollama_url = preferences.ollama_url.clone();
+            providers::create_provider(ProviderType::Ollama, &ollama_url)
+        },
+        "lmstudio" => {
+            let lmstudio_url = preferences.lm_studio_url.clone();
+            providers::create_provider(ProviderType::LMStudio, &lmstudio_url)
+        },
+        "openai" | _ => {
+            let openai_api_key = get_api_key(&_app_handle.ok_or("AppHandle is None")?).map_err(|e| e.to_string())?;
+            match openai_api_key {
+                Some(key) => {
+                    providers::create_provider(ProviderType::OpenAI, &key)
+                },
+                None => {
+                    log::warn!("OpenAI API key not found. Cannot use OpenAI provider.");
+                    return Err("OpenAI API key is required but was not found. Check preferences and/or system keychain.".to_string());
+                }
+            }
+        }
+    };
+    Ok(provider)
+}
+
 #[tauri::command]
 async fn search_similarity(
     state: tauri::State<'_, AppState>,
@@ -968,14 +1007,15 @@ async fn search_similarity(
     limit: Option<usize>,  
 ) -> Result<Vec<SearchResult>, String> {  // Changed return type
     let limit = limit.unwrap_or(3);
-    let preferences = state.preferences.lock().await;
+    let state_clone = state.clone();
+    let preferences = state_clone.preferences.lock().await;
     
-    let embedding = state
-    .embedding_generator
-    .generate_embedding(app_handle.clone(), &query)
-    .await
-    .map_err(|e| format!("Embedding generation failed: {}", e))?;
-    
+    let _provider = get_current_provider(state.clone()).await?;
+    let embedding_request = EmbeddingRequest {
+        model: "text-embedding-ada-002".to_string(),
+        input: vec![query.clone()],
+    };
+    let embedding = _provider.create_embeddings(embedding_request).await;
     let doc_store = state.doc_store.clone();
     
     // let doc_store = state

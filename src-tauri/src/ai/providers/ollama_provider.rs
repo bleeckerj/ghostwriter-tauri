@@ -1,5 +1,5 @@
 use crate::ai::{
-    traits::{ModelProvider, ChatCompletionProvider, EmbeddingProvider, AIProviderError},
+    traits::{ModelProvider, ChatCompletionProvider, EmbeddingProvider, PreferredEmbeddingModel, AIProviderError},
     models::*,
 };
 use async_trait::async_trait;
@@ -31,8 +31,8 @@ impl OllamaProvider {
             if let Ok(parsed_url) = url::Url::parse(url) {
                 let host = parsed_url.host_str().unwrap_or("localhost").to_string();
                 let port = parsed_url.port().unwrap_or(11434);
-
-
+                
+                
                 // Try to create a URL from components to catch potential errors
                 if let Ok(url) = url::Url::parse(&format!("http://{}:{}", host, port)) {
                     // Use from_url which doesn't have the unwrap calls
@@ -110,11 +110,11 @@ impl ChatCompletionProvider for OllamaProvider {
     ) -> Result<ChatCompletionResponse, AIProviderError> {
         // Combine messages into a simple prompt as in the example
         let messages = convert_messages(&request.messages);
-    
+        
         // Create and send the request
         let chat_request = ChatMessageRequest::new(request.model.clone(), messages);
         let response = self.client.send_chat_messages(chat_request).await
-            .map_err(|e| AIProviderError::APIError(format!("Chat completion failed: {}", e)))?;
+        .map_err(|e| AIProviderError::APIError(format!("Chat completion failed: {}", e)))?;
         
         Ok(ChatCompletionResponse {
             id: uuid::Uuid::new_v4().to_string(),
@@ -144,17 +144,17 @@ impl ChatCompletionProvider for OllamaProvider {
 
 fn convert_messages(messages: &[crate::ai::models::ChatMessage]) -> Vec<ChatMessage> {
     messages
-        .iter()
-        .map(|msg| {
-            match msg.role {
-                MessageRole::User => ChatMessage::user(msg.content.clone()),
-                MessageRole::Assistant => ChatMessage::assistant(msg.content.clone()),
-                MessageRole::System => ChatMessage::system(msg.content.clone()),
-                MessageRole::Tool => ChatMessage::user(msg.content.clone()), // Fallback for tool
-                MessageRole::Function => ChatMessage::user(msg.content.clone()), // Fallback for function
-            }
-        })
-        .collect()
+    .iter()
+    .map(|msg| {
+        match msg.role {
+            MessageRole::User => ChatMessage::user(msg.content.clone()),
+            MessageRole::Assistant => ChatMessage::assistant(msg.content.clone()),
+            MessageRole::System => ChatMessage::system(msg.content.clone()),
+            MessageRole::Tool => ChatMessage::user(msg.content.clone()), // Fallback for tool
+            MessageRole::Function => ChatMessage::user(msg.content.clone()), // Fallback for function
+        }
+    })
+    .collect()
 }
 
 fn convert_ollama_message(msg: &ollama_rs::generation::chat::ChatMessage) -> crate::ai::models::ChatMessage {
@@ -164,7 +164,7 @@ fn convert_ollama_message(msg: &ollama_rs::generation::chat::ChatMessage) -> cra
         ollama_rs::generation::chat::MessageRole::System => MessageRole::System,
         ollama_rs::generation::chat::MessageRole::Tool => MessageRole::Tool,
     };
-
+    
     crate::ai::models::ChatMessage {
         role,
         content: msg.content.clone(),
@@ -178,42 +178,36 @@ impl EmbeddingProvider for OllamaProvider {
         &self,
         embedding_request: EmbeddingRequest,
     ) -> Result<Vec<Embedding>, AIProviderError> {
-        let mut embeddings = Vec::new();
 
-        //let ollama = Ollama::new("https://api.ollama.com");
+        let mut embeddings: Vec<Embedding> = Vec::new();
         let input = EmbeddingsInput::Multiple(embedding_request.input.clone());
-
+        
         // Create a request to generate embeddings
         let request = GenerateEmbeddingsRequest::new(
             embedding_request.model.to_string(),
             input,
         );
         
-
-// // Call the generate_embeddings function
-// match client.generate_embeddings(request).await {
-//     Ok(response) => {
-//         println!("Embeddings: {:?}", response.embeddings);
-//     }
-//     Err(e) => {
-//         eprintln!("Error generating embeddings: {:?}", e);
-//     }
-// }
-
-
-
-        // for text in embedding_request.input {
-        //     let ollama_embedding_request = ollama_rs::generation::embeddings::request::EmbeddingRequest::new(
-        //         embedding_request.model.to_string(),
-        //         text.clone(),
-        //     );
-
-        //     let response = self.client.generate_embeddings(ollama_embedding_request).await
-        //         .map_err(|e| AIProviderError::APIError(format!("Embedding failed: {}", e)))?;
-
-        //     embeddings.push(response.embedding);
-        // }
-
+        let response = self.client.generate_embeddings(request).await
+        .map_err(|e| AIProviderError::APIError(format!("Embedding failed: {}", e)))?;
+        
+        // Extract the embeddings from the response
+        let embeddings = response.embeddings.into_iter()
+        .enumerate()
+        .map(|(index, vector)| Embedding {
+            vector,
+            index,
+        })
+        .collect();
+        log::debug!("Embeddings: {:?}", embeddings);
+        println!("Embeddings: {:?}", embeddings);
         Ok(embeddings)
+    }
+}
+
+impl PreferredEmbeddingModel for OllamaProvider {
+    fn get_preferred_embedding_model(&self) -> String {
+        "nomic-embed-text".to_string()
+        //unimplemented!("Ollama does not yet support a preferred embedding model");
     }
 }

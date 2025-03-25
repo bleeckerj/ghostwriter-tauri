@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 #![allow(unused)]
 use async_openai::types::AudioInput;
 // src/document_store.rs
@@ -24,6 +23,11 @@ use crate::ingest::{
     url_ingestor::UrlDocumentIngestor,
     audio_ingestor::AudioIngestor,
 };
+use crate::ai::{self, AIProviderError};
+use crate::ai::providers::{self, ProviderType, Provider};
+use crate::ai::models::{ChatCompletionRequest, ChatMessage, MessageRole, EmbeddingRequest};
+use crate::ai::traits::{EmbeddingProvider, ChatCompletionProvider};
+
 use tauri::Manager; // Add this import
 use tauri::Emitter;
 use serde_json::json;
@@ -105,7 +109,7 @@ impl DocumentStore {
         doc_store.register_ingestor(Box::new(TextIngestor));
         doc_store.register_ingestor(Box::new(UrlDocumentIngestor));
         //doc_store.register_ingestor(Box::new(AudioIngestor));
-            
+        
         
         Ok(doc_store)
     }
@@ -256,10 +260,31 @@ impl DocumentStore {
     
     pub async fn search(
         &self,
-        query_embedding: &[f32],
+        query_embedding_result: &Result<Vec<ai::models::Embedding>, AIProviderError>,
         similar_docs_count: usize,
         similarity_threshold: f32,
     ) -> Result<Vec<(i64, String, usize, String, f32)>, Box<dyn std::error::Error>> {
+        // Handle the Result type for query_embedding
+        let query_embedding = match query_embedding_result {
+            Ok(embeddings) => {
+                // Assuming you want to use the first embedding in the vector
+                if let Some(first_embedding) = embeddings.first() {
+                    &first_embedding.vector
+                } else {
+                    return Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "No embeddings found in the result",
+                    )));
+                }
+            }
+            Err(e) => {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    format!("Error obtaining embeddings: {}", e),
+                )));
+            }
+        };
+        
         let conn = self.conn.lock().await;
         let mut stmt = conn.prepare(
             "SELECT d.id, d.name, d.file_path, d.created_at, e.id, e.chunk, e.embedding 
@@ -271,47 +296,47 @@ impl DocumentStore {
             ) e ON d.id = e.doc_id
             WHERE d.paused = 0 OR d.paused IS NULL"
         )?;  // Use ? directly for rusqlite::Error
-
+        
         let mut similarities = Vec::new();
-
+        
         let rows = stmt.query_map([], |row| {
             let doc_id: i64 = row.get(0)?;  // Extract the document id
             let name: String = row.get(1)?;  // Use ? directly for rusqlite errors
             let chunk_id: usize = row.get(4)?;
             let chunk: String = row.get(5)?;
             let embedding_json: String = row.get(6)?;
-
+            
             let chunk_embedding: Vec<f32> = serde_json::from_str(&embedding_json)
-                .map_err(|e| rusqlite::Error::FromSqlConversionFailure(
-                    6,
-                    rusqlite::types::Type::Text,
-                    Box::new(e)
-                ))?;
-
+            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(
+                6,
+                rusqlite::types::Type::Text,
+                Box::new(e)
+            ))?;
+            
             let similarity = cosine_similarity(query_embedding, &chunk_embedding);
-
+            
             Ok((doc_id, name, chunk_id, chunk, similarity))
         })?;  // Use ? directly for rusqlite::Error
-
+        
         for row in rows {
             similarities.push(row?);
         }
-
+        
         // Filter by min_score and sort by similarity score in descending order
         similarities.retain(|&(doc_id, ref name, _, _, similarity)| {
             similarity >= similarity_threshold
         });
-
+        
         similarities.sort_by(|a, b| {
             b.4.partial_cmp(&a.4)  // Changed from .3 to .4 to access similarity
-                .unwrap_or(std::cmp::Ordering::Equal)
+            .unwrap_or(std::cmp::Ordering::Equal)
         });
-
+        
         // Collect top results with unique doc_id and unique chunk_id
         let mut unique_results = Vec::new();
         let mut seen_doc_ids = std::collections::HashSet::new();
         let mut seen_chunk_ids = std::collections::HashSet::new();
-
+        
         for result in &similarities {
             if seen_doc_ids.len() >= similar_docs_count {
                 break;
@@ -320,7 +345,7 @@ impl DocumentStore {
                 unique_results.push(result.clone());
             }
         }
-
+        
         // If we have fewer than similar_docs_count unique results, add more entries from the remaining items
         if unique_results.len() < similar_docs_count {
             for result in &similarities {
@@ -332,7 +357,7 @@ impl DocumentStore {
                 }
             }
         }
-
+        
         Ok(unique_results)
     }
     
@@ -391,10 +416,10 @@ impl DocumentStore {
                 )));
             }
         };
-
+        
         // Ingest the document
         let ingested_document = ingestor.ingest(resource).await?;
-
+        
         // Check if the ingestor is UrlDocumentIngestor and call save_to_file
         if let Some(url_ingestor) = ingestor.as_any().downcast_ref::<UrlDocumentIngestor>() {
             url_ingestor.save_to_file(&ingested_document, file_path)?;
@@ -404,10 +429,10 @@ impl DocumentStore {
                 "Ingestor does not support saving to file",
             )));
         }
-
+        
         Ok(())
     }
-
+    
     pub async fn process_url_async(
         self: Arc<Self>, 
         url: &str,
@@ -553,7 +578,7 @@ impl DocumentStore {
             }))?;
             //println!("Ingestor found");
             let resource = Resource::FilePath(path.to_path_buf());
-
+            
             //
             // let ingested = ingestor.ingest(&resource).await?;
             //
@@ -911,5 +936,6 @@ impl DocumentStore {
             dot_product / (norm_a * norm_b)
         }
     }
-
-
+    
+    
+    

@@ -26,8 +26,9 @@ pub struct Preferences {
     pub game_timer_ms: usize,
     
     // New fields for AI provider selection
-    pub ai_provider: String,           // "openai" or "lmstudio"
+    pub ai_provider: String,           // "openai" or "lmstudio" or "ollama"
     pub lm_studio_url: String,         // LM Studio server URL
+    pub ollama_url: String,            // Ollama server URL
     pub model_name: String,            // The model name to use
     
     // #[serde(skip_serializing, skip_deserializing)]
@@ -137,6 +138,7 @@ impl Preferences {
         self.max_history = Self::MAX_HISTORY_DEFAULT;
         self.ai_provider = Self::AI_PROVIDER_DEFAULT.to_string();
         self.lm_studio_url = "http://localhost:1234/v1".to_string();
+        self.ollama_url = "http://localhost:11434".to_string();
         self.model_name = "gpt-4o-mini".to_string();
         self.game_timer_ms = Self::GAME_TIMER_MS_DEFAULT;
     }

@@ -1,7 +1,7 @@
 use async_openai::{Client, config::OpenAIConfig};
 
 use crate::ai::{
-    traits::{ModelProvider, ChatCompletionProvider, EmbeddingProvider, AIProviderError},
+    traits::{ModelProvider, ChatCompletionProvider, EmbeddingProvider, PreferredEmbeddingModel, AIProviderError},
     models::*,
 };
 use async_trait::async_trait;
@@ -130,6 +130,12 @@ impl EmbeddingProvider for OpenAIProvider {
                 index: e.index as usize,
             })
             .collect())
+    }
+}
+
+impl PreferredEmbeddingModel for OpenAIProvider {
+    fn get_preferred_embedding_model(&self) -> String {
+        "text-embedding-ada-002".to_string()
     }
 }
 

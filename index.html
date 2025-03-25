@@ -231,13 +231,17 @@
           </label>
         </div>
         <!-- Add this after "Prose Style" section and before the RAG Shuffle toggle -->
-<div id="llm-preferences" class="mx-10/12 my-4 hidden">
+<div id="llm-preferences" class="mx-10/12 my-4">
   <div class="label">
     <span class="label-text text-sm font-['Haffer'] ml-1">AI Provider</span>
   </div>
   <div class="provider-selection flex gap-3 mb-2">
     <label class="radio-label cursor-pointer flex items-center gap-1">
-      <input type="radio" name="ai-provider" value="openai" id="provider-openai" checked class="radio-input">
+      <input type="radio" name="ai-provider" value="ollama" id="provider-ollama" class="radio-input">
+      <span class="text-[0.8em]">Ollama</span>
+    </label>
+    <label class="radio-label cursor-pointer flex items-center gap-1">
+      <input type="radio" name="ai-provider" value="openai" id="provider-openai" class="radio-input">
       <span class="text-[0.8em]">OpenAI</span>
     </label>
     <label class="radio-label cursor-pointer flex items-center gap-1">

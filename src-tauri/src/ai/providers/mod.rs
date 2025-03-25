@@ -9,7 +9,7 @@ pub use lm_studio_provider::LMStudioProvider;
 pub use ollama_provider::OllamaProvider;
 
 use crate::ai::{
-    traits::{ModelProvider, ChatCompletionProvider, EmbeddingProvider, AIProviderError},
+    traits::{ModelProvider, ChatCompletionProvider, EmbeddingProvider, PreferredEmbeddingModel, AIProviderError},
     models::*
 };
 use std::sync::Arc;
@@ -80,8 +80,6 @@ impl EmbeddingProvider for Provider {
     async fn create_embeddings(
         &self,
         embedding_request: EmbeddingRequest,
-        // texts: &[String],
-        // model: &str,
     ) -> Result<Vec<Embedding>, AIProviderError> {
         match self {
             Provider::OpenAI(provider) => provider.create_embeddings(embedding_request).await,
@@ -106,6 +104,16 @@ impl ModelProvider for Provider {
             Provider::OpenAI(provider) => provider.get_model(model_id).await,
             Provider::LMStudio(provider) => provider.get_model(model_id).await,
             Provider::Ollama(provider) => provider.get_model(model_id).await,
+        }
+    }
+}
+
+impl PreferredEmbeddingModel for Provider {
+    fn get_preferred_embedding_model(&self) -> String {
+        match self {
+            Provider::OpenAI(provider) => provider.get_preferred_embedding_model(),
+            Provider::LMStudio(provider) => provider.get_preferred_embedding_model(),
+            Provider::Ollama(provider) => provider.get_preferred_embedding_model(),
         }
     }
 }

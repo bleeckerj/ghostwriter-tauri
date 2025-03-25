@@ -1,5 +1,5 @@
 use crate::ai::{
-    traits::{ModelProvider, ChatCompletionProvider, EmbeddingProvider, AIProviderError},
+    traits::{ModelProvider, ChatCompletionProvider, EmbeddingProvider, PreferredEmbeddingModel, AIProviderError},
     models::*,
 };
 use async_trait::async_trait;
@@ -355,5 +355,12 @@ impl EmbeddingProvider for LMStudioProvider {
                 index: e.index,
             })
             .collect())
+    }
+}
+
+impl PreferredEmbeddingModel for LMStudioProvider {
+    fn get_preferred_embedding_model(&self) -> String {
+        // LM Studio doesn't have a preferred embedding model
+        unimplemented!("LM Studio does not yet support a preferred embedding model");
     }
 }
