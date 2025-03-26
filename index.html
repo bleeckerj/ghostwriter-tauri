@@ -8,271 +8,288 @@
   <title>Ghostwriter</title>
   <script type="module" src="/src/main.js" defer></script>
   <script type="module" src="/src/url-panel.js" defer></script>
-
+  
 </head>
 
 <body>
-
+  
   <main class="container">
     <div id="floating-timer" class="floating-timer">
       00:00
     </div>
-<!-- URL Top Panel -->
-<div id="url-panel" class="url-panel-hidden border-[0.5px] relative w-full z-50 rounded-sm">
-  <div class="flex items-center gap-2 p-2">
-    <input type="text" autocomplete="off" spellcheck="false" autocapitalize="off" id="url-input" placeholder="Enter URL..." class="w-3/4  !bg-white !rounded-[1px] flex-grow !p-1 !text-[0.8em] !font-['Haffer'] !border-[0.1px]">
-    <span id="url-submit-btn" class="diagnostics-area-button enabled whitespace-nowrap min-w-[4rem]">INGST</span>
-    <span id="url-close-btn" class="diagnostics-area-button enabled min-w-[2.5rem] text-center">×</span>
-  </div>
-</div>
-
-
-
-      <div class="scroll-area">
-        <div class="editor-content h-full">
-          <div autocomplete="off" spellcheck="false" autocapitalize="off" id="main-editor" class="element"></div>
-        </div>
+    <!-- URL Top Panel -->
+    <div id="url-panel" class="url-panel-hidden border-[0.5px] relative w-full z-50 rounded-sm">
+      <div class="flex items-center gap-2 p-2">
+        <input type="text" autocomplete="off" spellcheck="false" autocapitalize="off" id="url-input" placeholder="Enter URL..." class="w-3/4  !bg-white !rounded-[1px] flex-grow !p-1 !text-[0.8em] !font-['Haffer'] !border-[0.1px]">
+        <span id="url-submit-btn" class="diagnostics-area-button enabled whitespace-nowrap min-w-[4rem]">INGST</span>
+        <span id="url-close-btn" class="diagnostics-area-button enabled min-w-[2.5rem] text-center">×</span>
       </div>
-      
-      <!-- Add the resize handle -->
-      <div class="resize-handle" title="Drag to resize"></div>
-      
-      <div class="diagnostics-scroll-area bg-transparent">
-        
-        
-        <div id="action-buttons" class="diagnostics-btn-area bg-gray-200 border-[0.5px] text-[0.8em] w-full rounded-sm pl-4">
-          <span id="incant-btn" class="diagnostics-area-button enabled">INCNT</span>
-          <span id="clear-diagnostics-btn" class="diagnostics-area-button enabled">CLEAR</span>
-          <span id="reset-rag-btn" class="diagnostics-area-button button-inactive">RESET</span>
-          <span id="list-canon-btn" class="diagnostics-area-button enabled">CANON</span>
-          <span id="ingest-btn" class="diagnostics-area-button enabled">INGST</span>
-          <span id="panel-toggle-btn" class="diagnostics-area-button enabled">PREFS</span>
-          <span id="similarity-search-btn" class="diagnostics-area-button enabled">SSRCH</span>
-          <span id="nudge-inline-action-item" class="diagnostics-area-button enabled">NUDGE</span>
-          <span id="vibem-inline-action-item" class="diagnostics-area-button enabled">VIBEM</span>
-          <span id="misc-test-btn" class="diagnostics-area-button enabled">MISC</span>
-          <span id="open-log-btn" class="diagnostics-area-button enabled">LOGJS</span>
-          <!-- <span id="openai-api-key-btn" class="diagnostics-area-button enabled">OPNAI</span> -->
-          <span id="ingest-url-btn" class="diagnostics-area-button enabled">NGSTU</span>
-
-          <div class="absolute right-4 top-2 z-10 flex items-center transparent rounded-full shadow-sm shadow-black">
-            <img class="h-[2.2em]" src="/images/icons/LaboratoryCircle_Guy_01_CircleTeal.webp" />
-          </div>
-        </div>
-        <div id="diagnostics-editor" class="diagnostics-content bg-blue-700 h-full bg-2 rounded-sm">
-          <div class="diagnostics bg-blue-700 rounded-sm mb-2"></div>
-        </div>
-        <p id="greet-msg" class="mt-2 greet-msg bg-gray-200 border-[0.5px] text-[0.8em] w-full mb-1 rounded-sm pl-4">
-          <span>Hello.</span>
-        </p>
-      </div>
-      <!-- Add the side panel -->
-      <div id="side-panel" class="side-panel w-11/12">
-        <div class="text-[0.8em] font-['ESKlarheitKurrentMono'] mb-1 w-full mx-auto text-center">Incantation Preferences & Parameters</div>
-        <div class="fixed-buttons">
-          <div class="grid grid-cols-4 gap-1 w-3/4 mb-0 mx-auto">
-            <div id="prefs-load-btn" class="diagnostics-area-button enabled">LOAD</div>
-            <div id="prefs-save-btn" class="diagnostics-area-button enabled">SAVE</div>
-            <div id="prefs-reset-btn" class="diagnostics-area-button enabled">RSET</div>
-            <div id="prefs-close-btn" class="diagnostics-area-button enabled">CLOSE</div>
-          </div>
-        </div>
-        <div class="side-panel-content mx-auto ml-3 mb-20 w-11/12 bg-gray-400">
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text text-sm font-['Haffer'] ml-1">Main Prompt</span>
-            </div>
-            <textarea id="prefs-main-prompt" type="text" placeholder="Main Prompt" class="text-pretty w-full h-[200px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
-          </label>
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text text-sm font-['Haffer'] ml-1">Response Limit</span>
-            </div>
-            <textarea id="prefs-response-limit" type="text" placeholder="Response Limit" class="text-pretty w-full h-[100px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
-          </label>
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text text-sm font-['Haffer'] ml-1">Final Preamble</span>
-            </div>
-            <textarea id="prefs-final-preamble" type="text" placeholder="Final Preamble" class="text-pretty w-full h-[100px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
-          </label>
-          <label class="form-control">
-            <div class="label">
-              <span class="label-text text-sm font-['Haffer'] ml-1">Prose Style</span>
-            </div>
-            <textarea id="prefs-prose-style" type="text" placeholder="Prose Style" class="text-pretty w-full h-[24px] text-xs font-['ESKlarheitKurrentMono'] textarea textarea-primary overscroll-none"></textarea>
-          </label>
-          
-          <!-- Daisy toggle doesn't work maybe beta issues? So this is my own -->
-          <div class="my-4">
-            <label class="form-control toggle-switch">
-              <div class="label">
-                <span class="label-text text-sm font-['Haffer'] ml-1">RAG Shuffle?</span>
-              </div>
-              <input id="prefs-shuffle-similars" type="checkbox" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          
-          <label class="form-control my-4 block">
-            <div class="label">
-              <span class="label-text text-sm font-['Haffer'] ml-1">Similarity Threshold</span>
-            </div>
-            <div class="grid grid-cols-12 gap-2">
-              <div class="col-span-9">
-                <input id="prefs-similarity-treashold" type="range" min="50" max="100" value="82" class="range" step="1" />
-              </div>
-              <div class="col-span-3">
-                <span id="prefs-similarity-treashold-value" class="ghost-text">.82</span>
-              </div>
-            </div> 
-          </label>
-          
-          
-          
-          <label class="form-control my-4 block">
-            <div class="label">
-              <span class="label-text text-sm font-['Haffer'] ml-1">Similarity Count (RAG Results To Use)</span>
-            </div>
-            
-            <div class="grid grid-cols-12 gap-2">
-              <div class="col-span-9">
-                <input id="prefs-similarity-count" type="range" min="1" max="10" class="range mb-3" step="1" />
-              </div>
-              <div class="col-span-3">
-                <span id="prefs-similarity-count-value" class="ghost-text">3</span>
-              </div>
-            </div>
-          </label>
-          
-          <label class="form-control my-4 block">
-            <div class="label">
-              <span class="label-text text-sm font-['Haffer'] ml-1">Temperature</span>
-            </div>
-            
-            <div class="grid grid-cols-12 gap-2">
-              <div class="col-span-9">
-                <input id="prefs-temperature" type="range" min="0" max="2" class="range mb-3" step="0.1" />
-              </div>
-              <div class="col-span-3">
-                <span id="prefs-temperature-value" class="ghost-text"></span>
-              </div>
-            </div>
-          </label>
-          
-          <!-- MAX OUTPUT TOKENS-->
-          <label class="form-control my-4 block">
-            <div class="label">
-              <span class="label-text text-sm font-['Haffer'] ml-1">Max Output Tokens</span>
-            </div>
-            <div class="grid grid-cols-12 gap-2">
-              <div class="col-span-9">
-                <input id="prefs-max-output-tokens" type="range" min="50" max="800" value="100" class="range mb-3" step="25" />
-              </div>
-              <div class="col-span-3">
-                <span id="prefs-max-output-tokens-value" class="ghost-text">100</span>
-              </div>
-            </div>
-          </label>
-          
-          <!-- MAX HISTORY ITEMS -->
-          <label class="form-control my-4 block">
-            <div class="label">
-              <span class="label-text text-sm font-['Haffer'] ml-1">Max History Items</span>
-            </div>
-            <div class="grid grid-cols-12 gap-2">
-              <div class="col-span-9">
-                <input id="prefs-max-history-items" type="range" min="0" max="500" value="300" class="range mb-3" step="50" />
-              </div>
-              <div class="col-span-3">
-                <span id="prefs-max-history-items-value" class="ghost-text">300</span>
-              </div>
-            </div>
-          </label>
-          
-          <label class="form-control my-4 block">
-            <div class="label">
-              <span class="label-text text-sm font-['Haffer'] ml-1">Vibe Mode Timer</span>
-            </div>
-            <div class="grid grid-cols-12 gap-2">
-              <div class="col-span-9">
-                <input id="prefs-game-time-secs" type="range" min="0" max="90" value="20" class="range mb-3" step="5" />
-              </div>
-              <div class="col-span-3">
-                <span id="prefs-game-time-secs-value" class="ghost-text">20</span>
-              </div>
-            </div>
-          </label>
-
-          <!-- Little spot to put in OpenAI API Key -->
-          <div class="label">
-            <span class="label-text text-sm font-['Haffer'] ml-1">OpenAI API Key</span>
-          </div>
-          <label class="input input-bordered flex items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 16 16"
-              fill="currentColor"
-              class="h-4 w-4 opacity-70">
-              <path
-                fill-rule="evenodd"
-                d="M14 6a4 4 0 0 1-4.899 3.899l-1.955 1.955a.5.5 0 0 1-.353.146H5v1.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2.293a.5.5 0 0 1 .146-.353l3.955-3.955A4 4 0 1 1 14 6Zm-4-2a.75.75 0 0 0 0 1.5.5.5 0 0 1 .5.5.75.75 0 0 0 1.5 0 2 2 0 0 0-2-2Z"
-                clip-rule="evenodd" />
-            </svg>
-            <div class="flex grow items-center !shadow-none">
-              <span class="text-gray-500 select-none">sk-</span>
-              <input 
-                id="openai-api-key" 
-                type="text" 
-                class="grow !shadow-none border-none focus:outline-none font-mono text-xs placeholder:text-gray-400 placeholder:text-xs placeholder:font-mono" 
-                placeholder="paste your API key here"
-              />
-            </div>
-          </label>
-        </div>
-        <!-- Add this after "Prose Style" section and before the RAG Shuffle toggle -->
-<div id="llm-preferences" class="mx-10/12 my-4">
-  <div class="label">
-    <span class="label-text text-sm font-['Haffer'] ml-1">AI Provider</span>
-  </div>
-  <div class="provider-selection flex gap-3 mb-2">
-    <label class="radio-label cursor-pointer flex items-center gap-1">
-      <input type="radio" name="ai-provider" value="ollama" id="provider-ollama" class="radio-input">
-      <span class="text-[0.8em]">Ollama</span>
-    </label>
-    <label class="radio-label cursor-pointer flex items-center gap-1">
-      <input type="radio" name="ai-provider" value="openai" id="provider-openai" class="radio-input">
-      <span class="text-[0.8em]">OpenAI</span>
-    </label>
-    <label class="radio-label cursor-pointer flex items-center gap-1">
-      <input type="radio" name="ai-provider" value="lmstudio" id="provider-lmstudio" class="radio-input">
-      <span class="text-[0.8em]">LM Studio (local)</span>
-    </label>
-  </div>
-  
-  <!-- LM Studio URL - only visible when LM Studio is selected -->
-  <div id="lmstudio-url-container" class="hidden mb-3">
-    <div class="label">
-      <span class="label-text text-sm font-['Haffer'] ml-1">LM Studio URL</span>
     </div>
-    <input type="text" id="prefs-lmstudio-url" placeholder="http://localhost:1234/v1" 
-           class="w-full text-[0.7em] font-['ESKlarheitKurrentMono'] p-1.5 input input-bordered">
-  </div>
-  
-  <!-- Model Selection Dropdown -->
-  <div class="mb-3">
-    <div class="label">
-      <span class="label-text text-sm font-['Haffer'] ml-1">Model</span>
-      <button id="refresh-models-btn" class="text-xs p-0.5 px-2 rounded bg-gray-200 hover:bg-gray-300" title="Refresh available models">↻</button>
-    </div>
-    <select id="prefs-model-name" class="w-full text-[0.7em] font-['ESKlarheitKurrentMono'] p-1.5 input input-bordered">
-      <option value="">Loading models...</option>
-    </select>
-  </div>
-</div>
-
-      </div>
-    </main>
     
-  </body>
-  </html>
+    
+    
+    <div class="scroll-area">
+      <div class="editor-content h-full">
+        <div autocomplete="off" spellcheck="false" autocapitalize="off" id="main-editor" class="element"></div>
+      </div>
+    </div>
+    
+    <!-- Add the resize handle -->
+    <div class="resize-handle" title="Drag to resize"></div>
+    
+    <div class="diagnostics-scroll-area bg-transparent">
+      
+      
+      <div id="action-buttons" class="diagnostics-btn-area bg-gray-200 border-[0.5px] text-[0.8em] w-full rounded-sm pl-4">
+        <span id="incant-btn" class="diagnostics-area-button enabled">INCNT</span>
+        <span id="clear-diagnostics-btn" class="diagnostics-area-button enabled">CLEAR</span>
+        <span id="reset-rag-btn" class="diagnostics-area-button button-inactive">RESET</span>
+        <span id="list-canon-btn" class="diagnostics-area-button enabled">CANON</span>
+        <span id="ingest-btn" class="diagnostics-area-button enabled">INGST</span>
+        <span id="panel-toggle-btn" class="diagnostics-area-button enabled">PREFS</span>
+        <span id="similarity-search-btn" class="diagnostics-area-button enabled">SSRCH</span>
+        <span id="nudge-inline-action-item" class="diagnostics-area-button enabled">NUDGE</span>
+        <span id="vibem-inline-action-item" class="diagnostics-area-button enabled">VIBEM</span>
+        <span id="misc-test-btn" class="diagnostics-area-button enabled">MISC</span>
+        <span id="open-log-btn" class="diagnostics-area-button enabled">LOGJS</span>
+        <!-- <span id="openai-api-key-btn" class="diagnostics-area-button enabled">OPNAI</span> -->
+        <span id="ingest-url-btn" class="diagnostics-area-button enabled">NGSTU</span>
+        
+        <div class="absolute right-4 top-2 z-10 flex items-center transparent rounded-full shadow-sm shadow-black">
+          <img class="h-[2.2em]" src="/images/icons/LaboratoryCircle_Guy_01_CircleTeal.webp" />
+        </div>
+      </div>
+      <div id="diagnostics-editor" class="diagnostics-content bg-blue-700 h-full bg-2 rounded-sm">
+        <div class="diagnostics bg-blue-700 rounded-sm mb-2"></div>
+      </div>
+      <p id="greet-msg" class="mt-2 greet-msg bg-gray-200 border-[0.5px] text-[0.8em] w-full mb-1 rounded-sm pl-4">
+        <span>Hello.</span>
+      </p>
+    </div>
+    <!-- Add the side panel -->
+    <div id="side-panel" class="side-panel w-full">
+      <div class="text-[0.8em] font-['ESKlarheitKurrentMono'] mb-1 w-full mx-auto text-center">Incantation Preferences & Parameters</div>
+      <div class="fixed-buttons">
+        <div class="grid grid-cols-4 gap-1 w-3/4 mb-0 mx-auto">
+          <div id="prefs-load-btn" class="diagnostics-area-button enabled">LOAD</div>
+          <div id="prefs-save-btn" class="diagnostics-area-button enabled">SAVE</div>
+          <div id="prefs-reset-btn" class="diagnostics-area-button enabled">RSET</div>
+          <div id="prefs-close-btn" class="diagnostics-area-button enabled">CLOSE</div>
+        </div>
+      </div>
+      <div class="side-panel-content mx-auto p-2 mb-0 w-full bg-gray-400">
+        <label class="form-control">
+          <div class="label">
+            <span class="label-text text-sm font-['Haffer'] ml-1">Main Prompt</span>
+          </div>
+          <textarea id="prefs-main-prompt" type="text" placeholder="Main Prompt" class="text-pretty w-full h-[200px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
+        </label>
+        <label class="form-control">
+          <div class="label">
+            <span class="label-text text-sm font-['Haffer'] ml-1">Response Limit</span>
+          </div>
+          <textarea id="prefs-response-limit" type="text" placeholder="Response Limit" class="text-pretty w-full h-[100px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
+        </label>
+        <label class="form-control">
+          <div class="label">
+            <span class="label-text text-sm font-['Haffer'] ml-1">Final Preamble</span>
+          </div>
+          <textarea id="prefs-final-preamble" type="text" placeholder="Final Preamble" class="text-pretty w-full h-[100px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
+        </label>
+        <label class="form-control">
+          <div class="label">
+            <span class="label-text text-sm font-['Haffer'] ml-1">Prose Style</span>
+          </div>
+          <textarea id="prefs-prose-style" type="text" placeholder="Prose Style" class="text-pretty w-full h-[24px] text-xs font-['ESKlarheitKurrentMono'] textarea textarea-primary overscroll-none"></textarea>
+        </label>
+        
+        <!-- Daisy toggle doesn't work maybe beta issues? So this is my own -->
+        <div class="my-4">
+          <label class="form-control toggle-switch">
+            <div class="label">
+              <span class="label-text text-sm font-['Haffer'] ml-1">RAG Shuffle?</span>
+            </div>
+            <input id="prefs-shuffle-similars" type="checkbox" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <label class="form-control my-4 block">
+          <div class="label">
+            <span class="label-text text-sm font-['Haffer'] ml-1">Similarity Threshold</span>
+          </div>
+          <div class="grid grid-cols-12 gap-2">
+            <div class="col-span-9">
+              <input id="prefs-similarity-treashold" type="range" min="50" max="100" value="82" class="range" step="1" />
+            </div>
+            <div class="col-span-3">
+              <span id="prefs-similarity-treashold-value" class="ghost-text">.82</span>
+            </div>
+          </div> 
+        </label>
+        
+        
+        
+        <label class="form-control my-4 block">
+          <div class="label">
+            <span class="label-text text-sm font-['Haffer'] ml-1">Similarity Count (RAG Results To Use)</span>
+          </div>
+          
+          <div class="grid grid-cols-12 gap-2">
+            <div class="col-span-9">
+              <input id="prefs-similarity-count" type="range" min="1" max="10" class="range mb-3" step="1" />
+            </div>
+            <div class="col-span-3">
+              <span id="prefs-similarity-count-value" class="ghost-text">3</span>
+            </div>
+          </div>
+        </label>
+        
+        <label class="form-control my-4 block">
+          <div class="label">
+            <span class="label-text text-sm font-['Haffer'] ml-1">Temperature</span>
+          </div>
+          
+          <div class="grid grid-cols-12 gap-2">
+            <div class="col-span-9">
+              <input id="prefs-temperature" type="range" min="0" max="2" class="range mb-3" step="0.1" />
+            </div>
+            <div class="col-span-3">
+              <span id="prefs-temperature-value" class="ghost-text"></span>
+            </div>
+          </div>
+        </label>
+        
+        <!-- MAX OUTPUT TOKENS-->
+        <label class="form-control my-4 block">
+          <div class="label">
+            <span class="label-text text-sm font-['Haffer'] ml-1">Max Output Tokens</span>
+          </div>
+          <div class="grid grid-cols-12 gap-2">
+            <div class="col-span-9">
+              <input id="prefs-max-output-tokens" type="range" min="50" max="800" value="100" class="range mb-3" step="25" />
+            </div>
+            <div class="col-span-3">
+              <span id="prefs-max-output-tokens-value" class="ghost-text">100</span>
+            </div>
+          </div>
+        </label>
+        
+        <!-- MAX HISTORY ITEMS -->
+        <label class="form-control my-4 block">
+          <div class="label">
+            <span class="label-text text-sm font-['Haffer'] ml-1">Max History Items</span>
+          </div>
+          <div class="grid grid-cols-12 gap-2">
+            <div class="col-span-9">
+              <input id="prefs-max-history-items" type="range" min="0" max="500" value="300" class="range mb-3" step="50" />
+            </div>
+            <div class="col-span-3">
+              <span id="prefs-max-history-items-value" class="ghost-text">300</span>
+            </div>
+          </div>
+        </label>
+        
+        <label class="form-control my-4 block">
+          <div class="label">
+            <span class="label-text text-sm font-['Haffer'] ml-1">Vibe Mode Timer</span>
+          </div>
+          <div class="grid grid-cols-12 gap-2">
+            <div class="col-span-9">
+              <input id="prefs-game-time-secs" type="range" min="0" max="90" value="20" class="range mb-3" step="5" />
+            </div>
+            <div class="col-span-3">
+              <span id="prefs-game-time-secs-value" class="ghost-text">20</span>
+            </div>
+          </div>
+        </label>
+        
+        <!-- Little spot to put in OpenAI API Key -->
+        <div class="label">
+          <span class="label-text text-sm font-['Haffer'] ml-1">OpenAI API Key</span>
+        </div>
+        <label class="input input-bordered flex items-center gap-2">
+          <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 16 16"
+          fill="currentColor"
+          class="h-4 w-4 opacity-70">
+          <path
+          fill-rule="evenodd"
+          d="M14 6a4 4 0 0 1-4.899 3.899l-1.955 1.955a.5.5 0 0 1-.353.146H5v1.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2.293a.5.5 0 0 1 .146-.353l3.955-3.955A4 4 0 1 1 14 6Zm-4-2a.75.75 0 0 0 0 1.5.5.5 0 0 1 .5.5.75.75 0 0 0 1.5 0 2 2 0 0 0-2-2Z"
+          clip-rule="evenodd" />
+        </svg>
+        <div class="flex grow items-center !shadow-none">
+          <span class="text-gray-500 select-none">sk-</span>
+          <input 
+          id="openai-api-key" 
+          type="text" 
+          class="grow !shadow-none border-none focus:outline-none font-mono text-xs placeholder:text-gray-400 placeholder:text-xs placeholder:font-mono" 
+          placeholder="paste your API key here"
+          />
+        </div>
+      </label>
+    </div>
+    <!-- Add this after "Prose Style" section and before the RAG Shuffle toggle -->
+    
+    <div id="llm-preferences" class="px-8 pt-2">
+      <div class="label">
+        <span class="label-text text-sm font-['Haffer'] ml-1">AI Provider</span>
+      </div>
+      <div class="provider-selection flex gap-3 mb-2">
+        <label class="radio-label cursor-pointer flex items-center gap-1">
+          <input type="radio" name="ai-provider" value="ollama" id="provider-ollama" class="radio radio-md">
+          <span class="text-[0.8em]">Ollama</span>
+        </label>
+        <label class="radio-label cursor-pointer flex items-center gap-1">
+          <input type="radio" name="ai-provider" value="openai" id="provider-openai" class="radio radio-md">
+          <span class="text-[0.8em]">OpenAI</span>
+        </label>
+        <label class="radio-label cursor-pointer flex items-center gap-1">
+          <input type="radio" name="ai-provider" value="lmstudio" id="provider-lmstudio" class="radio radio-md">
+          <span class="text-[0.8em]">LM Studio (local)</span>
+        </label>
+      </div>
+      
+      <!-- LM Studio URL - only visible when LM Studio is selected -->
+      <div id="lmstudio-url-container" class="hidden mb-3">
+        <div class="label">
+          <span class="label-text text-sm font-['Haffer'] ml-1">LM Studio URL</span>
+        </div>
+        <input type="text" id="prefs-lmstudio-url" placeholder="http://localhost:1234/v1" 
+        class="w-full text-[0.7em] font-['ESKlarheitKurrentMono'] p-1.5 input input-bordered">
+      </div>
+
+      <div id="ollama-url-container" class="hidden mb-3">
+        <div class="label">
+          <span class="label-text text-sm font-['Haffer'] ml-1">Ollama URL</span>
+        </div>
+        <input type="text" id="prefs-ollama-url" placeholder="http://localhost:114321" 
+        class="w-full text-[0.7em] font-['ESKlarheitKurrentMono'] p-1.5 input input-bordered">
+      </div>
+      
+      <!-- Model Selection Dropdown -->
+      <div class="mb-3">
+        <div class="label">
+          <span class="label-text text-sm font-['Haffer'] ml-1">Model</span>
+          <button id="refresh-models-btn" class="text-xs p-0.5 px-2 rounded bg-gray-200 hover:bg-gray-300" title="Refresh available models">↻</button>
+        </div>
+        <div id="models-container" class="relative">
+          <select id="prefs-model-name" class="w-full text-[0.7em] font-['ESKlarheitKurrentMono'] p-1.5 input input-bordered">
+            <option value="">Loading models...</option>
+          </select>
+          <div id="loading-spinner" class="absolute inset-0 flex items-center justify-center hidden">
+            <div class="loading loading-infinity loading-lg"></div>
+          </div>
+        </div>
+      </div>
+      
+      
+      
+    </div>
+    
+  </div>
+</main>
+
+</body>
+</html>

@@ -101,8 +101,6 @@ async function toggleVibeMode(enabled) {
 async function restartVibeMode() {
   if (vibeMode) {
     let seconds = prefsGameTimeSeconds.value; // default to 10 seconds if not specified
-    //invoke("load_preferences").then((res) => {
-      //seconds = prefsGameTimeSecondsValue;
     
     timer.show();
     timer.setTime(seconds);
@@ -389,39 +387,43 @@ function emanateNavigableNodeToEditor(content) {
   }
   
   window.addEventListener("DOMContentLoaded", async () => {
-    //create();
-    //console.log('Timer:', timer);
+    
+    const refreshModelsBtn = document.getElementById('refresh-models-btn');
+    const modelsContainer = document.getElementById('models-container');
+    const modelsDropdown = document.getElementById('prefs-model-name');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    loadingSpinner.classList.remove('hidden');
     timer.hide();
+
+    invoke("load_preferences").then((res) => {
+      //console.log('Preferences Loaded:', res);
+      const resJson = JSON.stringify(res, null, 2);
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'Preferences loaded<br/>'+resJson,
+        level: 'info'
+      });
+      prefsMainPromptTextArea.value = res.main_prompt;
+      prefsResponseLimitTextArea.value = res.response_limit;
+      prefsFinalPreambleTextArea.value = res.final_preamble;
+      prefsProseStyleTextArea.value = res.prose_style;
+      prefsMaxHistoryItems.value = res.max_history;
+      prefsGameTimeSeconds.value = res.gametimerms / 1000;
+      setSelectedAIProvider(res.ai_provider); // Set the selected AI provider
+      prefsMaxOutputTokens.value = res.max_output_tokens;
+    });
+    
+    
+    // Reload models when the refresh button is clicked
+    refreshModelsBtn.addEventListener('click', loadModels);
     
     invoke("set_logger_app_data_path", {}).then((res) => {
       //console.log('Logger App Data Path:', res);
       invoke("simple_log_message", { message: 'Logger App Data Path: '+res, id: "tracker", level: "info" }).then((res) => {
       });
-      // addSimpleLogEntry({
-      //   id: "",
-      //   timestamp: Date.now(),
-      //   message: 'Logger App Data Path fn release: '+res,
-      //   level: 'info'
-      // });
-      // invoke("get_logger_path", {}).then((res) => {
-        //   console.log('Logger Path:', res);
-      //   invoke("simple_log_message", { message: 'JS Logger Path: '+res, id: "tracker", level: "debug" }).then((res) => {
-        //     //console.log('simple_log_emissions', res);
-      //   });
-      // });
+      
     });
-    
-    // timer.setTime(120);
-    // timer.start(
-    //   (remainingTime) => {
-      //     addSimpleLogEntry({
-    //       id: "",
-    //       timestamp: Date.now(),
-    //       message: 'Timer Rick: '+remainingTime,
-    //       level: 'debug'
-    //     });
-    //   }
-    // )
     
     // Listen for node clicks
     editor.on('node:clicked', ({ id, node }) => {
@@ -599,7 +601,7 @@ function emanateNavigableNodeToEditor(content) {
     prefsLoadBtn = document.querySelector("#prefs-load-btn");
     prefsLoadBtn.addEventListener("click", () => {
       invoke("load_preferences").then((res) => {
-        console.log('Preferences Loaded:', res);
+        //console.log('Preferences Loaded:', res);
         const resJson = JSON.stringify(res, null, 2);
         addSimpleLogEntry({
           id: "",
@@ -1009,11 +1011,42 @@ function emanateNavigableNodeToEditor(content) {
         unlistenCanonListFn();
       }
     });
+
+    async function loadModels() {
+      try {
+        // Show the loading spinner
+        loadingSpinner.classList.toggle('hidden');
+
+        // Determine the selected AI provider
+        const selectedProvider = document.querySelector('input[name="ai-provider"]:checked').value;
+        invoke("get_model_names", { providerName: selectedProvider }).then((models) => {
+          console.log('Models:', models);
+        // Clear the existing options
+        modelsDropdown.innerHTML = '';
+        
+        // Populate the dropdown with the fetched models
+        models.forEach(model => {
+          const option = document.createElement('option');
+          option.value = model;
+          option.textContent = model;
+          modelsDropdown.appendChild(option);
+        });
+      });
+      } catch (error) {
+        console.error('Error loading models:', error);
+        modelsDropdown.innerHTML = '<option value="">Failed to load models</option>';
+      } finally {
+        // Hide the loading spinner
+        loadingSpinner.classList.add('hidden');
+      }
+    }
+    // Load models when the page loads
+    loadModels();
     
     // Initialize the resize handle
     initializeResizeHandle();
   });
-  
+  // not the worst idea
   // handleTextInput(view, from, to, text) {
   //   console.log('User started typing:', text, ' and vibe mode is ', vibeMode);
   //   addSimpleLogEntry({

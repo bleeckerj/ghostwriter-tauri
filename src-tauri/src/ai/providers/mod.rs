@@ -24,11 +24,35 @@ pub enum ProviderType {
 }
 
 /// Enum to wrap different provider implementations
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub enum Provider {
     OpenAI(OpenAIProvider),
     LMStudio(LMStudioProvider),
     Ollama(OllamaProvider),
+}
+
+impl Serialize for Provider {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Provider::OpenAI(provider) => provider.serialize(serializer),
+            Provider::LMStudio(provider) => provider.serialize(serializer),
+            Provider::Ollama(provider) => provider.serialize(serializer),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Provider {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        // Custom deserialization logic here
+        // This is a placeholder and should be implemented according to your requirements
+        unimplemented!()
+    }
 }
 
 /// Create a provider based on the specified type and configuration

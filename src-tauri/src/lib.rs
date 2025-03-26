@@ -239,6 +239,43 @@ impl fmt::Display for CompletionTiming {
 }
 
 #[tauri::command]
+async fn get_model_names(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    provider_name: String,
+) -> Result<Vec<String>, String> {
+    let preferences = state.preferences.lock().await;
+    //let provider = get_preferred_llm_provider(&app_handle, &preferences).map_err(|e| e.to_string())?;
+    let provider = match provider_name.to_lowercase().as_str() {
+        "ollama" => {
+            let ollama_url = preferences.ollama_url.clone();
+            providers::create_provider(ProviderType::Ollama, &ollama_url)
+        },
+        "lmstudio" => {
+            let lmstudio_url = preferences.lm_studio_url.clone();
+            providers::create_provider(ProviderType::LMStudio, &lmstudio_url)
+        },
+        "openai" => {
+            let openai_api_key = get_api_key(&app_handle).map_err(|e| e.to_string())?;
+            match openai_api_key {
+                Some(key) => providers::create_provider(ProviderType::OpenAI, &key),
+                None => {
+                    log::warn!("OpenAI API key not found. Cannot use OpenAI provider.");
+                    return Err("OpenAI API key is required but was not found. Check preferences and/or system keychain.".to_string());
+                }
+            }
+        },
+        | _ => {
+            log::warn!("Unknown provider name: {}", provider_name);
+            return Err(format!("Unknown provider name {}", provider_name));
+        }
+    };
+    let models = provider.list_models().await.map_err(|e| e.to_string())?;
+    let model_names: Vec<String> = models.iter().map(|model| model.name.clone()).collect();
+    Ok(model_names)
+}
+
+#[tauri::command]
 async fn ingest_from_url(
     state: tauri::State<'_, AppState>,
     app_handle: tauri::AppHandle,
@@ -1625,6 +1662,7 @@ async fn search_similarity(
             save_text_content,
             save_json_content,
             ingest_from_url,
+            get_model_names,
             toggle_rag_pause,
             shot_clock_complete,
             ])
