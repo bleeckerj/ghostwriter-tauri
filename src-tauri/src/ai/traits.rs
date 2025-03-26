@@ -84,3 +84,10 @@ pub trait EmbeddingProvider {
 pub trait PreferredEmbeddingModel {
     fn get_preferred_embedding_model(&self) -> String;
 }
+
+// pub trait LastRequest {
+//     type RequestType;
+
+//     fn set_last_request(&mut self, request: Self::RequestType);
+//     fn get_last_request(&self) -> Option<&Self::RequestType>;
+// }

@@ -1,4 +1,5 @@
 use async_openai::{Client, config::OpenAIConfig};
+use serde::{Serialize, Deserialize, ser::SerializeStruct, de::{self, Deserializer, Visitor}};
 
 use crate::ai::{
     traits::{ModelProvider, ChatCompletionProvider, EmbeddingProvider, PreferredEmbeddingModel, AIProviderError},
@@ -8,10 +9,21 @@ use async_trait::async_trait;
 use futures::Stream;
 use std::pin::Pin;
 use std::sync::Arc;
+use async_openai::types::CreateChatCompletionRequest;
+use lazy_static::lazy_static;
+use std::sync::Mutex;
+
+lazy_static! {
+    static ref LAST_REQUEST: Mutex<Option<CreateChatCompletionRequest>> = Mutex::new(None);
+}
 
 /// OpenAI implementation of the AI provider traits
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpenAIProvider {
+    #[serde(skip)]
     client: Client<OpenAIConfig>,
+    #[serde(skip)]
+    last_request: Option<CreateChatCompletionRequest>,
 }
 
 impl OpenAIProvider {
@@ -19,18 +31,42 @@ impl OpenAIProvider {
     pub fn new(api_key: &str) -> Self {
         let config: OpenAIConfig = OpenAIConfig::new().with_api_key(api_key.to_string());
         OpenAIProvider {
-            client: Client::with_config(config)
+            client: Client::with_config(config),
+            last_request: None,
         }
     }
     
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+
+        let mut state = serializer.serialize_struct("OpenAIProvider", 1)?;
+        state.serialize_field("provider", &"openai_provider")?;
+        state.end()
+    }
+
     /// Create with an existing OpenAI client
     pub fn with_client(client: Client<OpenAIConfig>) -> Self {
-        OpenAIProvider { client }
+        OpenAIProvider { client, last_request: None }
     }
     
     /// Get a reference to the underlying OpenAI client
     pub fn get_client(&self) -> &Client<OpenAIConfig> {
         &self.client
+    }
+}
+
+impl OpenAIProvider {
+
+    fn set_last_request(request: CreateChatCompletionRequest) {
+        let mut last_request = LAST_REQUEST.lock().unwrap();
+        *last_request = Some(request);
+    }
+
+    fn get_last_request() -> Option<CreateChatCompletionRequest> {
+        let last_request = LAST_REQUEST.lock().unwrap();
+        last_request.clone()
     }
 }
 
@@ -94,13 +130,16 @@ impl ChatCompletionProvider for OpenAIProvider {
         // Convert to OpenAI specific format
         let openai_messages = convert_messages_to_openai(&request.messages)?;
         
-        let openai_request = async_openai::types::CreateChatCompletionRequest {
+        let openai_request = CreateChatCompletionRequest {
             model: request.model.clone(),
             messages: openai_messages,
             temperature: request.temperature,
             // Add other parameters as needed
             ..Default::default()
         };
+
+        // Store the last request in the global state
+        //OpenAIProvider::set_last_request(openai_request.clone());
         
         // Make the API call
         let response = self.client.chat().create(openai_request).await

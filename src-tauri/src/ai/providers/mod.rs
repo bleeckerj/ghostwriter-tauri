@@ -14,6 +14,7 @@ use crate::ai::{
 };
 use std::sync::Arc;
 use async_trait::async_trait;
+use serde::{Serialize, Deserialize};
 
 /// Enum to represent the type of provider
 pub enum ProviderType {
@@ -23,6 +24,7 @@ pub enum ProviderType {
 }
 
 /// Enum to wrap different provider implementations
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum Provider {
     OpenAI(OpenAIProvider),
     LMStudio(LMStudioProvider),

@@ -2,7 +2,9 @@ use crate::ai::{
     traits::{ModelProvider, ChatCompletionProvider, EmbeddingProvider, PreferredEmbeddingModel, AIProviderError},
     models::*,
 };
+
 use async_trait::async_trait;
+use serde::{Serialize, Deserialize};
 use futures::{Stream, StreamExt};
 use std::pin::Pin;
 use ollama_rs::{
@@ -17,7 +19,9 @@ use ollama_rs::{
 use tokio::io::{stdout, AsyncWriteExt};
 
 /// Provider implementation for Ollama API
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OllamaProvider {
+    #[serde(skip)]
     client: Ollama,
 }
 

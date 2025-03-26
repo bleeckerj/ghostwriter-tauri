@@ -10,8 +10,30 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use futures::Stream;
 use std::pin::Pin;
 use std::sync::Arc;
+use lazy_static::lazy_static;
+use std::sync::Mutex;
+use async_openai::types::CreateChatCompletionRequest;
+
+lazy_static! {
+    static ref LAST_REQUEST: Mutex<Option<CreateChatCompletionRequest>> = Mutex::new(None);
+}
+
+impl LMStudioProvider {
+    fn set_last_request(request: CreateChatCompletionRequest) {
+        let mut last_request = LAST_REQUEST.lock().unwrap();
+        *last_request = Some(request);
+    }
+
+    fn get_last_request() -> Option<CreateChatCompletionRequest> {
+        let last_request = LAST_REQUEST.lock().unwrap();
+        last_request.clone()
+    }
+}
 /// LM Studio provider implementation
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LMStudioProvider {
+    #[serde(skip)] 
     client: HttpClient,
     base_url: String,
     api_key: Option<String>,

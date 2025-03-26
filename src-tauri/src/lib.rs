@@ -646,44 +646,6 @@ async fn load_openai_api_key_from_keyring(
         
         let provider = get_preferred_llm_provider(&app_handle, &preferences).map_err(|e| format!("Cound't get preferred LLM provider: {}", e))?;
         
-        // // Create provider based on preferences
-        // let provider = match preferences.ai_provider.to_lowercase().as_str() {
-        //     "ollama" => {
-        //         new_logger.simple_log_message(
-        //             format!("Using Ollama provider at: {}", preferences.ollama_url),
-        //             "provider".to_string(),
-        //             "info".to_string()
-        //         );
-        //         providers::create_provider(ProviderType::Ollama, &preferences.ollama_url)
-        //     },
-        //     "lmstudio" => {
-        //         new_logger.simple_log_message(
-        //             format!("Using LM Studio provider at: {}", preferences.lm_studio_url),
-        //             "provider".to_string(),
-        //             "info".to_string()
-        //         );
-        //         providers::create_provider(ProviderType::LMStudio, &preferences.lm_studio_url)
-        //     },
-        //     "openai" | _ => {
-        //         // Default to OpenAI if unrecognized
-        //         let openai_api_key = get_api_key(&app_handle).map_err(|e| e.to_string())?;
-        //         match openai_api_key {
-        //             Some(key) => {
-        //                 new_logger.simple_log_message(
-        //                     "Using OpenAI provider".to_string(),
-        //                     "provider".to_string(),
-        //                     "info".to_string()
-        //                 );
-        //                 providers::create_provider(ProviderType::OpenAI, &key)
-        //             },
-        //             None => {
-        //                 log::warn!("OpenAI API key not found. Cannot use OpenAI provider.");
-        //                 return Err("OpenAI API key is required but was not found. Check preferences and/or system keychain.".to_string());
-        //             }
-        //         }
-        //     }
-        // };
-        
         let lm_models = provider.list_models().await;
         lm_models.iter().for_each(|models| {
             models.iter().for_each(|model| {
@@ -910,6 +872,7 @@ async fn load_openai_api_key_from_keyring(
                 canon_name: database_name,
                 canon_path: database_path,
                 preferences: preferences.clone(),
+                llm_provider: provider,
                 
             }
         };

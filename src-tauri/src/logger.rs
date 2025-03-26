@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use chrono::Local;
 use crate::preferences::Preferences;
 use crate::NewLogger;
+use crate::ai::*;
 
 const MAX_ENTRIES: usize = 50;
 
@@ -32,6 +33,7 @@ pub struct CompletionLogEntry {
     pub canon_name: String,
     pub canon_path: String,
     pub preferences: Preferences,
+    pub llm_provider: Provider,    
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -71,7 +73,7 @@ impl Logger {
             serde_json::to_writer(&file, &Vec::<Completion>::new())?;
         }
         
-        println!("** Opened log file at {:?}", log_path);
+        //println!("** Opened log file at {:?}", log_path);
         log::debug!("** Opened log file at {:?}", log_path);
         Ok(Logger { 
             log_file: Some(file), 
