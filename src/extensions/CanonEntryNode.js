@@ -44,6 +44,12 @@ const CanonEntryNode = Node.create({
       level: {
         default: 'info',
       },
+      embedding_model_name: {
+        default: 'dk',
+      },
+      notes: {
+        default: '',
+      },
       paused: {
         default: false, // Track paused state
         parseHTML: element => element.getAttribute('data-paused') === 'true',
@@ -80,15 +86,72 @@ const CanonEntryNode = Node.create({
       dom.classList.add('canon-entry', `canon-entry-level-${node.attrs.level}`)
       
       // Timestamp
-      const timestamp = document.createElement('span')
-      timestamp.classList.add('canon-entry-timestamp')
-      timestamp.textContent = node.attrs.timestamp // Use the timestamp string directly
- 
+      dom.appendChild(
+        (() => {
+          const span = document.createElement('span')
+          span.classList.add('canon-entry-timestamp')
+          span.textContent = node.attrs.timestamp
+          return span
+        })()
+      )
+
       // Message
-      const message = document.createElement('span')
-      message.classList.add('canon-entry-message')
-      message.textContent = node.attrs.message
+      dom.appendChild(
+        (() => {
+          const span = document.createElement('span')
+          span.classList.add('canon-entry-message')
+          span.textContent = node.attrs.message
+          return span
+        })()
+      )
       
+      // Embedding model name container
+      dom.appendChild(
+        (() => {
+          const div = document.createElement('div')
+          div.classList.add('flex', 'items-center', 'gap-4', 'border', 'border-gray-400', 'font-[InputMono]', 'p-2', 'rounded-md')
+
+          const fixedTextSpan = document.createElement('div')
+          fixedTextSpan.classList.add('text-[0.8em]', 'font-thin')
+          fixedTextSpan.textContent = 'Embedding Model: '
+
+          const dynamicTextSpan = document.createElement('div')
+          dynamicTextSpan.classList.add('flex-grow', 'text-[0.8em]', 'font-bold')
+          dynamicTextSpan.textContent = node.attrs.embedding_model_name
+
+          const modelButton = document.createElement('button')
+          modelButton.classList.add('ml-4', 'enabled', 'model', 'bg-blue-500', 'text-white', 'px-2', 'py-1', 'rounded')
+          modelButton.textContent = 'ONLY'
+
+          div.appendChild(fixedTextSpan)
+          div.appendChild(dynamicTextSpan)
+          div.appendChild(modelButton)
+          return div
+        })()
+      )
+
+      // Notes from the document
+      dom.appendChild(
+        (() => {
+          const span = document.createElement('span')
+          span.classList.add('canon-entry-notes')
+          span.textContent = node.attrs.notes
+          return span
+        })()
+      )
+
+      // Button container
+      const buttonContainer = document.createElement('div')
+      buttonContainer.classList.add('canon-entry-button-container')
+
+
+      // Edit button
+      const editBtn = document.createElement('button')
+      editBtn.classList.add('canon-entry-button')
+      editBtn.classList.add('enabled')
+      editBtn.classList.add('edit')
+      editBtn.textContent = 'EDIT'
+
       // Delete button
       const deleteBtn = document.createElement('button')
       deleteBtn.classList.add('canon-entry-button')
@@ -105,8 +168,8 @@ const CanonEntryNode = Node.create({
       // Pause RAG button - with toggle capability
       const pauseRagBtn = document.createElement('button')
       pauseRagBtn.classList.add('canon-entry-button', 'enabled', 'pause')
-      console.log('Attributes are ', node.attrs);
-      console.log('Initial paused state:', node.attrs.paused);
+      //console.log('Attributes are ', node.attrs);
+      //console.log('Initial paused state:', node.attrs.paused);
       // Store state directly on the button element
       pauseRagBtn.dataset.isPaused = node.attrs.paused ? 'true' : 'false'
 
@@ -124,13 +187,13 @@ const CanonEntryNode = Node.create({
         e.preventDefault()
         
         // Debug the current state
-        console.log('Button clicked. Current state:', {
-          'paused attribute': node.attrs.paused,
-          'button data-isPaused': pauseRagBtn.dataset.isPaused,
-          'button text': pauseRagBtn.textContent,
-          'has button-in': pauseRagBtn.classList.contains('button-in'),
-          'has button-out': pauseRagBtn.classList.contains('button-out')
-        });
+        // console.log('Button clicked. Current state:', {
+        //   'paused attribute': node.attrs.paused,
+        //   'button data-isPaused': pauseRagBtn.dataset.isPaused,
+        //   'button text': pauseRagBtn.textContent,
+        //   'has button-in': pauseRagBtn.classList.contains('button-in'),
+        //   'has button-out': pauseRagBtn.classList.contains('button-out')
+        // });
         
         // Toggle the state using the button's dataset
         const currentlyPaused = pauseRagBtn.dataset.isPaused === 'true'
@@ -172,11 +235,15 @@ const CanonEntryNode = Node.create({
       }
       
       // Append elements
-      dom.appendChild(timestamp)
-      dom.appendChild(message)
-      dom.appendChild(deleteBtn)
-      dom.appendChild(pauseRagBtn)
-      
+      //dom.appendChild(timestamp)
+      //dom.appendChild(message)
+      //dom.appendChild(embedding_model_name)
+      //dom.appendChild(notes)
+      buttonContainer.appendChild(deleteBtn)
+      buttonContainer.appendChild(pauseRagBtn)
+      buttonContainer.appendChild(editBtn)
+      dom.appendChild(buttonContainer)
+
       // Update method to handle external state changes
       const update = (updatedNode) => {
         if (updatedNode.attrs.paused !== node.attrs.paused) {

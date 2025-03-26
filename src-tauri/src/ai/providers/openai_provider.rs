@@ -70,6 +70,19 @@ impl ModelProvider for OpenAIProvider {
             additional_info: serde_json::to_value(&model).unwrap_or_default(),
         })
     }
+
+    async fn get_preferred_inference_model(&self) -> Result<AIModel, AIProviderError> {
+        // For now, just return the first model
+        let all_models = self.list_models().await?;
+
+        for model in all_models {
+            if model.name == "gpt-4o-mini" {
+                return Ok(model);
+            }
+        }
+
+        Err(AIProviderError::ModelNotFound("gpt-4o-mini".to_string()))
+    }
 }
 
 #[async_trait]

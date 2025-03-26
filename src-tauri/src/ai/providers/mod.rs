@@ -106,6 +106,14 @@ impl ModelProvider for Provider {
             Provider::Ollama(provider) => provider.get_model(model_id).await,
         }
     }
+
+    async fn get_preferred_inference_model(&self) -> Result<AIModel, AIProviderError> {
+        match self {
+            Provider::OpenAI(provider) => provider.get_preferred_inference_model().await,
+            Provider::LMStudio(provider) => provider.get_preferred_inference_model().await,
+            Provider::Ollama(provider) => provider.get_preferred_inference_model().await,
+        }
+    }
 }
 
 impl PreferredEmbeddingModel for Provider {

@@ -97,6 +97,7 @@ pub struct TokenUsage {
 pub struct Embedding {
     pub vector: Vec<f32>,
     pub index: usize,
+    pub model_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

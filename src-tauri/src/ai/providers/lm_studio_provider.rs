@@ -138,6 +138,11 @@ impl ModelProvider for LMStudioProvider {
             additional_info: model_data,
         })
     }
+
+    async fn get_preferred_inference_model(&self) -> Result<AIModel, AIProviderError> {
+        // LM Studio doesn't have a preferred model
+        unimplemented!("LM Studio does not yet support a preferred model");
+    }
 }
 
 #[async_trait]

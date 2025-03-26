@@ -34,11 +34,11 @@ use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use embeddings::EmbeddingGenerator;
 use document_store::DocumentStore;
 
+pub mod ai;
 pub mod ingest;
 pub mod document_store;
 pub mod menu;
 pub mod embeddings;
-pub mod ai;
 
 mod conversations; // Add this line
 use conversations::Conversation;
@@ -170,6 +170,49 @@ pub fn get_resource_dir_path() -> Option<PathBuf> {
     RESOURCE_DIR_PATH.lock().unwrap().clone()
 }
 
+
+pub fn get_preferred_llm_provider(app_handle: &AppHandle, preferences: &Preferences) -> Result<Provider, String> {
+    // Create provider based on preferences
+    let mut new_logger = NewLogger::new(app_handle.clone());
+    let provider = match preferences.ai_provider.to_lowercase().as_str() {
+        "ollama" => {
+            new_logger.simple_log_message(
+                format!("Using Ollama provider at: {}", preferences.ollama_url),
+                "provider".to_string(),
+                "info".to_string()
+            );
+            providers::create_provider(ProviderType::Ollama, &preferences.ollama_url)
+        },
+        "lmstudio" => {
+            new_logger.simple_log_message(
+                format!("Using LM Studio provider at: {}", preferences.lm_studio_url),
+                "provider".to_string(),
+                "info".to_string()
+            );
+            providers::create_provider(ProviderType::LMStudio, &preferences.lm_studio_url)
+        },
+        "openai" | _ => {
+            // Default to OpenAI if unrecognized
+            let openai_api_key = get_api_key(&app_handle).map_err(|e| e.to_string())?;
+            match openai_api_key {
+                Some(key) => {
+                    new_logger.simple_log_message(
+                        "Using OpenAI provider".to_string(),
+                        "provider".to_string(),
+                        "info".to_string()
+                    );
+                    providers::create_provider(ProviderType::OpenAI, &key)
+                },
+                None => {
+                    log::warn!("OpenAI API key not found. Cannot use OpenAI provider.");
+                    return Err("OpenAI API key is required but was not found. Check preferences and/or system keychain.".to_string());
+                }
+            }
+        }
+    };
+    Ok(provider)
+}
+
 #[derive(Serialize)]
 struct CompletionTiming {
     embedding_generation_ms: u128,
@@ -185,7 +228,7 @@ impl fmt::Display for CompletionTiming {
             "Completion Timing:\n\
             Embedding Generation: {} ms\n\
             Similarity Search: {} ms\n\
-            OpenAI Request: {} ms\n\
+            LLM Inference Request: {} ms\n\
             Total: {} ms",
             self.embedding_generation_ms,
             self.similarity_search_ms,
@@ -201,10 +244,21 @@ async fn ingest_from_url(
     app_handle: tauri::AppHandle,
     url: String,
 ) -> Result<(), String> {
+    
     let store = state.doc_store.lock().await;
     let store_clone = Arc::new(store.clone());
+    let preferences = state.preferences.lock().await;
     
-    match store_clone.process_url_async(&url, app_handle.clone()).await {
+    let provider = match get_preferred_llm_provider(&app_handle, &preferences) {
+        Ok(p) => p,
+        Err(e) => {
+            let line = line!();
+            log_message!(app_handle, LOG_ERROR, "Line {} - Provider initialization failed: {}", line, e);
+            return Err(format!("Line {} — Could not initialize AI provider: {}", line, e));
+        }
+    };
+    
+    match store_clone.ingest_url_async(&url, &provider, app_handle.clone()).await {
         Ok(ingested_document) => {
             log::info!("Ingested URL: {}", url);
             log_message!(app_handle, LOG_INFO, "Ingested URL: {}", url);
@@ -553,27 +607,17 @@ async fn load_openai_api_key_from_keyring(
         file_path: String,
     ) -> Result<String, String> {
         
-        println!("Ingesting file: {}", file_path);
+        //println!("Ingesting file: {}", file_path);
         log::info!("Ingesting file: {}", file_path);
         
         let file_path_buf = PathBuf::from(file_path);
         let file_name = file_path_buf.clone().as_path().file_name().unwrap().to_str().unwrap().to_string();
         
-        
-        //let doc_store = state.doc_store.clone();
-        //let embedding_generator = state.embedding_generator.clone();
-        
-        let store = state.doc_store.lock().await;
+        let preferences = state.preferences.lock().await;
+        let provider = get_preferred_llm_provider(&app_handle, &preferences)
+        .map_err(|e| format!("Couldn't get a preferred LLM provider: {}", e))?;        let store = state.doc_store.lock().await;
         let store_clone = Arc::new(store.clone());
-        store_clone.process_document_async(&file_path_buf, app_handle).await;
-        
-        // tokio::spawn(async move {
-        //     if let Err(err) = store.process_document_async(file_path_buf.as_path()).await {
-        //         eprintln!("Error processing document: {}", err);
-        //     }
-        // });
-        
-        //doc_store.lock().unwrap().process_document_async(file_path_buf.as_path()).await;
+        store_clone.process_document_async(&provider, &file_path_buf, app_handle).await;
         
         Ok("Ingested file".to_string())
     }
@@ -600,43 +644,45 @@ async fn load_openai_api_key_from_keyring(
         let key_clone = openai_api_key.clone().unwrap();
         let logger_clone = state.logger.clone();
         
-        // Create provider based on preferences
-        let provider = match preferences.ai_provider.to_lowercase().as_str() {
-            "ollama" => {
-                new_logger.simple_log_message(
-                    format!("Using Ollama provider at: {}", preferences.ollama_url),
-                    "provider".to_string(),
-                    "info".to_string()
-                );
-                providers::create_provider(ProviderType::Ollama, &preferences.ollama_url)
-            },
-            "lmstudio" => {
-                new_logger.simple_log_message(
-                    format!("Using LM Studio provider at: {}", preferences.lm_studio_url),
-                    "provider".to_string(),
-                    "info".to_string()
-                );
-                providers::create_provider(ProviderType::LMStudio, &preferences.lm_studio_url)
-            },
-            "openai" | _ => {
-                // Default to OpenAI if unrecognized
-                let openai_api_key = get_api_key(&app_handle).map_err(|e| e.to_string())?;
-                match openai_api_key {
-                    Some(key) => {
-                        new_logger.simple_log_message(
-                            "Using OpenAI provider".to_string(),
-                            "provider".to_string(),
-                            "info".to_string()
-                        );
-                        providers::create_provider(ProviderType::OpenAI, &key)
-                    },
-                    None => {
-                        log::warn!("OpenAI API key not found. Cannot use OpenAI provider.");
-                        return Err("OpenAI API key is required but was not found. Check preferences and/or system keychain.".to_string());
-                    }
-                }
-            }
-        };
+        let provider = get_preferred_llm_provider(&app_handle, &preferences).map_err(|e| format!("Cound't get preferred LLM provider: {}", e))?;
+        
+        // // Create provider based on preferences
+        // let provider = match preferences.ai_provider.to_lowercase().as_str() {
+        //     "ollama" => {
+        //         new_logger.simple_log_message(
+        //             format!("Using Ollama provider at: {}", preferences.ollama_url),
+        //             "provider".to_string(),
+        //             "info".to_string()
+        //         );
+        //         providers::create_provider(ProviderType::Ollama, &preferences.ollama_url)
+        //     },
+        //     "lmstudio" => {
+        //         new_logger.simple_log_message(
+        //             format!("Using LM Studio provider at: {}", preferences.lm_studio_url),
+        //             "provider".to_string(),
+        //             "info".to_string()
+        //         );
+        //         providers::create_provider(ProviderType::LMStudio, &preferences.lm_studio_url)
+        //     },
+        //     "openai" | _ => {
+        //         // Default to OpenAI if unrecognized
+        //         let openai_api_key = get_api_key(&app_handle).map_err(|e| e.to_string())?;
+        //         match openai_api_key {
+        //             Some(key) => {
+        //                 new_logger.simple_log_message(
+        //                     "Using OpenAI provider".to_string(),
+        //                     "provider".to_string(),
+        //                     "info".to_string()
+        //                 );
+        //                 providers::create_provider(ProviderType::OpenAI, &key)
+        //             },
+        //             None => {
+        //                 log::warn!("OpenAI API key not found. Cannot use OpenAI provider.");
+        //                 return Err("OpenAI API key is required but was not found. Check preferences and/or system keychain.".to_string());
+        //             }
+        //         }
+        //     }
+        // };
         
         let lm_models = provider.list_models().await;
         lm_models.iter().for_each(|models| {
@@ -711,7 +757,7 @@ async fn load_openai_api_key_from_keyring(
         // fence this off so we can release the lock on the store
         {
             let store = state.doc_store.lock().await;
-            similar_docs = store.search(&embedding_result, similarity_count, similarity_threshold).await.map_err(|e| e.to_string())?;
+            similar_docs = store.search(&embedding_result, &provider, similarity_count, similarity_threshold).await.map_err(|e| e.to_string())?;
             database_name = (store.get_database_name().to_string()); // Just convert &str to String
             database_path = store.get_database_path().to_string(); // Just convert &str to String
         }
@@ -817,11 +863,13 @@ async fn load_openai_api_key_from_keyring(
         name: None,
     },
     ];
+
+    let provider_chat_model = provider.get_preferred_inference_model().await.map_err(|e| e.to_string())?;
     
     // Use the model name from preferences
     let chat_request = ChatCompletionRequest {
         messages,
-        model: preferences.model_name.clone(),  // Use from preferences
+        model: provider_chat_model.name,
         temperature: Some(temperature),
         max_tokens: Some(max_tokens as u32),
         stream: false,
@@ -1008,24 +1056,31 @@ async fn search_similarity(
 ) -> Result<Vec<SearchResult>, String> {  // Changed return type
     let limit = limit.unwrap_or(3);
     let state_clone = state.clone();
-    let preferences = state_clone.preferences.lock().await;
     
-    let _provider = get_current_provider(state.clone()).await?;
+    let provider = get_current_provider(state.clone()).await?;
+    let provider_embedding_model = provider.get_preferred_embedding_model();
     let embedding_request = EmbeddingRequest {
-        model: "text-embedding-ada-002".to_string(),
+        model: provider_embedding_model,
         input: vec![query.clone()],
     };
-    let embedding = _provider.create_embeddings(embedding_request).await;
+    let query_embedding = provider.create_embeddings(embedding_request).await;
     let doc_store = state.doc_store.clone();
     
     // let doc_store = state
     // .doc_store
     // .lock()
     // .map_err(|e| format!("Failed to acquire doc store lock: {}", e))?;
+    let preferences = match state_clone.preferences.try_lock() {
+        Ok(preferences) => preferences,
+        Err(_) => {
+            log::error!("Failed to acquire lock on preferences");
+            return Err("Failed to acquire lock on preferences".to_string());
+        }
+    };
     let similarity_threshold = preferences.similarity_threshold;
     let store = state.doc_store.lock().await;
     let results = store
-    .search(&embedding, limit, similarity_threshold)
+    .search(&query_embedding, &provider, limit, similarity_threshold)
     .await // ✅ Now correctly awaiting the async function
     .map_err(|e| format!("Search failed: {}", e))?;
     
@@ -1171,17 +1226,14 @@ async fn search_similarity(
         }
         
         #[tauri::command]
-        async fn list_canon_docs(
+    async fn list_canon_docs(
             //logger: tauri::State<'_, NewLogger>,
             app_state: tauri::State<'_, AppState>,
             app_handle: tauri::AppHandle,
         ) -> Result<String, String> {
             let doc_store = Arc::clone(&app_state.doc_store);
-            //println!("Listing canon documents");
-            //log::debug!("Listing canon documents");
-            //log::debug!("doc_store is {:?}", doc_store);
+
             let store = doc_store.lock().await;
-            //log::debug!("store (locked doc_store) is {:?}", store);
             match store.fetch_documents().await {
                 Ok(listing) => {
                     //log::debug!("listing is {:?}", listing);
@@ -1539,7 +1591,7 @@ async fn search_similarity(
                 
                 let embedding_generator_clone: EmbeddingGenerator = b_embedding_generator.clone();
                 
-                let doc_store = match DocumentStore::new(path.clone(), std::sync::Arc::new(b_embedding_generator)) {
+                let doc_store = match DocumentStore::new(path.clone()) {
                     Ok(store) => store,
                     Err(e) => {
                         let error_msg = format!("Failed to initialize document store at path: {:?}. Error: {}", path, e);

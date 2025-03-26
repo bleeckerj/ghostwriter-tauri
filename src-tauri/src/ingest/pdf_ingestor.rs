@@ -10,6 +10,7 @@ use super::document_ingestor::{
     IngestError,
     Resource  // Add this import
 };
+use crate::get_resource_dir_path;
 
 #[derive(Debug)]
 pub struct PdfIngestor;

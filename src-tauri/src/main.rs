@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    gh_tauri_tt_js_lib::run()
+    ghostwriter_lib::run()
 }

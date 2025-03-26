@@ -521,40 +521,80 @@ button {
   @apply px-2 py-1;
   @apply font-[ESKlarheitKurrentMono];
   @apply text-[0.7em];
-  display: flex;
-  align-items: center;
+  display: grid; /* Use grid layout */
+  grid-template-columns: 1fr 1fr; /* Two columns */
+  grid-template-rows: auto auto; /* Two rows */
   gap: 1rem;
   @apply shadow-[2px_2px_2px_2px__rgba(0,0,0,0.5)];
   user-select: none;
   @apply mb-2;
   @apply text-pretty;
   @apply items-start;
-  @apply py-4;
+  @apply py-2;
 }
+
 .canon-entry-timestamp {
   color: #aaa;
   font-size: 0.4em;
-  /* min-width: 150px; */
   @apply font-mono;
   @apply leading-none;
-  flex: 1;
+  grid-column: 1 / span 2; /* Span both columns */
 }
+
 .canon-entry-message {
-  flex: 4;
+  grid-column: 1 / span 2; /* Span both columns */
   @apply leading-normal;
   @apply text-balance;
   @apply pt-1;
   @apply self-start;
   @apply border-[0.5px] border-gray-400 p-4;
-
-  /*@apply font-[WarblerText];*/
-  @apply font-[ESKlarheitKurrentMono];
-
+  @apply font-[InputMonoCondensed];
   @apply font-light;
   @apply text-[0.9em];
   @apply break-all;
 }
 
+.canon-entry-embedding-model-name {
+  @apply leading-normal;
+  @apply text-balance;
+  @apply pt-1;
+  @apply self-start;
+  @apply font-[ChicagoKare];
+  @apply text-green-400;
+  @apply text-[1.1em];
+  @apply break-all;
+}
+
+.canon-entry-notes {
+  grid-column: 2; /* Second column */
+  @apply leading-normal;
+  @apply text-balance;
+  @apply pt-1;
+  @apply self-start;
+  @apply border-[0.5px] border-gray-400 p-4;
+  @apply font-[WarblerText];
+  @apply font-light;
+  @apply text-[0.9em];
+  @apply break-all;
+}
+
+
+.canon-entry-button-container {
+  grid-column: 1 / span 2; /* Span both columns */
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end; /* Align buttons to the right */
+}
+
+
+.canon-entry-button {
+  grid-column: span 2; /* Span both columns */
+  @apply font-['ESKlarheitKurrentMono'];
+  @apply relative w-fit px-1 py-[0.5px] rounded-sm;
+  @apply border border-black;
+  @apply shadow-[3px_3px_0px_0px];
+  @apply min-w-[80px] text-center;
+}
 
 
 .canon-entry-level-info {
@@ -571,14 +611,6 @@ button {
 
 .canon-entry-level-error {
   background-color: #f8d7da;
-}
-
-.canon-entry-button {
-  @apply font-['ESKlarheitKurrentMono'];
-  @apply relative w-fit px-1 py-[0.5px] rounded-sm;
-  @apply border border-black;
-  @apply shadow-[3px_3px_0px_0px];
-  @apply min-w-[80px] text-center;
 }
 
 /* .canon-entry-button.del {

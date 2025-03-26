@@ -100,6 +100,20 @@ impl ModelProvider for OllamaProvider {
             additional_info: serde_json::Value::Null,
         })
     }
+
+    async fn get_preferred_inference_model(&self) -> Result<AIModel, AIProviderError> {
+        
+        let all_models = self.list_models().await
+        .map_err(|e| AIProviderError::APIError(format!("Failed to list models: {}", e)))?;
+        
+        for model in all_models {
+            if model.name == "llama3.2:latest" {
+                return Ok(model);
+            }
+        }
+
+        Err(AIProviderError::ModelNotFound("llama3.2:latest".to_string()))
+    }
 }
 
 #[async_trait]

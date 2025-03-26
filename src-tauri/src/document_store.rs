@@ -1,4 +1,3 @@
-#![allow(unused)]
 use async_openai::types::AudioInput;
 // src/document_store.rs
 use rusqlite::{params, Connection};
@@ -13,7 +12,7 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use std::fmt::Debug;
-use crate::embeddings::EmbeddingGenerator;  // Change this line
+use crate::ai::traits::{EmbeddingProvider, PreferredEmbeddingModel, ChatCompletionProvider};
 use crate::ingest::{
     pdf_ingestor::PdfIngestor,
     mdx_ingestor::MdxIngestor,
@@ -26,7 +25,6 @@ use crate::ingest::{
 use crate::ai::{self, AIProviderError};
 use crate::ai::providers::{self, ProviderType, Provider};
 use crate::ai::models::{ChatCompletionRequest, ChatMessage, MessageRole, EmbeddingRequest};
-use crate::ai::traits::{EmbeddingProvider, ChatCompletionProvider};
 
 use tauri::Manager; // Add this import
 use tauri::Emitter;
@@ -42,7 +40,9 @@ pub struct Document {
     pub name: String,
     pub file_path: String,
     pub created_at: String,
-    pub embedding: Vec<f32>
+    pub embedding_model_name: String,
+    pub notes: String,
+    // pub embedding: Vec<f32>
 }
 
 pub struct SimilarDocument {
@@ -66,25 +66,29 @@ pub struct DocumentInfo {
     pub file_path: String,
     pub created_at: String,
     pub paused: bool,
+    pub embedding_model_name: String,
+    pub notes: String,
+    pub authors: Vec<String>,
+    
 }
 #[derive(Debug, Clone)]
 pub struct DocumentStore {
     conn: Arc<Mutex<Connection>>, // Change to tokio Mutex
     ingestors: Vec<Arc<Box<dyn DocumentIngestor>>>,
     next_id: usize,
-    embedding_generator: Arc<EmbeddingGenerator>,
+    //embedding_generator: Arc<EmbeddingGenerator>,
     canon_name: String,
     canon_path: String,
 }
 
 
 impl DocumentStore {
-    pub const DEFAULT_CHUNK_SIZE: usize = 4096;
-    pub const DEFAULT_CHUNK_OVERLAP: usize = 400;
+    pub const DEFAULT_CHUNK_SIZE: usize = 1024;
+    pub const DEFAULT_CHUNK_OVERLAP: usize = 200;
     
     pub fn new(
         store_path: PathBuf,
-        embedding_generator: Arc<EmbeddingGenerator>
+        //embedding_generator: Arc<EmbeddingGenerator>
     ) -> Result<Self, Box<dyn std::error::Error>> {
         
         let (conn, canon_path, canon_name, next_id) = 
@@ -96,7 +100,7 @@ impl DocumentStore {
             conn: Arc::new(Mutex::new(conn)),
             ingestors: Vec::new(),
             next_id,
-            embedding_generator,
+            //embedding_generator,
             canon_path,
             canon_name,
         };        
@@ -190,13 +194,19 @@ impl DocumentStore {
             (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
+            title TEXT,
+            authors JSON,
             created_at TEXT NOT NULL,
-            file_path TEXT NOT NULL UNIQUE,
-            paused BOOLEAN DEFAULT 0
+            file_path TEXT NOT NULL,
+            paused BOOLEAN DEFAULT 0,
+            embedding_model_name TEXT DEFAULT 'unknown',
+            notes TEXT DEFFAULT '',
+            UNIQUE(file_path, embedding_model_name)
             )",
             [],
         )?;
         
+        // Replace the existing CREATE TABLE statement for embeddings
         conn.execute(
             "CREATE TABLE IF NOT EXISTS embeddings 
             (
@@ -204,6 +214,7 @@ impl DocumentStore {
             doc_id INTEGER NOT NULL,
             chunk TEXT NOT NULL, 
             embedding JSON NOT NULL,
+            embedding_model_name TEXT DEFAULT 'unknown',
             FOREIGN KEY(doc_id) REFERENCES documents(id)
             )",
             [],
@@ -248,8 +259,8 @@ impl DocumentStore {
         
         // Insert document
         tx.execute(
-            "INSERT INTO documents (id, name, created_at, file_path) VALUES (?1, ?2, ?3, ?4)",
-            params![document.id, document.name, current_time, document.file_path],
+            "INSERT INTO documents (id, name, created_at, file_path) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![document.id, document.name, current_time, document.file_path, document.embedding_model_name, document.notes],
         )?;
         
         tx.commit()?;
@@ -261,6 +272,7 @@ impl DocumentStore {
     pub async fn search(
         &self,
         query_embedding_result: &Result<Vec<ai::models::Embedding>, AIProviderError>,
+        provider: &Provider,
         similar_docs_count: usize,
         similarity_threshold: f32,
     ) -> Result<Vec<(i64, String, usize, String, f32)>, Box<dyn std::error::Error>> {
@@ -284,22 +296,23 @@ impl DocumentStore {
                 )));
             }
         };
-        
+        let embedding_model_name = provider.get_preferred_embedding_model();
         let conn = self.conn.lock().await;
         let mut stmt = conn.prepare(
             "SELECT d.id, d.name, d.file_path, d.created_at, e.id, e.chunk, e.embedding 
             FROM documents d 
             JOIN (
-                SELECT id, doc_id, chunk, embedding 
+                SELECT id, doc_id, chunk, embedding, embedding_model_name 
                 FROM embeddings
-                GROUP BY id, doc_id, chunk, embedding
+                GROUP BY id, doc_id, chunk, embedding, embedding_model_name
             ) e ON d.id = e.doc_id
-            WHERE d.paused = 0 OR d.paused IS NULL"
+            WHERE (d.paused = 0 OR d.paused IS NULL) 
+            AND e.embedding_model_name = ?1"
         )?;  // Use ? directly for rusqlite::Error
         
         let mut similarities = Vec::new();
         
-        let rows = stmt.query_map([], |row| {
+        let rows = stmt.query_map(params![embedding_model_name], |row| {
             let doc_id: i64 = row.get(0)?;  // Extract the document id
             let name: String = row.get(1)?;  // Use ? directly for rusqlite errors
             let chunk_id: usize = row.get(4)?;
@@ -317,6 +330,7 @@ impl DocumentStore {
             
             Ok((doc_id, name, chunk_id, chunk, similarity))
         })?;  // Use ? directly for rusqlite::Error
+        
         
         for row in rows {
             similarities.push(row?);
@@ -363,15 +377,25 @@ impl DocumentStore {
     
     pub async fn fetch_documents(&self) -> Result<DocumentListing, Box<dyn std::error::Error>> {
         let conn = self.conn.lock().await;
-        let mut stmt = conn.prepare("SELECT id, name, file_path, created_at, paused FROM documents")?;
+        let mut stmt = conn.prepare("SELECT id, name, file_path, created_at, paused, embedding_model_name, notes, authors FROM documents")?;
         
         let rows = stmt.query_map([], |row| {
+            // Parse authors from JSON string to Vec<String>
+            let authors_json: String = row.get(7).unwrap_or_default();
+            let authors: Vec<String> = match serde_json::from_str(&authors_json) {
+                Ok(parsed) => parsed,
+                Err(_) => Vec::new() // Default to empty vector if JSON parsing fails
+            };
+            
             Ok(DocumentInfo {
                 id: row.get(0)?,
                 name: row.get(1)?,
                 file_path: row.get(2)?,
                 created_at: row.get(3)?,
                 paused: row.get(4).unwrap_or(false),
+                embedding_model_name: row.get(5).unwrap_or("unknown".to_string()),
+                notes: row.get(6).unwrap_or("".to_string()),
+                authors, // A Vec<String> parsed from JSON
             })
         })?;
         
@@ -433,12 +457,16 @@ impl DocumentStore {
         Ok(())
     }
     
-    pub async fn process_url_async(
+    pub async fn ingest_url_async(
         self: Arc<Self>, 
         url: &str,
+        provider: &Provider,
         app_handle: tauri::AppHandle, // Add app_handle parameter
     ) -> Result<(IngestedDocument), Box<dyn std::error::Error>> {
+        
         let store = self.clone(); // Clone Arc to get a reference
+
+        let embedding_model_name = provider.get_preferred_embedding_model();
         
         // Create a Resource::Url from the URL string
         let url_resource = Resource::Url(url.to_string());
@@ -464,27 +492,30 @@ impl DocumentStore {
             "timestamp": chrono::Local::now().to_rfc3339(),
             "level": "debug"
         }))?;
+        
+
         let document = Document {
             id: 0,
             name: ingested.title.clone(),
             created_at: chrono::Local::now().to_rfc3339(),
             file_path: ingested.metadata.source_path.clone(),
-            embedding: vec![],
+            embedding_model_name: embedding_model_name,
+            notes: "".to_string(),
         };
         let doc_name = document.name.clone();
-        println!("Document created: {:?}", document);
-        log::debug!("Document created: {:?}", document);
-        app_handle.emit("simple-log-message", json!({
-            "message": format!("Document created: {}", doc_name),
-            "timestamp": chrono::Local::now().to_rfc3339(),
-            "level": "debug"
-        }))?;
+
         let doc_id_result = {
             let conn = store.conn.lock().await;
-            store.add_document_internal(&conn, document)
+            store.add_document_internal(&conn, document.clone())
         };
         let doc_id = match doc_id_result {
             Ok(id) => {
+                log::debug!("Document created: {:?}", &document);
+                app_handle.emit("simple-log-message", json!({
+                    "message": format!("Document created: {}", doc_name),
+                    "timestamp": chrono::Local::now().to_rfc3339(),
+                    "level": "debug"
+                }))?;
                 println!("Document ID: {}", id);
                 log::debug!("Document ID: {}", id);
                 id
@@ -493,13 +524,21 @@ impl DocumentStore {
                 let error_message = format!("Error adding document to database: {}", e);
                 println!("Error adding document to database: {:?}", e);
                 app_handle.emit("simple-log-message", json!({
-                    "message": format!("Couldn't add {} to canon {}", doc_name, error_message),
+                    "message": format!("Couldn't add {} to canon because {}", doc_name, error_message),
                     "timestamp": chrono::Local::now().to_rfc3339(),
                     "level": "warn"
                 })).ok();
                 return Err(e); // Propagate the error
             }
         };
+        
+        
+        
+        
+        
+        
+
+        
         drop(doc_id_result); // Release the lock
         app_handle.emit("simple-log-message", json!({
             "message": format!("Document added to the Canon with ID: {}", doc_id),
@@ -512,7 +551,7 @@ impl DocumentStore {
         // let name = file_name.clone();
         match store
         .process_embeddings(doc_id
-            , ingested.content.clone(), file_name, &store.embedding_generator, app_handle.clone())
+            , ingested.content.clone(), file_name, &provider, app_handle.clone())
             .await
             {
                 Ok(_) => {
@@ -544,6 +583,7 @@ impl DocumentStore {
         
         pub async fn process_document_async(
             self: Arc<Self>, 
+            provider: &Provider,
             path: &Path,
             app_handle: tauri::AppHandle, // Add app_handle parameter
         ) -> Result<(), Box<dyn std::error::Error>> {
@@ -632,10 +672,12 @@ impl DocumentStore {
                 name: ingested.title,
                 created_at: chrono::Local::now().to_rfc3339(),
                 file_path: ingested.metadata.source_path,
-                embedding: vec![],
+                embedding_model_name: "dk".to_string(),
+                notes: "".to_string(),
+                //embedding: vec![],
             };
             let doc_name = document.name.clone();
-            println!("Document created: {:?}", document);
+            //println!("Document created: {:?}", document);
             log::debug!("Document created: {:?}", document);
             
             let doc_id_result = {
@@ -669,8 +711,13 @@ impl DocumentStore {
             let file_name_clone = file_name.clone();
             // let app_handle_clone = app_handle.clone();
             // let name = file_name.clone();
+            /****************************************/
+            /****************************************/
+            /* HERE IS WHERE EMBEDDINGS ARE CREATED */
+            /****************************************/
+            /****************************************/
             match store
-            .process_embeddings(doc_id, ingested.content, file_name, &store.embedding_generator, app_handle.clone())
+            .process_embeddings(doc_id, ingested.content, file_name, &provider, app_handle.clone())
             .await
             {
                 Ok(_) => {
@@ -767,14 +814,25 @@ impl DocumentStore {
             doc_id: i64, 
             content: String,
             file_name: String,
-            embedding_generator: &EmbeddingGenerator,
+            provider: &Provider,
+            //embedding_generator: &EmbeddingGenerator,
             app_handle: tauri::AppHandle,
         ) -> Result<(), Box<dyn std::error::Error>> {
             //println!("app_handle: {:?}", app_handle);
+            
+            
+            let conn = self.conn.lock().await;
+            let embedding_model = provider.get_preferred_embedding_model();
+            
+            // Update the embedding_model_name column in the documents table
+            conn.execute(
+                "UPDATE documents SET embedding_model_name = ?1 WHERE id = ?2",
+                params![embedding_model, doc_id],
+            )?;
             // Chunk the content
-            let chunks = self.embedding_generator.chunk_text(&content, 2048, 0); // adjust size/overlap as needed
+            let chunks = chunk_text(&content, Self::DEFAULT_CHUNK_SIZE, Self::DEFAULT_CHUNK_OVERLAP); // adjust size/overlap as needed
+            
             // Emit progress update
-            //println!("Processing {} chunks", chunks.len());
             app_handle.emit("progress-indicator-load", json!({
                 "progress_id": format!("embedding_doc_id_{}",doc_id),
                 "current_step": 0,
@@ -782,6 +840,7 @@ impl DocumentStore {
                 "current_file": file_name,
                 "meta": content.chars().take(50).collect::<String>(),
             }))?;
+            
             // Get embeddings for each chunk
             for (count, chunk) in chunks.iter().enumerate() {
                 let count = count + 1;
@@ -792,16 +851,40 @@ impl DocumentStore {
                     "current_file": file_name,
                     "meta": chunk,
                 }))?;
-                let embedding = embedding_generator.generate_embedding(app_handle.clone(), &chunk).await?;
+                
+                
+                
+                //let embedding = embedding_generator.generate_embedding(app_handle.clone(), &chunk).await?;
+                let embedding_request = EmbeddingRequest {
+                    model: embedding_model.to_string(),
+                    input: vec![chunk.clone()],
+                };
+                
+                let embedding_response = provider.create_embeddings(embedding_request).await?;
+                let embedding = embedding_response.into_iter().next().ok_or_else(|| {
+                    std::io::Error::new(std::io::ErrorKind::Other, "No embedding data received")
+                })?;
+                
+                // Deserialize the embedding JSON to a serde_json::Value
+                let embedding_value: serde_json::Value = serde_json::to_value(&embedding)?;
+                
+                // Extract the vector field
+                let vector_value = embedding_value.get("vector").ok_or_else(|| {
+                    std::io::Error::new(std::io::ErrorKind::Other, "No vector field in embedding data")
+                })?;
+                
+                // Serialize the vector field back to a string
+                let vector_string = serde_json::to_string(vector_value)?;
+                
+                
                 
                 // Convert embedding to JSON string
                 let embedding_json = serde_json::to_string(&embedding)?;
                 //println!("Embedding: {}", embedding_json);
                 // Store in database
-                let conn = self.conn.lock().await;
                 conn.execute(
-                    "INSERT INTO embeddings (doc_id, chunk, embedding) VALUES (?1, ?2, ?3)",
-                    params![doc_id, chunk, embedding_json],
+                    "INSERT INTO embeddings (doc_id, chunk, embedding, embedding_model_name) VALUES (?1, ?2, ?3, ?4)",
+                    params![doc_id, chunk, vector_string, embedding_model],
                 )?;
                 
             }
@@ -814,17 +897,26 @@ impl DocumentStore {
                 "meta": "Completed"
             }))?;
             println!("Embeddings processed");
+            app_handle.emit("simple-log-message", json!({
+                "message": format!("Embeddings processed for {} with model {}", file_name, embedding_model),
+                "timestamp": chrono::Local::now().to_rfc3339(),
+                "level": "info"
+            }))?;
+            
+            
+            
             Ok(())
         }
         
         // Private helper function for database operations
         fn add_document_internal(&self, conn: &Connection, document: Document) -> Result<i64, Box<dyn std::error::Error>> {
             match conn.execute(
-                "INSERT INTO documents (name, created_at, file_path) VALUES (?1, ?2, ?3)",
+                "INSERT INTO documents (name, created_at, file_path, embedding_model_name) VALUES (?1, ?2, ?3, ?4)",
                 params![
                 document.name,
                 document.created_at,
                 document.file_path,
+                document.embedding_model_name,
                 ],
             ) {
                 Ok(_) => {
@@ -935,6 +1027,43 @@ impl DocumentStore {
         } else {
             dot_product / (norm_a * norm_b)
         }
+    }
+    
+    /// Chunks text into segments with optional overlap
+    /// 
+    /// * `text` - The text to chunk
+    /// * `chunk_size` - Maximum size of each chunk in characters
+    /// * `overlap` - Number of characters to overlap between chunks
+    fn chunk_text(text: &str, chunk_size: usize, overlap: usize) -> Vec<String> {
+        let mut chunks = Vec::new();
+        let words: Vec<&str> = text.split_whitespace().collect();
+        let mut i = 0;
+        
+        while i < words.len() {
+            let mut chunk = String::new();
+            let mut j = i;
+            
+            // Build chunk up to chunk_size
+            while j < words.len() && (chunk.len() + words[j].len() + 1) <= chunk_size {
+                if !chunk.is_empty() {
+                    chunk.push(' ');
+                }
+                chunk.push_str(words[j]);
+                j += 1;
+            }
+            
+            chunks.push(chunk);
+            
+            // Move forward by chunk_size - overlap words for next iteration
+            let advance = if j > i {
+                ((j - i) as f32 * (1.0 - (overlap as f32 / chunk_size as f32))) as usize
+            } else {
+                1
+            };
+            i += advance.max(1);
+        }
+        
+        chunks
     }
     
     

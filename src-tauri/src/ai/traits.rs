@@ -47,6 +47,9 @@ pub trait ModelProvider {
     
     /// Get information about a specific model
     async fn get_model(&self, model_id: &str) -> Result<AIModel, AIProviderError>;
+
+    // Get the preferred model to use for inference
+    async fn get_preferred_inference_model(&self) -> Result<AIModel, AIProviderError>;
 }
 
 /// Core trait for chat completions

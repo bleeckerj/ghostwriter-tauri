@@ -845,8 +845,8 @@ function emanateNavigableNodeToEditor(content) {
     
     try {
       unlistenCanonListFn = await listen('canon-list', (event) => {
-        console.log('This is the event:', event);
-        console.log('Payload:', event.payload);
+        // console.log('This is the event:', event);
+        // console.log('Payload:', event.payload);
         
         try {
           const listing = JSON.parse(event.payload); // Parse the JSON string
@@ -854,11 +854,12 @@ function emanateNavigableNodeToEditor(content) {
           
           listing.documents.forEach((doc, index) => {
             console.log(`Document ${index}:`, doc);
-            // Access document properties:
-            // console.log(`  ID: ${doc.id}`);
-            // console.log(`  Name: ${doc.name}`);
-            // console.log(`  File Path: ${doc.file_path}`);
-            // console.log(`  Created At: ${doc.created_at}`);
+            console.log(`  ID: ${doc.id}`);
+            console.log(`  Name: ${doc.name}`);
+            console.log(`  File Path: ${doc.file_path}`);
+            console.log(`  Created At: ${doc.created_at}`);
+            console.log(`  Embedding Model Name: ${doc.embedding_model_name}`);
+            console.log(`  Notes: ${doc.notes}`);
             
             // You can now use the 'doc' object to create a rich log entry, for example:
             addCanonEntry({
@@ -866,6 +867,8 @@ function emanateNavigableNodeToEditor(content) {
               timestamp: doc.created_at,
               message: doc.name,
               data: doc.id, 
+              embedding_model_name: doc.embedding_model_name,
+              notes: doc.notes,
               paused: doc.paused,// Or any other data you want to include
               level: 'info',
             });
@@ -1509,6 +1512,8 @@ function emanateNavigableNodeToEditor(content) {
         timestamp: entry.timestamp,
         message: entry.message,
         data: entry.data,
+        embedding_model_name: entry.embedding_model_name,
+        notes: entry.notes,
         paused: entry.paused,
         level: entry.level,
       }
