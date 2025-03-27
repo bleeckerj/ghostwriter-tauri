@@ -29,7 +29,7 @@ pub struct Preferences {
     pub ai_provider: String,           // "openai" or "lmstudio" or "ollama"
     pub lm_studio_url: String,         // LM Studio server URL
     pub ollama_url: String,            // Ollama server URL
-    pub model_name: String,            // The model name to use
+    pub ai_model_name: String,            // The model name to use
     
     // #[serde(skip_serializing, skip_deserializing)]
     // pub api_key: Option<String>,
@@ -54,6 +54,8 @@ impl Preferences {
     
     pub const DEFAULT_PROSE_STYLE: &'static str = "A style that is consistent with the input text.";
     pub const GAME_TIMER_MS_DEFAULT: usize = 30000;
+    pub const OLLAMA_URL: &'static str = "http://localhost:11434";
+    pub const LM_STUDIO_URL: &'static str = "http://localhost:1234";
     /// Load preferences and ensure no empty fields
     pub fn load_with_defaults(app_state: &AppState, app_handle: AppHandle) -> Self {
         let mut prefs: Preferences = match confy::load("ghostwriter", "preferences") {
@@ -137,9 +139,9 @@ impl Preferences {
         self.similarity_count = Self::SIMILARITY_COUNT_DEFAULT;
         self.max_history = Self::MAX_HISTORY_DEFAULT;
         self.ai_provider = Self::AI_PROVIDER_DEFAULT.to_string();
-        self.lm_studio_url = "http://localhost:1234/v1".to_string();
+        self.lm_studio_url = "http://localhost:1234".to_string();
         self.ollama_url = "http://localhost:11434".to_string();
-        self.model_name = "gpt-4o-mini".to_string();
+        self.ai_model_name = "gpt-4o-mini".to_string();
         self.game_timer_ms = Self::GAME_TIMER_MS_DEFAULT;
     }
     
@@ -178,8 +180,8 @@ impl Preferences {
         if self.ai_provider.is_empty() {
             self.ai_provider = Self::AI_PROVIDER_DEFAULT.to_string();
         }
-        if self.model_name.is_empty() {
-            self.model_name = Self::MODEL_NAME_DEFAULT.to_string();
+        if self.ai_model_name.is_empty() {
+            self.ai_model_name = Self::MODEL_NAME_DEFAULT.to_string();
         }
         if self.game_timer_ms == 0 {
             self.game_timer_ms = Self::GAME_TIMER_MS_DEFAULT;

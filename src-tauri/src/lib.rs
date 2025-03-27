@@ -561,6 +561,9 @@ async fn load_openai_api_key_from_keyring(
         temperature: String,
         gametimerms: String,
         aiprovider: String,
+        aimodelname: String,
+        ollamaurl: String,
+        lmstudiourl: String,
     ) -> Result<(Preferences), String> {
         
         // println!("update_preferences called with: {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}",
@@ -579,6 +582,10 @@ async fn load_openai_api_key_from_keyring(
         preferences.temperature = temperature.parse::<f32>().unwrap_or(Preferences::TEMPERATURE_DEFAULT);
         preferences.game_timer_ms = 1000*(gametimerms.parse::<usize>().unwrap_or(Preferences::GAME_TIMER_MS_DEFAULT));
         preferences.ai_provider = aiprovider;
+        preferences.ai_model_name = aimodelname;
+        preferences.ollama_url = ollamaurl;
+        preferences.lm_studio_url = lmstudiourl;
+        
         let prefs_clone = preferences.clone();
         // Attempt to save preferences and handle any errors
         if let Err(e) = preferences.save() {
@@ -597,7 +604,7 @@ async fn load_openai_api_key_from_keyring(
     async fn reset_preferences(state: tauri::State<'_, AppState>) -> Result<(Preferences), String> {
         let mut preferences = state.preferences.lock().await;
         preferences.reset_to_defaults();
-        preferences.save().map_err(|e| e.to_string()); // ✅ Persist preferences
+        preferences.save().map_err(|e| e.to_string()); 
         Ok(preferences.clone())
     }
     

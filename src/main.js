@@ -18,7 +18,7 @@ import { open, save, confirm } from '@tauri-apps/plugin-dialog';
 import { getCurrentWebviewWindow, WebviewWindow } from '@tauri-apps/api/webviewWindow';
 //import { list } from 'postcss';
 import { Timer } from './timer.js';
-import { debounce } from 'lodash';
+import { debounce, set } from 'lodash';
 
 
 let w = getCurrentWebviewWindow();
@@ -66,6 +66,8 @@ let prefsGameTimeSecondsValue;
 
 let prefsAIProvider;
 let prefsAIModel;
+let prefsOllamaUrl;
+let prefsLMStudioUrl;
 
 let closePreferencesBtnEl;
 
@@ -385,7 +387,7 @@ function emanateNavigableNodeToEditor(content) {
       },
     ]).run();
   }
-
+  
   
   
   window.addEventListener("DOMContentLoaded", async () => {
@@ -404,19 +406,23 @@ function emanateNavigableNodeToEditor(content) {
         message: 'Preferences loaded<br/>'+resJson,
         level: 'info'
       });
-      prefsMainPromptTextArea.value = res.main_prompt;
-      prefsResponseLimitTextArea.value = res.response_limit;
-      prefsFinalPreambleTextArea.value = res.final_preamble;
-      prefsProseStyleTextArea.value = res.prose_style;
-      prefsMaxHistoryItems.value = res.max_history;
-      prefsGameTimeSeconds.value = res.gametimerms / 1000;
-      setSelectedAIProvider(res.ai_provider); // Set the selected AI provider
-      prefsMaxOutputTokens.value = res.max_output_tokens;
+      setPreferencesUI(res);
+      // prefsMainPromptTextArea.value = res.main_prompt;
+      // prefsResponseLimitTextArea.value = res.response_limit;
+      // prefsFinalPreambleTextArea.value = res.final_preamble;
+      // prefsProseStyleTextArea.value = res.prose_style;
+      // prefsMaxHistoryItems.value = res.max_history;
+      // prefsGameTimeSeconds.value = res.gametimerms / 1000;
+      // setSelectedAIProvider(res.ai_provider); // Set the selected AI provider
+      // prefsMaxOutputTokens.value = res.max_output_tokens;
+      // setSelectedAIModel(res.aimodelname); // Set the selected AI model
+      // prefsOllamaUrl.value = res.ollamaurl;
+      // prefsLMStudioUrl.value = res.lmstudiourl;
     });
     
     
     // Reload models when the refresh button is clicked
-    refreshModelsBtn.addEventListener('click', loadModels);
+    refreshModelsBtn.addEventListener('click', passSelectedModelToBackend);
     
     invoke("set_logger_app_data_path", {}).then((res) => {
       //console.log('Logger App Data Path:', res);
@@ -574,6 +580,9 @@ function emanateNavigableNodeToEditor(content) {
       prefsMaxHistoryItemsValue.textContent = prefsMaxHistoryItems.value;
     });
     
+    prefsOllamaUrl = document.querySelector("#prefs-ollama-url");
+    prefsLMStudioUrl = document.querySelector("#prefs-lmstudio-url");
+    prefsOllamaUrl = document.querySelector("#prefs-ollama-url");
     
     greetInputEl = document.querySelector("#greet-input");
     greetMsgEl = document.querySelector("#greet-msg");
@@ -609,14 +618,16 @@ function emanateNavigableNodeToEditor(content) {
           message: 'Preferences loaded<br/>'+resJson,
           level: 'info'
         });
-        prefsMainPromptTextArea.value = res.main_prompt;
-        prefsResponseLimitTextArea.value = res.response_limit;
-        prefsFinalPreambleTextArea.value = res.final_preamble;
-        prefsProseStyleTextArea.value = res.prose_style;
-        prefsMaxHistoryItems.value = res.max_history;
-        prefsGameTimeSeconds.value = res.gametimerms / 1000;
-        setSelectedAIProvider(res.ai_provider); // Set the selected AI provider
-        prefsMaxOutputTokens.value = res.max_output_tokens;
+        setPreferencesUI(res);
+        // prefsMainPromptTextArea.value = res.main_prompt;
+        // prefsResponseLimitTextArea.value = res.response_limit;
+        // prefsFinalPreambleTextArea.value = res.final_preamble;
+        // prefsProseStyleTextArea.value = res.prose_style;
+        // prefsMaxHistoryItems.value = res.max_history;
+        // prefsGameTimeSeconds.value = res.gametimerms / 1000;
+        // setSelectedAIProvider(res.ai_provider); // Set the selected AI provider
+        // prefsMaxOutputTokens.value = res.max_output_tokens;
+        // setSelectedAIModel(res.aimodelname); // Set the selected AI model
       });
       
       invoke("prefs_file_path").then((res) => { 
@@ -666,12 +677,7 @@ function emanateNavigableNodeToEditor(content) {
           });
         });
       }
-      // addSimpleLogEntry({
-      //   id: "",
-      //   timestamp: Date.now(),
-      //   message: 'shuffleSimilarsValue is '+shuffleSimilarsValue,
-      //   level: 'debug'
-      // });
+      
       invoke("update_preferences", {
         responselimit: prefsResponseLimitTextArea.value,
         mainprompt: prefsMainPromptTextArea.value,
@@ -685,6 +691,9 @@ function emanateNavigableNodeToEditor(content) {
         temperature: prefsTemperature.value,
         gametimerms: prefsGameTimeSeconds.value,
         aiprovider: getSelectedAIProvider(),
+        aimodelname: getSelectedAIModel(),
+        ollamaurl: prefsOllamaUrl.value,
+        lmstudiourl: prefsLMStudioUrl.value
       }).then((res) => {
         console.log('Preferences Saved:', res);
         greetMsgEl.textContent = 'Preferences saved';
@@ -1011,14 +1020,44 @@ function emanateNavigableNodeToEditor(content) {
         unlistenCanonListFn();
       }
     });
-
+    
+    async function passSelectedModelToBackend() {
+      try {
+        // Get the selected AI provider
+        const selectedProvider = document.querySelector('input[name="ai-provider"]:checked');
+        if (!selectedProvider) {
+          console.error('No AI provider selected');
+          return;
+        }
+        const providerName = selectedProvider.value;
+        
+        // Get the selected model from the dropdown
+        const modelsDropdown = document.getElementById('prefs-model-name');
+        const selectedModel = modelsDropdown.value;
+        if (!selectedModel) {
+          console.error('No model selected');
+          return;
+        }
+        
+        // Invoke the backend function with the selected provider and model
+        const response = await invoke('assign_selected_model', {
+          providerName: providerName,
+          modelName: selectedModel,
+        });
+        
+        console.log('Backend response:', response);
+      } catch (error) {
+        console.error('Error passing selected model to backend:', error);
+      }
+    }
+    
     async function loadModels() {
       try {
         
         // Determine the selected AI provider
         const selectedProvider = document.querySelector('input[name="ai-provider"]:checked').value;
         invoke("get_model_names", { providerName: selectedProvider }).then((models) => {
-        console.log('Models:', models);
+          console.log('Models:', models);
           // Clear the existing options
           modelsDropdown.innerHTML = '';
           
@@ -1042,7 +1081,7 @@ function emanateNavigableNodeToEditor(content) {
     
     // Initialize the resize handle
     initializeResizeHandle();
-  
+    
     const radioButtons = document.querySelectorAll('input[name="ai-provider"]');
     
     // Add event listeners to each radio button
@@ -1061,7 +1100,7 @@ function emanateNavigableNodeToEditor(content) {
         } else if (selectedValue === 'ollama') {
           loadModels().then(() => {
             // Show the URL container for the selected provider
-            document.getElementById('lmstudio-url-container').classList.remove('hidden');
+            document.getElementById('ollama-url-container').classList.remove('hidden');
           });
         } else if (selectedValue === 'openai') {
           // No specific action for OpenAI in this example
@@ -1072,7 +1111,7 @@ function emanateNavigableNodeToEditor(content) {
         }
       });
     });
-
+    
   });
   // not the worst idea
   // handleTextInput(view, from, to, text) {
@@ -1464,6 +1503,17 @@ function emanateNavigableNodeToEditor(content) {
     if (radioButton) {
       radioButton.checked = true;
     }
+    // Hide all URL containers initially
+    document.getElementById('lmstudio-url-container').classList.add('hidden');
+    document.getElementById('ollama-url-container').classList.add('hidden');
+    
+    // Show the corresponding URL container based on the provider
+    if (provider === 'lmstudio') {
+      document.getElementById('lmstudio-url-container').classList.remove('hidden');
+    } else if (provider === 'ollama') {
+      document.getElementById('ollama-url-container').classList.remove('hidden');
+    }
+    
   }
   
   // Function to get the selected AI provider
@@ -1476,6 +1526,19 @@ function emanateNavigableNodeToEditor(content) {
       level: 'debug'
     });
     return selectedProvider ? selectedProvider.value : null;
+  }
+  
+  function setSelectedAIModel(model) {
+    const modelsDropdown = document.getElementById('prefs-model-name');
+    const modelOption = modelsDropdown.querySelector(`option[value="${model}"]`);
+    if (modelOption) {
+      modelOption.selected = true;
+    }
+  }
+  
+  function getSelectedAIModel() {
+    const modelsDropdown = document.getElementById('prefs-model-name');
+    return modelsDropdown.value;
   }
   
   async function showCanonList() {
@@ -1604,7 +1667,10 @@ function emanateNavigableNodeToEditor(content) {
     prefsTemperatureValue.textContent = res.temperature;
     prefsGameTimeSeconds.value = res.game_timer_ms / 1000;
     prefsGameTimeSecondsValue.textContent = res.game_timer_ms / 1000;
-    setSelectedAIProvider(res.ai_provider); // Set the selected AI provider
+    setSelectedAIProvider(res.ai_provider);
+    setSelectedAIModel(res.ai_model_name);
+    prefsOllamaUrl.value = res.ollama_url;
+    prefsLMStudioUrl.value = res.lmstudio_url;
     invoke("load_openai_api_key_from_keyring", {}).then((res) => {
       openaiApiKeyEl.value = res;
     });
@@ -1715,8 +1781,8 @@ function emanateNavigableNodeToEditor(content) {
     
     handle.addEventListener('mousedown', startResize);
   }
-
-
+  
+  
   document.addEventListener('DOMContentLoaded', () => {
     // Select all radio buttons with the name "ai-provider"
     

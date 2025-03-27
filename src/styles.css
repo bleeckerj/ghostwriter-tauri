@@ -550,15 +550,18 @@ select#prefs-model-name option {
 
 .canon-entry-message {
   grid-column: 1 / span 2; /* Span both columns */
-  @apply leading-normal;
-  @apply text-balance;
+  @apply leading-[1em];
+  @apply text-pretty;
   @apply pt-1;
   @apply self-start;
   @apply border-[0.5px] border-gray-400 p-4;
-  @apply font-[InputMonoCondensed];
-  @apply font-light;
-  @apply text-[0.9em];
+  @apply font-[ChicagoKare];
+  @apply font-normal;
+  @apply text-[1.1em];
   @apply break-all;
+  @apply bg-gray-900;
+  @apply text-green-500;
+  @apply rounded-md;
 }
 
 .canon-entry-embedding-model-name {
