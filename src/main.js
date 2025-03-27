@@ -385,16 +385,16 @@ function emanateNavigableNodeToEditor(content) {
       },
     ]).run();
   }
+
+  
   
   window.addEventListener("DOMContentLoaded", async () => {
     
     const refreshModelsBtn = document.getElementById('refresh-models-btn');
     const modelsContainer = document.getElementById('models-container');
     const modelsDropdown = document.getElementById('prefs-model-name');
-    const loadingSpinner = document.getElementById('loading-spinner');
-    loadingSpinner.classList.remove('hidden');
     timer.hide();
-
+    
     invoke("load_preferences").then((res) => {
       //console.log('Preferences Loaded:', res);
       const resJson = JSON.stringify(res, null, 2);
@@ -1014,30 +1014,27 @@ function emanateNavigableNodeToEditor(content) {
 
     async function loadModels() {
       try {
-        // Show the loading spinner
-        loadingSpinner.classList.toggle('hidden');
-
+        
         // Determine the selected AI provider
         const selectedProvider = document.querySelector('input[name="ai-provider"]:checked').value;
         invoke("get_model_names", { providerName: selectedProvider }).then((models) => {
-          console.log('Models:', models);
-        // Clear the existing options
-        modelsDropdown.innerHTML = '';
-        
-        // Populate the dropdown with the fetched models
-        models.forEach(model => {
-          const option = document.createElement('option');
-          option.value = model;
-          option.textContent = model;
-          modelsDropdown.appendChild(option);
+        console.log('Models:', models);
+          // Clear the existing options
+          modelsDropdown.innerHTML = '';
+          
+          // Populate the dropdown with the fetched models
+          models.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model;
+            option.textContent = model;
+            modelsDropdown.appendChild(option);
+          });
         });
-      });
       } catch (error) {
         console.error('Error loading models:', error);
         modelsDropdown.innerHTML = '<option value="">Failed to load models</option>';
       } finally {
         // Hide the loading spinner
-        loadingSpinner.classList.add('hidden');
       }
     }
     // Load models when the page loads
@@ -1045,6 +1042,37 @@ function emanateNavigableNodeToEditor(content) {
     
     // Initialize the resize handle
     initializeResizeHandle();
+  
+    const radioButtons = document.querySelectorAll('input[name="ai-provider"]');
+    
+    // Add event listeners to each radio button
+    radioButtons.forEach(radio => {
+      radio.addEventListener('change', (event) => {
+        const selectedValue = event.target.value;
+        
+        // Hide all URL containers initially
+        document.getElementById('lmstudio-url-container').classList.add('hidden');
+        document.getElementById('ollama-url-container').classList.add('hidden');
+        
+        // Perform actions based on the selected radio button
+        if (selectedValue === 'lmstudio') {
+          loadModels();
+          document.getElementById('lmstudio-url-container').classList.remove('hidden');
+        } else if (selectedValue === 'ollama') {
+          loadModels().then(() => {
+            // Show the URL container for the selected provider
+            document.getElementById('lmstudio-url-container').classList.remove('hidden');
+          });
+        } else if (selectedValue === 'openai') {
+          // No specific action for OpenAI in this example
+          loadModels().then(() => {
+            // Show the URL container for the selected provider
+            console.log('OpenAI selected');
+          });
+        }
+      });
+    });
+
   });
   // not the worst idea
   // handleTextInput(view, from, to, text) {
@@ -1687,6 +1715,9 @@ function emanateNavigableNodeToEditor(content) {
     
     handle.addEventListener('mousedown', startResize);
   }
-  
-  // Add this to your existing JavaScript
-  
+
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Select all radio buttons with the name "ai-provider"
+    
+  });

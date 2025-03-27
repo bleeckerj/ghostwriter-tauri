@@ -211,6 +211,13 @@ button {
   min-height: 1rem;
 }
 
+select#prefs-model-name option {
+  font-family: 'InputMonoCondensed', monospace; /* Change font */
+  font-size: 12px; /* Change font size */
+  color: #333; /* Change text color */
+  background-color: #f9f9f9; /* Change background color */
+}
+
 .diagnostics-btn-area {
   flex-shrink: 0;
   display: flex;

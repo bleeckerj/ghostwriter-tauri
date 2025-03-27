@@ -270,7 +270,24 @@ async fn get_model_names(
             return Err(format!("Unknown provider name {}", provider_name));
         }
     };
-    let models = provider.list_models().await.map_err(|e| e.to_string())?;
+    let new_logger = NewLogger::new(app_handle.clone());
+    let models = match provider.list_models().await {
+        Ok(models) => models,
+        Err(e) => {
+            let error_message = format!("Failed to list models: {}", e);
+            log::error!("{}", error_message); // Log the error
+            new_logger.simple_log_message(error_message.clone(), "models".to_string(), "error".to_string());
+            Vec::new() // Return an empty list of models
+        }
+    };
+    models.iter().for_each(|model| {
+            log::debug!("Model: {:?}", model);
+            new_logger.simple_log_message(
+                format!("Model: {:?}", model),
+                "models".to_string(),
+                "debug".to_string()
+            );
+    });
     let model_names: Vec<String> = models.iter().map(|model| model.name.clone()).collect();
     Ok(model_names)
 }

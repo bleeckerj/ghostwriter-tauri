@@ -50,6 +50,11 @@ impl<'de> Deserialize<'de> for Provider {
         D: serde::Deserializer<'de>,
     {
         // Custom deserialization logic here
+        // match self {
+        //     Provider::OpenAI(provider) => provider.deserialize(deserializer),
+        //     Provider::LMStudio(provider) => provider.deserialize(deserializer),
+        //     Provider::Ollama(provider) => provider.deserialize(deserializer),
+        // }
         // This is a placeholder and should be implemented according to your requirements
         unimplemented!()
     }
