@@ -1,5 +1,6 @@
 use async_openai::{Client, config::OpenAIConfig};
-use serde::{Serialize, Deserialize, ser::SerializeStruct, de::{self, Deserializer, Visitor}};
+use serde::{Serialize, Deserialize, ser::SerializeStruct, de::{self, Deserializer, Visitor, MapAccess}};
+use std::fmt;
 
 use crate::ai::{
     traits::{ModelProvider, ChatCompletionProvider, EmbeddingProvider, PreferredEmbeddingModel, AIProviderError},
@@ -18,12 +19,13 @@ lazy_static! {
 }
 
 /// OpenAI implementation of the AI provider traits
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct OpenAIProvider {
     #[serde(skip)]
     client: Client<OpenAIConfig>,
     #[serde(skip)]
     last_request: Option<CreateChatCompletionRequest>,
+    preferred_model_name: Option<String>,
 }
 
 impl OpenAIProvider {
@@ -33,6 +35,7 @@ impl OpenAIProvider {
         OpenAIProvider {
             client: Client::with_config(config),
             last_request: None,
+            preferred_model_name: None,
         }
     }
     
@@ -48,7 +51,7 @@ impl OpenAIProvider {
 
     /// Create with an existing OpenAI client
     pub fn with_client(client: Client<OpenAIConfig>) -> Self {
-        OpenAIProvider { client, last_request: None }
+        OpenAIProvider { client, last_request: None, preferred_model_name: None }
     }
     
     /// Get a reference to the underlying OpenAI client
@@ -67,6 +70,55 @@ impl OpenAIProvider {
     fn get_last_request() -> Option<CreateChatCompletionRequest> {
         let last_request = LAST_REQUEST.lock().unwrap();
         last_request.clone()
+    }
+}
+
+impl<'de> Deserialize<'de> for OpenAIProvider {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // Define a visitor to handle deserialization
+        struct OpenAIProviderVisitor;
+
+        impl<'de> Visitor<'de> for OpenAIProviderVisitor {
+            type Value = OpenAIProvider;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct OpenAIProvider")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut preferred_model_name = None;
+
+                while let Some(key) = map.next_key::<String>()? {
+                    match key.as_str() {
+                        "preferred_model_name" => {
+                            preferred_model_name = map.next_value()?;
+                        }
+                        _ => {
+                            let _: de::IgnoredAny = map.next_value()?; // Ignore unknown fields
+                        }
+                    }
+                }
+
+                Ok(OpenAIProvider {
+                    client: Client::with_config(OpenAIConfig::new()), // Default client
+                    last_request: None, // Default value
+                    preferred_model_name,
+                })
+            }
+        }
+
+        // Use the visitor to deserialize the struct
+        deserializer.deserialize_struct(
+            "OpenAIProvider",
+            &["preferred_model_name"],
+            OpenAIProviderVisitor,
+        )
     }
 }
 
@@ -118,6 +170,16 @@ impl ModelProvider for OpenAIProvider {
         }
 
         Err(AIProviderError::ModelNotFound("gpt-4o-mini".to_string()))
+    }
+
+    fn set_preferred_inference_model(&mut self, model_name: String) -> Result<(), AIProviderError> {
+        // Set the preferred model
+        self.preferred_model_name = Some(model_name.clone());
+        Ok(())
+    }
+
+    fn get_provider_name(&self) -> String {
+        "openai".to_string()
     }
 }
 

@@ -44,21 +44,21 @@ impl Serialize for Provider {
     }
 }
 
-impl<'de> Deserialize<'de> for Provider {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        // Custom deserialization logic here
-        // match self {
-        //     Provider::OpenAI(provider) => provider.deserialize(deserializer),
-        //     Provider::LMStudio(provider) => provider.deserialize(deserializer),
-        //     Provider::Ollama(provider) => provider.deserialize(deserializer),
-        // }
-        // This is a placeholder and should be implemented according to your requirements
-        unimplemented!()
-    }
-}
+// impl<'de> Deserialize<'de> for Provider {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: serde::Deserializer<'de>,
+//     {
+//         // Custom deserialization logic here
+//         match self {
+//             Provider::OpenAI(provider) => provider.deserialize(deserializer),
+//             Provider::LMStudio(provider) => provider.deserialize(deserializer),
+//             Provider::Ollama(provider) => provider.deserialize(deserializer),
+//         }
+//         // This is a placeholder and should be implemented according to your requirements
+//         //unimplemented!()
+//     }
+// }
 
 /// Create a provider based on the specified type and configuration
 pub fn create_provider(provider_type: ProviderType, config: &str) -> Provider {
@@ -143,6 +143,22 @@ impl ModelProvider for Provider {
             Provider::OpenAI(provider) => provider.get_preferred_inference_model().await,
             Provider::LMStudio(provider) => provider.get_preferred_inference_model().await,
             Provider::Ollama(provider) => provider.get_preferred_inference_model().await,
+        }
+    }
+
+    fn set_preferred_inference_model(&mut self, model_name: String) -> Result<(), AIProviderError> {
+        match self {
+            Provider::OpenAI(provider) => provider.set_preferred_inference_model(model_name),
+            Provider::LMStudio(provider) => provider.set_preferred_inference_model(model_name),
+            Provider::Ollama(provider) => provider.set_preferred_inference_model(model_name),
+        }
+    }
+
+    fn get_provider_name(&self) -> String {
+        match self {
+            Provider::OpenAI(provider) => provider.get_provider_name(),
+            Provider::LMStudio(provider) => provider.get_provider_name(),
+            Provider::Ollama(provider) => provider.get_provider_name(),
         }
     }
 }

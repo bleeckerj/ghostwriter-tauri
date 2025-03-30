@@ -37,6 +37,7 @@ pub struct LMStudioProvider {
     client: HttpClient,
     base_url: String,
     api_key: Option<String>,
+    preferred_model_name: Option<String>,
 }
 
 impl LMStudioProvider {
@@ -60,6 +61,7 @@ impl LMStudioProvider {
             client,
             base_url: base_url.trim_end_matches('/').to_string(),
             api_key,
+            preferred_model_name: None,
         }
     }
 
@@ -164,6 +166,15 @@ impl ModelProvider for LMStudioProvider {
     async fn get_preferred_inference_model(&self) -> Result<AIModel, AIProviderError> {
         // LM Studio doesn't have a preferred model
         unimplemented!("LM Studio does not yet support a preferred model");
+    }
+
+    fn set_preferred_inference_model(&mut self, model_name: String) -> Result<(), AIProviderError> {
+        self.preferred_model_name = Some(model_name);
+        Ok(())
+    }
+
+    fn get_provider_name(&self) -> String {
+        "lm_studio".to_string()
     }
 }
 
@@ -391,4 +402,5 @@ impl PreferredEmbeddingModel for LMStudioProvider {
         // LM Studio doesn't have a preferred embedding model
         unimplemented!("LM Studio does not yet support a preferred embedding model");
     }
+    
 }

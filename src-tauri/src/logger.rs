@@ -33,7 +33,8 @@ pub struct CompletionLogEntry {
     pub canon_name: String,
     pub canon_path: String,
     pub preferences: Preferences,
-    pub llm_provider: Provider,    
+    pub llm_provider_name: String,  
+    pub llm_model_name: String,  
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

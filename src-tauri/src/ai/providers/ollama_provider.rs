@@ -23,6 +23,7 @@ use tokio::io::{stdout, AsyncWriteExt};
 pub struct OllamaProvider {
     #[serde(skip)]
     client: Ollama,
+    preferred_model_name: Option<String>,
 }
 
 impl OllamaProvider {
@@ -53,6 +54,7 @@ impl OllamaProvider {
         
         OllamaProvider {
             client: ollama,
+            preferred_model_name: None,
         }
     }
 }
@@ -118,6 +120,17 @@ impl ModelProvider for OllamaProvider {
 
         Err(AIProviderError::ModelNotFound("llama3.2:latest".to_string()))
     }
+
+    fn set_preferred_inference_model(&mut self, model_name: String) -> Result<(), AIProviderError> {
+            // Set the preferred model
+            self.preferred_model_name = Some(model_name);
+            Ok(())
+    }
+
+    fn get_provider_name(&self) -> String {
+        "Ollama".to_string()
+    }
+        
 }
 
 #[async_trait]
@@ -220,8 +233,8 @@ impl EmbeddingProvider for OllamaProvider {
             model_name: Some(embedding_model_name.clone()),
         })
         .collect();
-        log::debug!("Embeddings: {:?}", embeddings);
-        println!("Embeddings: {:?}", embeddings);
+        //log::debug!("Embeddings: {:?}", embeddings);
+        //println!("Embeddings: {:?}", embeddings);
         Ok(embeddings)
     }
 }

@@ -281,12 +281,12 @@ async fn get_model_names(
         }
     };
     models.iter().for_each(|model| {
-            log::debug!("Model: {:?}", model);
-            new_logger.simple_log_message(
-                format!("Model: {:?}", model),
-                "models".to_string(),
-                "debug".to_string()
-            );
+        log::debug!("Model: {:?}", model);
+        new_logger.simple_log_message(
+            format!("Model: {:?}", model),
+            "models".to_string(),
+            "debug".to_string()
+        );
     });
     let model_names: Vec<String> = models.iter().map(|model| model.name.clone()).collect();
     Ok(model_names)
@@ -705,8 +705,8 @@ async fn load_openai_api_key_from_keyring(
         let key_clone = openai_api_key.clone().unwrap();
         let logger_clone = state.logger.clone();
         
-        let provider = get_preferred_llm_provider(&app_handle, &preferences).map_err(|e| format!("Cound't get preferred LLM provider: {}", e))?;
-        
+        let mut provider = get_preferred_llm_provider(&app_handle, &preferences).map_err(|e| format!("Couldn't get preferred LLM provider: {}", e))?;
+        provider.set_preferred_inference_model(preferences.ai_model_name.clone());
         let lm_models = provider.list_models().await;
         lm_models.iter().for_each(|models| {
             models.iter().for_each(|model| {
@@ -886,7 +886,7 @@ async fn load_openai_api_key_from_keyring(
         name: None,
     },
     ];
-
+    
     let provider_chat_model = provider.get_preferred_inference_model().await.map_err(|e| e.to_string())?;
     
     // Use the model name from preferences
@@ -921,7 +921,9 @@ async fn load_openai_api_key_from_keyring(
             llm_request_time_ms: llm_action_duration.as_millis(),
             total_ms: total_duration.as_millis(),
         };
-        
+        let model = provider.get_preferred_inference_model().await.map_err(|e| e.to_string())?;
+        let model_name = model.name;
+        let provider_name = provider.get_provider_name();
         let entry = Completion {
             completion: CompletionLogEntry {
                 timestamp: Utc::now(),
@@ -933,7 +935,8 @@ async fn load_openai_api_key_from_keyring(
                 canon_name: database_name,
                 canon_path: database_path,
                 preferences: preferences.clone(),
-                llm_provider: provider,
+                llm_provider_name: "Test".to_string(),
+                llm_model_name: model_name,
                 
             }
         };
@@ -1250,17 +1253,28 @@ async fn search_similarity(
         }
         
         #[tauri::command]
-    async fn list_canon_docs(
-            //logger: tauri::State<'_, NewLogger>,
+        async fn list_canon_docs(
             app_state: tauri::State<'_, AppState>,
             app_handle: tauri::AppHandle,
         ) -> Result<String, String> {
             let doc_store = Arc::clone(&app_state.doc_store);
-
+            
             let store = doc_store.lock().await;
             match store.fetch_documents().await {
-                Ok(listing) => {
-                    //log::debug!("listing is {:?}", listing);
+                Ok(mut listing) => {
+                    // Sort the listing by model_name first, then by document name
+                    listing.documents.sort_by(|a, b| {
+                        // First compare by embedding_model_name
+                        let model_cmp = a.embedding_model_name.cmp(&b.embedding_model_name);
+                        
+                        // If model names are equal, then compare by document name/title
+                        if model_cmp == std::cmp::Ordering::Equal {
+                            a.name.cmp(&b.name)
+                        } else {
+                            model_cmp
+                        }
+                    });
+                    
                     let json_string = serde_json::to_string(&listing).map_err(|e| e.to_string())?;
                     app_handle.emit("canon-list", json_string).map_err(|e| e.to_string())?;
                     Ok("Canon list emitted".to_string())

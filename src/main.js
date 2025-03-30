@@ -1625,6 +1625,33 @@ function emanateNavigableNodeToEditor(content) {
       diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, 0);
   }
+
+  function updateAllCanonEntries(updateFunction) {
+    // Create a transaction to batch all changes
+    const tr = diagnostics.state.tr;
+    let hasUpdates = false;
+    
+    // Traverse the document to find all canonEntry nodes
+    diagnostics.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'canonEntry') {
+        // Call the update function with the node and position
+        const updatedAttrs = updateFunction(node);
+        if (updatedAttrs) {
+          // Apply the changes to the node at this position
+          tr.setNodeMarkup(pos, null, {
+            ...node.attrs,
+            ...updatedAttrs
+          });
+          hasUpdates = true;
+        }
+      }
+    });
+    
+    // Only dispatch if there were actual changes
+    if (hasUpdates) {
+      diagnostics.view.dispatch(tr);
+    }
+  }
   
   function addCanonEntry(entry) {
     let pos = diagnostics.state.selection.from + 2
@@ -1787,3 +1814,6 @@ function emanateNavigableNodeToEditor(content) {
     // Select all radio buttons with the name "ai-provider"
     
   });
+
+  // Make updateAllCanonEntries available globally
+  window.updateAllCanonEntries = updateAllCanonEntries;

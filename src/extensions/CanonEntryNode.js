@@ -122,6 +122,25 @@ const CanonEntryNode = Node.create({
           const modelButton = document.createElement('button')
           modelButton.classList.add('ml-4', 'enabled', 'model', 'bg-blue-500', 'text-white', 'px-2', 'py-1', 'rounded')
           modelButton.textContent = 'ONLY'
+          
+          // Add click handler for the ONLY button
+          modelButton.onclick = (e) => {
+            e.preventDefault()
+            
+            // Get the model name of this node
+            const thisModelName = node.attrs.embedding_model_name
+            
+            // Use the updateAllCanonEntries function to pause all other models
+            window.updateAllCanonEntries(otherNode => {
+              if (otherNode.attrs.embedding_model_name === thisModelName) {
+                // ALWAYS unpause nodes with the same model name
+                return { paused: false }
+              } else {
+                // ALWAYS pause nodes with different model names
+                return { paused: true }
+              }
+            })
+          }
 
           div.appendChild(fixedTextSpan)
           div.appendChild(dynamicTextSpan)
@@ -246,18 +265,43 @@ const CanonEntryNode = Node.create({
 
       // Update method to handle external state changes
       const update = (updatedNode) => {
-        if (updatedNode.attrs.paused !== node.attrs.paused) {
+        // First, store the previous state for comparison
+        const wasPaused = node.attrs.paused;
+        
+        // IMPORTANT: Update our local reference to the node
+        // This is crucial - without this, the node reference stays outdated
+        Object.assign(node, updatedNode);
+        
+        // Now check if paused state changed (using the saved previous state)
+        if (updatedNode.attrs.paused !== wasPaused) {
+          console.log(`Node ${updatedNode.attrs.id} paused changed: ${wasPaused} → ${updatedNode.attrs.paused}`);
+          
+          // Update the button's dataset to match the new state
+          pauseRagBtn.dataset.isPaused = updatedNode.attrs.paused ? 'true' : 'false';
+          
+          // Update the button appearance based on the new state
           if (updatedNode.attrs.paused) {
-            pauseRagBtn.classList.remove('button-out')
-            pauseRagBtn.classList.add('button-in')
-            pauseRagBtn.textContent = 'RESUME'
+            // Switching to paused state
+            pauseRagBtn.classList.remove('button-out');
+            pauseRagBtn.classList.add('button-in');
+            pauseRagBtn.textContent = 'RESUME';
           } else {
-            pauseRagBtn.classList.remove('button-in')
-            pauseRagBtn.classList.add('button-out')
-            pauseRagBtn.textContent = 'PAUSE'
+            // Switching to active state
+            pauseRagBtn.classList.remove('button-in');
+            pauseRagBtn.classList.add('button-out');
+            pauseRagBtn.textContent = 'PAUSE';
           }
+          
+          // Notify the backend about this change
+          window.__TAURI__.core.invoke('toggle_rag_pause', { 
+            id: updatedNode.attrs.id, 
+            paused: updatedNode.attrs.paused 
+          }).catch(err => {
+            console.error('Failed to update pause state in backend:', err);
+          });
         }
-        return true
+        
+        return true;
       }
       
       return {

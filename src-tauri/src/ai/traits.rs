@@ -50,6 +50,10 @@ pub trait ModelProvider {
 
     // Get the preferred model to use for inference
     async fn get_preferred_inference_model(&self) -> Result<AIModel, AIProviderError>;
+
+    fn get_provider_name(&self) -> String;
+
+    fn set_preferred_inference_model(&mut self, model_name: String) -> Result<(), AIProviderError>;
 }
 
 /// Core trait for chat completions
