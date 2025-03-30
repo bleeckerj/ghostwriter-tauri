@@ -10,10 +10,12 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "macOSPrivateApi": true,
     "withGlobalTauri": true,
     "windows": [
       {
         "title": "Ghostwriter",
+        "label": "main",
         "width": 820,
         "height": 600,
         "minWidth": 820,

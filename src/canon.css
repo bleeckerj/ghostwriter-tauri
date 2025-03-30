@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+/* ... */
+
+
+body {
+  overflow-y: hidden;
+  overflow-x: hidden; /* Hide horizontal overflow */
+  overscroll-behavior: none; /* Completely prevents bouncing */
+  background-color: transparent;
+  
+}
+
+
