@@ -31,6 +31,7 @@ use keychain_handler::KeychainHandler;
 
 use crate::ai::AIProviderError;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
+use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
 use embeddings::EmbeddingGenerator;
 use document_store::DocumentStore;
 
@@ -236,6 +237,22 @@ impl fmt::Display for CompletionTiming {
             self.total_ms
         )
     }
+}
+
+#[tauri::command]
+fn turn_on_vibrancy(app_handle: AppHandle, window_label: String) -> Result<(), String> {
+    let window = app_handle.get_webview_window(&window_label)
+        .ok_or_else(|| format!("Window with label '{}' not found", window_label))?;
+    
+    #[cfg(target_os = "macos")]
+    apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(10.0))
+        .map_err(|e| format!("Failed to apply vibrancy: {}", e))?;
+    
+    #[cfg(target_os = "windows")]
+    apply_blur(&window, Some((18, 18, 18, 125)))
+        .map_err(|e| format!("Failed to apply blur: {}", e))?;
+    
+    Ok(())
 }
 
 #[tauri::command]
@@ -701,8 +718,8 @@ async fn load_openai_api_key_from_keyring(
         let similarity_threshold = preferences.similarity_threshold;
         let mut new_logger = NewLogger::new(app_handle.clone());
         
-        let openai_api_key = get_api_key(&app_handle).map_err(|e| e.to_string())?;
-        let key_clone = openai_api_key.clone().unwrap();
+        //let openai_api_key = get_api_key(&app_handle).map_err(|e| e.to_string())?;
+        //let key_clone = openai_api_key.clone().unwrap();
         let logger_clone = state.logger.clone();
         
         let mut provider = get_preferred_llm_provider(&app_handle, &preferences).map_err(|e| format!("Couldn't get preferred LLM provider: {}", e))?;
@@ -1584,13 +1601,6 @@ async fn search_similarity(
                     }
                 }
                 
-                // Now these log messages will work
-                // log::debug!("This is a debug message");
-                // log::info!("This is an info message");
-                // log::warn!("This is a warning message");
-                // log::error!("This is an error message");
-                // log::trace!("This is a trace message");
-                
                 let api_key = match KeychainHandler::retrieve_api_key() {
                     
                     Ok(Some(key)) => {
@@ -1700,6 +1710,7 @@ async fn search_similarity(
             save_text_content,
             save_json_content,
             ingest_from_url,
+            turn_on_vibrancy,
             get_model_names,
             toggle_rag_pause,
             shot_clock_complete,

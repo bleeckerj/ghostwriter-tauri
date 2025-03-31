@@ -11,4 +11,30 @@ body {
   
 }
 
+.canon {
+  flex: 1 1 auto;
+  min-height: 0;
+  z-index: 1;
+  overscroll-behavior: none; /* Completely prevents bouncing */
+  scroll-behavior: smooth; /* Optional: makes programmatic scrolling smooth */
+}
+
+.canon-scroll-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  border-radius: 0.25rem;
+  overflow-y: hidden;
+  @apply bg-transparent;
+  overscroll-behavior: none; /* Completely prevents bouncing */
+
+  :focus {
+    outline: none;
+  }
+  transition: flex-basis 0.2s ease;
+  min-height: 1rem;
+}
+
 

@@ -593,7 +593,7 @@ function emanateNavigableNodeToEditor(content) {
     incantBtnEl = document.querySelector("#incant-btn");
     incantBtnEl.addEventListener("click", completionFromContext);
     listCanonBtnEl = document.querySelector("#list-canon-btn");
-    ///listCanonBtnEl.addEventListener("click", showCanonList);
+    //listCanonBtnEl.addEventListener("click", showCanonList);
     listCanonBtnEl.addEventListener("click", openCanonListWindow);
     similaritySearchBtnEl = document.querySelector("#similarity-search-btn");
     similaritySearchBtnEl.addEventListener("click", searchSimilarity);
@@ -755,8 +755,22 @@ function emanateNavigableNodeToEditor(content) {
         setPreferencesUI(res);
         panel.classList.toggle('open');
         panelToggleBtn.classList.toggle('open');
+      })
+      .catch((error) => {
+        console.error('Failed to load preferences:', error);
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date.now(),
+          message: 'Failed to load preferences: ' + error,
+          level: 'error'
+        });
+        // Optionally show a user-friendly error message
+        greetMsgEl.textContent = 'Error loading preferences';
+        
+        // You might still want to open the panel but with default values
+        panel.classList.toggle('open');
+        panelToggleBtn.classList.toggle('open');
       });
-      
     });
     
     openLogBtnEl = document.querySelector("#open-log-btn");
@@ -866,13 +880,13 @@ function emanateNavigableNodeToEditor(content) {
           console.log('Parsed listing:', listing);
           
           listing.documents.forEach((doc, index) => {
-            console.log(`Document ${index}:`, doc);
-            console.log(`  ID: ${doc.id}`);
-            console.log(`  Name: ${doc.name}`);
-            console.log(`  File Path: ${doc.file_path}`);
-            console.log(`  Created At: ${doc.created_at}`);
-            console.log(`  Embedding Model Name: ${doc.embedding_model_name}`);
-            console.log(`  Notes: ${doc.notes}`);
+            // console.log(`Document ${index}:`, doc);
+            // console.log(`  ID: ${doc.id}`);
+            // console.log(`  Name: ${doc.name}`);
+            // console.log(`  File Path: ${doc.file_path}`);
+            // console.log(`  Created At: ${doc.created_at}`);
+            // console.log(`  Embedding Model Name: ${doc.embedding_model_name}`);
+            // console.log(`  Notes: ${doc.notes}`);
             
             // You can now use the 'doc' object to create a rich log entry, for example:
             addCanonEntry({
@@ -975,10 +989,10 @@ function emanateNavigableNodeToEditor(content) {
       console.error('Failed to setup event listener:', error);
     }
     
-    invoke("load_preferences").then((res) => {
-      console.log('Preferences Loaded:', res);
-      setPreferencesUI(res);
-    });
+    // invoke("load_preferences").then((res) => {
+    //   console.log('Preferences Loaded:', res);
+    //   setPreferencesUI(res);
+    // });
     
     invoke("simple_log_message", { message: 'Ghostwriter Is Up.', id: "tracker", level: "info" }).then((res) => {
       console.log('simple_log_emissions', res);
@@ -1542,6 +1556,24 @@ function emanateNavigableNodeToEditor(content) {
     const modelsDropdown = document.getElementById('prefs-model-name');
     return modelsDropdown.value;
   }
+
+  async function showCanonList() {
+    try {
+      await invoke("list_canon_docs", { limit: 99 });
+      //let pluginKey = new PluginKey('inlineActionItem');
+      //console.log('Plugin Key:', pluginKey);
+      // const tr = view.state.tr.setMeta(pluginKey, { disabled: true });
+      // view.dispatch(tr);
+    } catch (error) {
+      console.error('Failed to list canon docs:', error);
+      addSimpleLogEntry({
+        id: Date.now(),
+        timestamp: Date.now(),
+        message: 'Failed to list canon docs from backend: '+error,
+        level: 'error'
+      });
+    }
+  }
   
   async function openCanonListWindow() {
     console.log('Opening canon list window');
@@ -1567,6 +1599,10 @@ function emanateNavigableNodeToEditor(content) {
       webview.once('tauri://created', async function() {
         console.log('Canon list window created');
         
+
+      // Apply vibrancy using the plugin
+      //invoke('turn_on_vibrancy', { windowLabel: webview.label });
+
         try {
           // Get main window position and size
           console.log('Main window label:', mainWindow.label);
@@ -1574,7 +1610,7 @@ function emanateNavigableNodeToEditor(content) {
           const size = await mainWindow.outerSize();
           const wtf = await mainWindow.innerSize();
           // Get main window bounds using screen-relative coordinates
-          const screenX = pos.x + 10; // Browser API for screen position
+          const screenX = pos.x + 4; // Browser API for screen position
           const screenY = pos.y;
           const windowWidth = size.width;
           const windowHeight = size.height;

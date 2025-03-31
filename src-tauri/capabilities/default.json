@@ -6,7 +6,8 @@
     "main"
   ],
   "webviews": [
-    "view-log-window-label"
+    "view-log-window-label",
+    "canon-list-window"
   ],
   "remote": {
     "urls": ["http://*:*", "https://*"]
