@@ -14,7 +14,10 @@ use ollama_rs::{
         embeddings::request::GenerateEmbeddingsRequest,
     },
     Ollama,
+    generation::completion::request::GenerationRequest,
+    generation::options::GenerationOptions,
 };
+
 
 use tokio::io::{stdout, AsyncWriteExt};
 
@@ -142,6 +145,26 @@ impl ChatCompletionProvider for OllamaProvider {
         // Combine messages into a simple prompt as in the example
         let messages = convert_messages(&request.messages);
         
+        let ollama = Ollama::default();
+        let model = "llama3.2:latest".to_string();
+        let prompt = "<system>You are just a text completion engine. Do not precede your response with '...'</system>When the core reciprocating GPU-based mechanical-electrical engine connected to the network, we found that the farm operations were ".to_string();
+    
+        let options = GenerationOptions::default()
+        .temperature(0.2)
+        .repeat_penalty(1.5)
+        .top_k(25)
+        .top_p(0.25);
+    
+        let res = ollama
+            .generate(GenerationRequest::new(model, prompt).options(options))
+            .await;
+
+        // let res = ollama
+        //     .generate(GenerationRequest::new(model, prompt).options(options))
+        //     .await;
+    
+
+
         // Create and send the request
         let chat_request = ChatMessageRequest::new(request.model.clone(), messages);
         let response = self.client.send_chat_messages(chat_request).await
