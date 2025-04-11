@@ -1608,80 +1608,83 @@ function emanateNavigableNodeToEditor(content) {
   }
   
   async function openCanonListWindow() {
-    console.log('Opening canon list window');
-    const mainWindow = getCurrentWebviewWindow();
+    invoke('toggle_canon_control_panel').then((res) => {
+      console.log('Canon Control Panel Response:', res);
+    });
+    // console.log('Opening canon list window');
+    // const mainWindow = getCurrentWebviewWindow();
     
-    try {
-      const existingWindow = await WebviewWindow.getByLabel('canon-list-window');
-      if (existingWindow) {
-        // Close the existing window
-        existingWindow.close().then(() => {
-          console.log('Existing window closed');
+    // try {
+    //   const existingWindow = await WebviewWindow.getByLabel('canon-list-window');
+    //   if (existingWindow) {
+    //     // Close the existing window
+    //     existingWindow.close().then(() => {
+    //       console.log('Existing window closed');
           
-          return;
-        }).catch((error) => {
-          console.error('Failed to close existing window:', error);
-        });
-        return;
-      }
+    //       return;
+    //     }).catch((error) => {
+    //       console.error('Failed to close existing window:', error);
+    //     });
+    //     return;
+    //   }
       
       
-      // Create the window first with a fixed size, centered
-      const webview = new WebviewWindow('canon-list-window', {
-        url: '/canon-view.html', // Create this file in your public folder
-        title: 'Ghostwriter Canon List',
-        label: "canon-list-window",
-        width: 400,
-        height: 800,
-        center: false, // Start centered
-        resizable: true,
-        decorations: false,
-        transparent: true,
-        shadow: false,
-        //parent: mainWindow.label,
-      });
+    //   // Create the window first with a fixed size, centered
+    //   const webview = new WebviewWindow('canon-list-window', {
+    //     url: '/canon-view.html', // Create this file in your public folder
+    //     title: 'Ghostwriter Canon List',
+    //     label: "canon-list-window",
+    //     width: 400,
+    //     height: 800,
+    //     center: false, // Start centered
+    //     resizable: true,
+    //     decorations: false,
+    //     transparent: true,
+    //     shadow: false,
+    //     //parent: mainWindow.label,
+    //   });
       
-      // Position it AFTER creation
-      webview.once('tauri://created', async function() {
-        console.log('Canon list window created');
+    //   // Position it AFTER creation
+    //   webview.once('tauri://created', async function() {
+    //     console.log('Canon list window created');
         
         
-        // Apply vibrancy using the plugin
-        //invoke('turn_on_vibrancy', { windowLabel: webview.label });
+    //     // Apply vibrancy using the plugin
+    //     //invoke('turn_on_vibrancy', { windowLabel: webview.label });
         
-        try {
-          // Get main window position and size
-          console.log('Main window label:', mainWindow.label);
-          const pos = await mainWindow.outerPosition();
-          const size = await mainWindow.outerSize();
-          const wtf = await mainWindow.innerSize();
-          // Get main window bounds using screen-relative coordinates
-          const screenX = pos.x + 4; // Browser API for screen position
-          const screenY = pos.y;
-          const windowWidth = size.width;
-          const windowHeight = size.height;
-          console.log('Window position via browser:', screenX, screenY, windowWidth);
+    //     try {
+    //       // Get main window position and size
+    //       console.log('Main window label:', mainWindow.label);
+    //       const pos = await mainWindow.outerPosition();
+    //       const size = await mainWindow.outerSize();
+    //       const wtf = await mainWindow.innerSize();
+    //       // Get main window bounds using screen-relative coordinates
+    //       const screenX = pos.x + 4; // Browser API for screen position
+    //       const screenY = pos.y;
+    //       const windowWidth = size.width;
+    //       const windowHeight = size.height;
+    //       console.log('Window position via browser:', screenX, screenY, windowWidth);
           
-          // Calculate position to the right of main window
-          const newX = screenX + windowWidth;
-          const newY = screenY; // Center vertically
-          console.log(screen)
-          // Position the new window using these coordinates
-          let position = new PhysicalPosition(newX, newY);
-          console.log('Positioning window to:', position);
-          await webview.setPosition(position);
-          console.log('Set position to:', newX, newY);
-        } catch (posErr) {
-          console.error('Failed to position window:', posErr);
-        }
-      });
+    //       // Calculate position to the right of main window
+    //       const newX = screenX + windowWidth;
+    //       const newY = screenY; // Center vertically
+    //       console.log(screen)
+    //       // Position the new window using these coordinates
+    //       let position = new PhysicalPosition(newX, newY);
+    //       console.log('Positioning window to:', position);
+    //       await webview.setPosition(position);
+    //       console.log('Set position to:', newX, newY);
+    //     } catch (posErr) {
+    //       console.error('Failed to position window:', posErr);
+    //     }
+    //   });
       
-      webview.once('tauri://error', function(e) {
-        console.error('Error creating window:', e);
-      });
-    } catch (error) {
-      console.error('Exception creating window:', error);
-    }
+    //   webview.once('tauri://error', function(e) {
+    //     console.error('Error creating window:', e);
+    //   });
+    // } catch (error) {
+    //   console.error('Exception creating window:', error);
+    // }
   }
   
   function addSimpleLogEntry(entry) {

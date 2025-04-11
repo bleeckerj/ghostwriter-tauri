@@ -561,7 +561,70 @@ async fn load_openai_api_key_from_keyring(
         *state.preferences.lock().await = preferences.clone();
         Ok((preferences))
     }
-    
+
+    /**
+     * Canon list view control panel thing
+     */
+    #[tauri::command]
+    async fn open_canon_control_panel(app_handle: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<(), String> {
+        let preferences = state.preferences.lock().await;
+        let provider = get_preferred_llm_provider(&app_handle, &preferences).map_err(|e| format!("Couldn't get preferred LLM provider: {}", e))?;
+        let store = state.doc_store.lock().await;
+
+        let _ = tauri::WebviewWindowBuilder::new(
+            &app_handle,
+            "canon-control-panel", // window label
+            tauri::WebviewUrl::App("canon-view.html".into()), // path in /dist
+          )
+          .title("Control Panel")
+          .resizable(true)
+          .inner_size(600.0, 400.0)
+          .always_on_top(false)
+          .decorations(false)
+          .transparent(true)
+          .focused(true)
+          .skip_taskbar(false)
+          .build();
+
+
+        Ok(())
+    }
+
+    #[tauri::command]
+    async fn close_canon_control_panel(app_handle: tauri::AppHandle) -> Result<(), String> {
+        let window = app_handle.get_webview_window("canon-control-panel");
+        if let Some(window) = window {
+            window.close().map_err(|e| format!("Failed to close window: {}", e))?;
+        }
+        Ok(())
+    }
+
+#[tauri::command]
+async fn toggle_canon_control_panel(app_handle: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window("control-panel") {
+        // If the window exists, close it
+        window.close().map_err(|e| format!("Failed to close control panel: {}", e))?;
+    } else {
+        // If the window does not exist, open it
+        let _ = tauri::WebviewWindowBuilder::new(
+            &app_handle,
+            "canon-control-panel", // window label
+            tauri::WebviewUrl::App("canon-view.html".into()), // path in /dist
+        )
+        .title("Control Panel")
+        .resizable(true)
+        .inner_size(600.0, 400.0)
+        .always_on_top(false)
+        .decorations(false)
+        .transparent(true)
+        .focused(true)
+        .skip_taskbar(false)
+        .min_inner_size(400.0, 300.0)
+        .build();
+    }
+    Ok(())
+}
+
     #[tauri::command]
     async fn update_preferences(
         app_handle: tauri::AppHandle,
@@ -1720,6 +1783,9 @@ async fn search_similarity(
             get_model_names,
             toggle_rag_pause,
             shot_clock_complete,
+            open_canon_control_panel,
+            close_canon_control_panel,
+            toggle_canon_control_panel,
             ])
             .run(tauri::generate_context!())
             .expect("error while running tauri application");
