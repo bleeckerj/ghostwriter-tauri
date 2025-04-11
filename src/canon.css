@@ -19,14 +19,24 @@ body {
   scroll-behavior: smooth; /* Optional: makes programmatic scrolling smooth */
 }
 
+.scrollable-area {
+  overflow-y: auto; /* Enables vertical scrolling */
+  overflow-x: hidden; /* Prevents horizontal scrolling */
+  max-height: 400px; /* Set a maximum height for the area */
+  overscroll-behavior: none; /* Prevents bouncing */
+
+}
+
 .canon-scroll-area {
   position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  max-height: 400px;
   border-radius: 0.25rem;
-  overflow-y: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   @apply bg-transparent;
   overscroll-behavior: none; /* Completely prevents bouncing */
 
