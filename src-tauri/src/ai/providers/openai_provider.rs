@@ -159,17 +159,36 @@ impl ModelProvider for OpenAIProvider {
         })
     }
 
-    async fn get_preferred_inference_model(&self) -> Result<AIModel, AIProviderError> {
-        // For now, just return the first model
+    async fn get_preferred_inference_model(&self, preference_model: &str) -> Result<AIModel, AIProviderError> {
         let all_models = self.list_models().await?;
 
-        for model in all_models {
-            if model.name == "gpt-4o-mini" {
-                return Ok(model);
+        // Try to find the preferred model
+        for model in &all_models {
+            if model.name == preference_model {
+                log::info!("Using preference model: {}", model.name);
+                return Ok(model.clone());
             }
         }
-
-        Err(AIProviderError::ModelNotFound("gpt-4o-mini".to_string()))
+        
+        // Look for a sensible default model (gpt-4o-mini, gpt-3.5-turbo, etc.)
+        let default_candidates = ["gpt-4o-mini", "gpt-3.5-turbo", "gpt-4"];
+        
+        for candidate in default_candidates {
+            if let Some(model) = all_models.iter().find(|m| m.name.contains(candidate)) {
+                log::warn!("Using default model: {}", model.name);
+                return Ok(model.clone());
+            }
+        }
+        
+        // If all else fails, create a hardcoded default model
+        Ok(AIModel {
+            id: "gpt-4o-mini".to_string(),
+            name: "gpt-4o-mini".to_string(),
+            provider: "openai".to_string(),
+            capabilities: vec![ModelCapability::ChatCompletion],
+            context_length: Some(4096),
+            additional_info: serde_json::json!({}),
+        })
     }
 
     fn set_preferred_inference_model(&mut self, model_name: String) -> Result<(), AIProviderError> {

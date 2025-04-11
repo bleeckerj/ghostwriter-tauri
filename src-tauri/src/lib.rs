@@ -722,6 +722,8 @@ async fn load_openai_api_key_from_keyring(
         //let key_clone = openai_api_key.clone().unwrap();
         let logger_clone = state.logger.clone();
         
+
+
         let mut provider = get_preferred_llm_provider(&app_handle, &preferences).map_err(|e| format!("Couldn't get preferred LLM provider: {}", e))?;
         provider.set_preferred_inference_model(preferences.ai_model_name.clone());
         let lm_models = provider.list_models().await;
@@ -736,6 +738,8 @@ async fn load_openai_api_key_from_keyring(
             });
         });
         
+        let ai_model_name = preferences.ai_model_name.clone();
+
         let start_total = Instant::now();
         
         // Time embedding generation
@@ -870,26 +874,28 @@ async fn load_openai_api_key_from_keyring(
         
         let final_preamble: String = preferences.final_preamble.clone();
         
-        let system_content = format!("{main_prompt}
-        \
-        Response Limit: {response_limit}\
-        \
-        Previous exchanges: {conversation_context}\
-        \
-        Similar documents: {context}\
-        \
-        {final_preamble} \
-        \
-        Answer this in prose using this specific writing style: {prose_style}"
-    );
-    
-    /**
-    * I used to have this in the System Prompt..I think that's a mistake
-    *
-    * 
-    *          Input Text: {input}
-    */
-    
+        let mut system_content = main_prompt.clone();
+        system_content.push_str("<response_limit>\nStrictly follow these explicit instructions in terms of quantity and length of your response:\n");
+        system_content.push_str(&response_limit);
+        system_content.push_str("</response_limit>");
+        //system_content.push_str("<previous_exchanges>");
+        //system_content.push_str(&conversation_context);
+        //system_content.push_str("</previous_exchanges>");
+        system_content.push_str("<context>");
+        system_content.push_str(&context);
+        system_content.push_str("</context>");
+        system_content.push_str("<final_preamble>");
+        system_content.push_str(&final_preamble);
+        system_content.push_str("</final_preamble>");
+        system_content.push_str("<prose_style>");
+        system_content.push_str(&prose_style);
+        system_content.push_str("</prose_style>");
+        // system_content.push_str("<user_input>");
+        // system_content.push_str(&input);
+        // system_content.push_str("</user_input>");
+
+
+        
     // Create message array in the generic format
     let messages = vec![
     ChatMessage {
@@ -904,12 +910,12 @@ async fn load_openai_api_key_from_keyring(
     },
     ];
     
-    let provider_chat_model = provider.get_preferred_inference_model().await.map_err(|e| e.to_string())?;
+    let provider_chat_model = provider.get_preferred_inference_model(&ai_model_name).await.map_err(|e| e.to_string())?;
     
     // Use the model name from preferences
     let chat_request = ChatCompletionRequest {
         messages,
-        model: provider_chat_model.name,
+        model: provider_chat_model.name.clone(),
         temperature: Some(temperature),
         max_tokens: Some(max_tokens as u32),
         stream: false,
@@ -938,8 +944,8 @@ async fn load_openai_api_key_from_keyring(
             llm_request_time_ms: llm_action_duration.as_millis(),
             total_ms: total_duration.as_millis(),
         };
-        let model = provider.get_preferred_inference_model().await.map_err(|e| e.to_string())?;
-        let model_name = model.name;
+        //let model = provider.get_preferred_inference_model().await.map_err(|e| e.to_string())?;
+        let model_name = &provider_chat_model.name;
         let provider_name = provider.get_provider_name();
         let entry = Completion {
             completion: CompletionLogEntry {
@@ -953,7 +959,7 @@ async fn load_openai_api_key_from_keyring(
                 canon_path: database_path,
                 preferences: preferences.clone(),
                 llm_provider_name: "Test".to_string(),
-                llm_model_name: model_name,
+                llm_model_name: model_name.to_string(),
                 
             }
         };

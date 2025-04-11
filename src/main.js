@@ -1535,13 +1535,45 @@ function emanateNavigableNodeToEditor(content) {
   // Function to get the selected AI provider
   function getSelectedAIProvider() {
     const selectedProvider = document.querySelector('input[name="ai-provider"]:checked');
-    addSimpleLogEntry({
-      id: "",
-      timestamp: Date.now(),
-      message: 'Selected AI Provider: '+selectedProvider.value,
-      level: 'debug'
-    });
-    return selectedProvider ? selectedProvider.value : null;
+    
+    if (selectedProvider) {
+      // A radio button is already selected, use its value
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'Selected AI Provider: ' + selectedProvider.value,
+        level: 'debug'
+      });
+      return selectedProvider.value;
+    } else {
+      // No radio button is selected, select the first one as default
+      const allProviders = document.querySelectorAll('input[name="ai-provider"]');
+      
+      if (allProviders.length > 0) {
+        // Check the first radio button
+        allProviders[0].checked = true;
+        
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date.now(),
+          message: 'No AI provider was selected, defaulting to: ' + allProviders[0].value,
+          level: 'warn'
+        });
+        
+        return allProviders[0].value;
+      } else {
+        // No radio buttons found at all (extreme edge case)
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date.now(),
+          message: 'No AI provider radio buttons found in the DOM',
+          level: 'error'
+        });
+        
+        // Return a sensible default
+        return 'ollama'; // Or whichever default makes sense for your app
+      }
+    }
   }
   
   function setSelectedAIModel(model) {
