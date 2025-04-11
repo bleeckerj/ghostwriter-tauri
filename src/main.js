@@ -990,7 +990,7 @@ function emanateNavigableNodeToEditor(content) {
     }
     
     // invoke("load_preferences").then((res) => {
-    //   console.log('Preferences Loaded:', res);
+      //   console.log('Preferences Loaded:', res);
     //   setPreferencesUI(res);
     // });
     
@@ -1588,7 +1588,7 @@ function emanateNavigableNodeToEditor(content) {
     const modelsDropdown = document.getElementById('prefs-model-name');
     return modelsDropdown.value;
   }
-
+  
   async function showCanonList() {
     try {
       await invoke("list_canon_docs", { limit: 99 });
@@ -1610,31 +1610,45 @@ function emanateNavigableNodeToEditor(content) {
   async function openCanonListWindow() {
     console.log('Opening canon list window');
     const mainWindow = getCurrentWebviewWindow();
-
+    
     try {
+      const existingWindow = await WebviewWindow.getByLabel('canon-list-window');
+      if (existingWindow) {
+        // Close the existing window
+        existingWindow.close().then(() => {
+          console.log('Existing window closed');
+          
+          return;
+        }).catch((error) => {
+          console.error('Failed to close existing window:', error);
+        });
+        return;
+      }
+      
+      
       // Create the window first with a fixed size, centered
       const webview = new WebviewWindow('canon-list-window', {
         url: '/canon-view.html', // Create this file in your public folder
         title: 'Ghostwriter Canon List',
         label: "canon-list-window",
         width: 400,
-        height: 600,
-        center: true, // Start centered
+        height: 800,
+        center: false, // Start centered
         resizable: true,
         decorations: false,
         transparent: true,
         shadow: false,
-        parent: mainWindow.label,
+        //parent: mainWindow.label,
       });
       
       // Position it AFTER creation
       webview.once('tauri://created', async function() {
         console.log('Canon list window created');
         
-
-      // Apply vibrancy using the plugin
-      //invoke('turn_on_vibrancy', { windowLabel: webview.label });
-
+        
+        // Apply vibrancy using the plugin
+        //invoke('turn_on_vibrancy', { windowLabel: webview.label });
+        
         try {
           // Get main window position and size
           console.log('Main window label:', mainWindow.label);
@@ -1736,7 +1750,7 @@ function emanateNavigableNodeToEditor(content) {
       diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, 0);
   }
-
+  
   function updateAllCanonEntries(updateFunction) {
     // Create a transaction to batch all changes
     const tr = diagnostics.state.tr;
@@ -1925,6 +1939,6 @@ function emanateNavigableNodeToEditor(content) {
     // Select all radio buttons with the name "ai-provider"
     
   });
-
+  
   // Make updateAllCanonEntries available globally
   window.updateAllCanonEntries = updateAllCanonEntries;
