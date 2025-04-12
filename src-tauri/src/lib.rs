@@ -1623,6 +1623,7 @@ async fn search_similarity(
             doc_id: String,
             name: String,
             notes: String,
+            authors: Vec<String>,
         ) -> Result<String, String> {
             let doc_store = Arc::clone(&app_state.doc_store);
             let store = doc_store.lock().await;
@@ -1635,9 +1636,14 @@ async fn search_similarity(
                 }
             };
             
-            match store.update_document_details(doc_id_int, name.clone(), notes.clone()).await {
+            // Convert authors to JSON string
+            let authors_json = serde_json::to_string(&authors)
+                .map_err(|e| format!("Failed to serialize authors: {}", e))?;
+            
+            match store.update_document_details(doc_id_int, name.clone(), notes.clone(), authors_json).await {
                 Ok(_) => {
-                    log_message!(app_handle, LOG_INFO, "Updated document details for ID {}: name={}", doc_id, name);
+                    log_message!(app_handle, LOG_INFO, "Updated document details for ID {}: name={}, authors={}", 
+                                 doc_id, name, authors.join(", "));
                     Ok("Document updated successfully".to_string())
                 },
                 Err(e) => {

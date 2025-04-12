@@ -1020,17 +1020,18 @@ impl DocumentStore {
             doc_id: i64,
             name: String,
             notes: String,
+            authors_json: String,
         ) -> Result<(), Box<dyn std::error::Error>> {
             let conn = self.conn.lock().await;
             
             // Update the document details in the database
             conn.execute(
-                "UPDATE documents SET name = ?1, notes = ?2 WHERE id = ?3",
-                params![name, notes, doc_id],
+                "UPDATE documents SET name = ?1, notes = ?2, authors = ?3 WHERE id = ?4",
+                params![name, notes, authors_json, doc_id],
             )?;
             
-            log::info!("Updated document details for document {}: name = {}, notes length = {}", 
-                doc_id, name, notes.len());
+            log::info!("Updated document details for document {}: name = {}, notes length = {}, authors = {}", 
+                doc_id, name, notes.len(), authors_json);
             
             Ok(())
         }

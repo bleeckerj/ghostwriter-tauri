@@ -25,27 +25,31 @@ function populateDocumentList(documents) {
       'p-2', 
       'border-b', 
       'border-gray-200', 
-      'hover:bg-gray-100', 
+      'hover:bg-gray-900', 
       'flex', 
-      'justify-between', 
-      'items-center',
-      'cursor-pointer'
+      'flex-col',
+      'cursor-pointer',
+      'h-[3.5em]',
     );
     itemDiv.dataset.docId = doc.id;
     
     // If the document is paused, add visual indication
     if (doc.paused) {
-      itemDiv.classList.add('bg-gray-100');
+      itemDiv.classList.add('bg-amber-500', '!text-black');
     }
     
     // When clicking on the item, show the document details
     itemDiv.onclick = () => selectDocument(doc.id);
 
+    // Upper row with document name and buttons
+    const mainRow = document.createElement('div');
+    mainRow.classList.add('flex', 'justify-between', 'items-center', 'w-full');
+
     // Document name
     const nameSpan = document.createElement('span');
-    nameSpan.classList.add('flex-grow', 'truncate', 'pr-2');
+    nameSpan.classList.add('flex-grow', 'truncate', 'pr-2', 'text-[0.7em]', 'font-[InputMonoCondensed]');
     nameSpan.textContent = doc.name;
-    itemDiv.appendChild(nameSpan);
+    mainRow.appendChild(nameSpan);
     
     // Button container
     const btnContainer = document.createElement('div');
@@ -53,15 +57,22 @@ function populateDocumentList(documents) {
     
     // Pause/Resume button
     const pauseBtn = document.createElement('button');
-    pauseBtn.textContent = doc.paused ? '▶️' : '⏸️';
-    pauseBtn.title = doc.paused ? 'Resume' : 'Pause';
+    pauseBtn.textContent = doc.paused ? 'RESUME' : 'PAUSE';
+   // pauseBtn.title = doc.paused ? 'Resume' : 'Pause';
     pauseBtn.classList.add(
-      'text-xs', 
-      'px-2', 
-      'py-1', 
-      'rounded',
-      doc.paused ? 'bg-green-100' : 'bg-yellow-100'
+    'canon-entry-button', 
+        'text-xs',
+    //   'px-2', 
+    //   'py-1', 
+    //   'rounded', 
+      'enabled',
     );
+    if (doc.paused) {
+      pauseBtn.classList.add('pause', 'button-in', '!bg-amber-300', '!text-gray-600');
+    } else {
+        pauseBtn.classList.remove('pause', 'button-in');
+        pauseBtn.classList.add('button-out');
+    }   
     pauseBtn.onclick = (e) => {
       e.stopPropagation(); // Prevent triggering the item click
       togglePauseDocument(doc.id, !doc.paused);
@@ -69,14 +80,10 @@ function populateDocumentList(documents) {
     
     // Delete button
     const delBtn = document.createElement('button');
-    delBtn.textContent = '🗑️';
-    delBtn.title = 'Delete';
+    delBtn.textContent = 'DELETE';
+    //delBtn.title = 'Delete';
     delBtn.classList.add(
-      'text-xs', 
-      'px-2', 
-      'py-1', 
-      'rounded',
-      'bg-red-100'
+        'canon-entry-button', 'enabled', 'del', 'text-xs'
     );
     delBtn.onclick = (e) => {
       e.stopPropagation(); // Prevent triggering the item click
@@ -87,7 +94,26 @@ function populateDocumentList(documents) {
     
     btnContainer.appendChild(pauseBtn);
     btnContainer.appendChild(delBtn);
-    itemDiv.appendChild(btnContainer);
+    mainRow.appendChild(btnContainer);
+    
+    itemDiv.appendChild(mainRow);
+    
+    // Add authors row if authors exist
+    if (doc.authors && doc.authors.length > 0) {
+      const authorsRow = document.createElement('div');
+      authorsRow.classList.add('text-xs', 'text-gray-400', 'mt-1', 'font-[InputMonoCondensed]');
+      
+      const authorsLabel = document.createElement('span');
+      authorsLabel.classList.add('font-medium', 'mr-1');
+      authorsLabel.textContent = 'Authors:';
+      authorsRow.appendChild(authorsLabel);
+      
+      const authorsText = document.createElement('span');
+      authorsText.textContent = doc.authors.join(', ');
+      authorsRow.appendChild(authorsText);
+      
+      itemDiv.appendChild(authorsRow);
+    }
     
     container.appendChild(itemDiv);
   });
@@ -119,13 +145,13 @@ function selectDocument(docId) {
   
   // Clear previous selection visual indicator
   document.querySelectorAll('.document-item').forEach(item => {
-    item.classList.remove('bg-blue-100', 'border-l-4', 'border-blue-500');
+    item.classList.remove('bg-gray-600', 'border-l-[5px]', 'border-l-green-500');
   });
   
   // Add visual indicator to selected item
   const selectedItem = document.querySelector(`.document-item[data-doc-id="${docId}"]`);
   if (selectedItem) {
-    selectedItem.classList.add('bg-blue-100', 'border-l-4', 'border-blue-500');
+    selectedItem.classList.add('bg-gray-600', 'border-l-[5px]', 'border-l-green-500');
   }
   
   // Find the document
@@ -137,9 +163,84 @@ function selectDocument(docId) {
   document.getElementById('document-details').classList.remove('hidden');
   
   document.getElementById('detail-name').value = doc.name;
+  document.getElementById('detail-file-path').textContent = doc.file_path;
   document.getElementById('detail-date').textContent = formatDate(doc.created_at);
   document.getElementById('detail-model').textContent = doc.embedding_model_name;
   document.getElementById('detail-notes').value = doc.notes || '';
+  
+  // Clear and populate authors
+  const authorsList = document.getElementById('authors-list');
+  authorsList.innerHTML = '';
+  const authors = doc.authors || [];
+  
+  renderAuthorTags(authors);
+}
+
+/**
+ * Render author tags in the UI
+ */
+function renderAuthorTags(authors) {
+  const authorsList = document.getElementById('authors-list');
+  authorsList.innerHTML = '';
+  
+  authors.forEach(author => {
+    if (!author.trim()) return; // Skip empty authors
+    
+    const tag = document.createElement('div');
+    tag.classList.add('bg-blue-100', 'text-blue-800', 'px-2', 'py-1', 'rounded', 'flex', 'items-center');
+    
+    const authorText = document.createElement('span');
+    authorText.textContent = author;
+    tag.appendChild(authorText);
+    
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = '×';
+    removeBtn.classList.add('ml-1', 'text-blue-500', 'hover:text-blue-700', 'font-bold');
+    removeBtn.onclick = () => {
+      // Get the currently selected document
+      const doc = allDocuments.find(d => d.id === selectedDocumentId);
+      if (doc) {
+        // Remove this author from the array
+        doc.authors = (doc.authors || []).filter(a => a !== author);
+        // Re-render the tags
+        renderAuthorTags(doc.authors);
+      }
+    };
+    tag.appendChild(removeBtn);
+    
+    authorsList.appendChild(tag);
+  });
+}
+
+/**
+ * Add a new author to the selected document
+ */
+function addAuthor(authorInput) {
+  // Get input value and clear the input
+  const value = authorInput.value.trim();
+  authorInput.value = '';
+  
+  if (!value) return; // Don't add empty authors
+  
+  // Get the currently selected document
+  const doc = allDocuments.find(d => d.id === selectedDocumentId);
+  if (!doc) return;
+  
+  // Initialize authors array if it doesn't exist
+  if (!doc.authors) doc.authors = [];
+  
+  // Split by commas and add each author
+  const newAuthors = value.split(',').map(a => a.trim()).filter(a => a);
+  
+  // Add authors that don't already exist
+  newAuthors.forEach(author => {
+    if (!doc.authors.includes(author)) {
+      doc.authors.push(author);
+    }
+  });
+  
+  // Re-render the tags
+  renderAuthorTags(doc.authors);
 }
 
 /**
@@ -219,12 +320,17 @@ async function saveDocumentChanges() {
     return;
   }
   
+  // Get the currently selected document
+  const doc = allDocuments.find(d => d.id === selectedDocumentId);
+  if (!doc) return;
+  
   try {
-    // Call backend to update document (note: you'll need to implement this Rust function)
+    // Call backend to update document
     await invoke('update_document_details', { 
       docId: selectedDocumentId.toString(),
       name: newName,
-      notes: newNotes
+      notes: newNotes,
+      authors: doc.authors || []
     });
     
     // Update local data
@@ -232,6 +338,7 @@ async function saveDocumentChanges() {
     if (docIndex >= 0) {
       allDocuments[docIndex].name = newName;
       allDocuments[docIndex].notes = newNotes;
+      // authors are already updated in the object
       
       // Refresh the document list to reflect changes
       populateDocumentList(allDocuments);
@@ -262,6 +369,22 @@ window.addEventListener('DOMContentLoaded', async () => {
   
   // Set up event listener for save button
   document.getElementById('detail-save-btn').addEventListener('click', saveDocumentChanges);
+  
+  // Set up event listener for add author button
+  const authorInput = document.getElementById('detail-authors');
+  const addAuthorBtn = document.getElementById('add-author-btn');
+  
+  addAuthorBtn.addEventListener('click', () => {
+    addAuthor(authorInput);
+  });
+  
+  // Also add author when pressing Enter in the input
+  authorInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      addAuthor(authorInput);
+      e.preventDefault();
+    }
+  });
   
   // Listen for document list updates from the backend
   await listen('canon-list-to-control-panel', (event) => {

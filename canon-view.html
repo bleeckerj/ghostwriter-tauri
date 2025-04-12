@@ -3,7 +3,7 @@
 <head>
   <title>Canon</title>
   <meta charset="UTF-8" />
-  <link rel="stylesheet" href="/src/canon.css" />
+  <link rel="stylesheet" href="/src/canon-manager.css" />
   <link rel="stylesheet" href="/fonts.css" />
   <script type="module" src="/src/canon-view.js" defer></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -16,7 +16,7 @@
   <div class="drag-region bg-blue-500 font-[ChicagoKare] rounded-t-[10px] text-white p-2 flex justify-between items-center" data-tauri-drag-region>
     <span>Canon Manager</span>
     <div class="flex gap-2">
-      <select id="sort-select" class="text-xs bg-gray-700 border-none rounded px-2">
+      <select id="sort-select" class="text-xs bg-gray-700 border-none px-2">
         <option value="name">Sort by Name</option>
         <option value="date">Sort by Date</option>
         <option value="model">Sort by Model</option>
@@ -26,9 +26,9 @@
 
   <div class="flex h-[calc(100vh-32px)] pt-2 rounded-b-[10px]"> <!-- Adjusted height calculation -->
     <!-- Left Column: Document List -->
-    <div id="document-list" class="w-1/3 overflow-y-auto border-r border-gray-300 bg-gray-50">
+    <div id="document-list" class="w-1/3 overflow-y-auto border-r text-white border-gray-300 bg-gray-800">
       <!-- Document items will be dynamically populated here -->
-      <div class="p-2 bg-gray-200 font-bold">Documents</div>
+      <!-- <div class="p-2 border-b-1 font-bold">Documents</div> -->
       <div id="document-items-container"></div>
     </div>
 
@@ -43,6 +43,16 @@
           <input id="detail-name" type="text" class="w-full p-2 border border-gray-300 rounded" placeholder="Document Name">
         </div>
         <div class="flex-shrink-0 mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">File Path</label>
+          <div class="flex flex-col gap-2">
+            <div id="detail-file-path" class="text-gray-600 text-sm font-['InputMono'] bg-gray-50 p-2 rounded border border-gray-200 break-all"></div>
+            <div class="flex gap-2">
+              <button id="open-file-btn" class="canon-entry-button enabled">Open File</button>
+              <button id="open-folder-btn" class="canon-entry-button enabled">Open Folder</button>
+            </div>
+          </div>
+        </div>
+        <div class="flex-shrink-0 mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-1">Created</label>
           <div id="detail-date" class="text-gray-600 text-sm"></div>
         </div>
@@ -50,12 +60,20 @@
           <label class="block text-sm font-medium text-gray-700 mb-1">Embedding Model</label>
           <div id="detail-model" class="text-gray-600"></div>
         </div>
-        <div class="flex-grow min-h-0 mb-4">
+        <div class="flex-shrink-0 mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Authors</label>
+          <div class="flex items-center">
+            <input id="detail-authors" type="text" class="flex-grow p-2 border border-gray-300 rounded" placeholder="Enter comma-separated authors">
+            <button id="add-author-btn" class="ml-2 px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Add</button>
+          </div>
+          <div id="authors-list" class="mt-2 flex flex-wrap gap-2"></div>
+        </div>
+        <div class="flex-grow min-h-0 mb-8">
           <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
           <textarea id="detail-notes" class="w-full h-full min-h-[100px] p-2 border border-gray-300 rounded" placeholder="Notes"></textarea>
         </div>
         <div class="flex-shrink-0 justify-end gap-2 mt-2">
-          <button id="detail-save-btn" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Save Changes</button>
+          <button id="detail-save-btn" class="canon-entry-button enabled">Save Changes</button>
         </div>
       </div>
     </div>
