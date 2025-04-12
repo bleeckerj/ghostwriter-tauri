@@ -562,46 +562,15 @@ async fn load_openai_api_key_from_keyring(
         Ok((preferences))
     }
 
-    /**
+/**
      * Canon list view control panel thing
      */
-    #[tauri::command]
-    async fn open_canon_control_panel(app_handle: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<(), String> {
-        let preferences = state.preferences.lock().await;
-        let provider = get_preferred_llm_provider(&app_handle, &preferences).map_err(|e| format!("Couldn't get preferred LLM provider: {}", e))?;
-        let store = state.doc_store.lock().await;
-
-        let _ = tauri::WebviewWindowBuilder::new(
-            &app_handle,
-            "canon-control-panel", // window label
-            tauri::WebviewUrl::App("canon-view.html".into()), // path in /dist
-          )
-          .title("Control Panel")
-          .resizable(true)
-          .inner_size(600.0, 400.0)
-          .always_on_top(false)
-          .decorations(false)
-          .transparent(true)
-          .focused(true)
-          .skip_taskbar(false)
-          .build();
-
-
-        Ok(())
-    }
-
-    #[tauri::command]
-    async fn close_canon_control_panel(app_handle: tauri::AppHandle) -> Result<(), String> {
-        let window = app_handle.get_webview_window("canon-control-panel");
-        if let Some(window) = window {
-            window.close().map_err(|e| format!("Failed to close window: {}", e))?;
-        }
-        Ok(())
-    }
-
 #[tauri::command]
-async fn toggle_canon_control_panel(app_handle: tauri::AppHandle) -> Result<(), String> {
+async fn toggle_canon_control_panel(app_handle: tauri::AppHandle, app_state: tauri::State<'_, AppState>) -> Result<(), String> {
     if let Some(window) = app_handle.get_webview_window("canon-control-panel") {
+        //app_handle.emit_to("canon-control-panel", "canon-list-to-control-panel", "[{Hello}]".to_string()).unwrap();
+        //list_canon_docs_to_canon_control_panel(app_state, app_handle.clone()).await?;
+
         // If the window exists, close it
         window.close().map_err(|e| format!("Failed to close control panel: {}", e))?;
     } else {
@@ -611,16 +580,18 @@ async fn toggle_canon_control_panel(app_handle: tauri::AppHandle) -> Result<(), 
             "canon-control-panel", // window label
             tauri::WebviewUrl::App("canon-view.html".into()), // path in /dist
         )
-        .title("Control Panel")
+        .title("Canon Control Panel")
         .resizable(true)
-        .inner_size(600.0, 400.0)
+        .inner_size(600.0, 500.0)
         .always_on_top(false)
         .decorations(false)
         .transparent(true)
         .focused(true)
         .skip_taskbar(false)
-        .min_inner_size(400.0, 300.0)
+        .min_inner_size(400.0, 400.0)
         .build();
+        // Now populate the window with the canon docs
+
     }
     Ok(())
 }
@@ -1380,6 +1351,48 @@ async fn search_similarity(
         }
         
         #[tauri::command]
+        async fn list_canon_docs_to_canon_control_panel(
+            app_state: tauri::State<'_, AppState>,
+            app_handle: tauri::AppHandle,
+        ) -> Result<String, String> {
+            let doc_store = Arc::clone(&app_state.doc_store);
+            
+            let store = doc_store.lock().await;
+            match store.fetch_documents().await {
+                Ok(mut listing) => {
+                    // Sort the listing by model_name first, then by document name
+                    listing.documents.sort_by(|a, b| {
+                        // First compare by embedding_model_name
+                        let model_cmp = a.embedding_model_name.cmp(&b.embedding_model_name);
+                        
+                        // If model names are equal, then compare by document name/title
+                        if model_cmp == std::cmp::Ordering::Equal {
+                            a.name.cmp(&b.name)
+                        } else {
+                            model_cmp
+                        }
+                    });
+                    
+                    let json_string = serde_json::to_string(&listing).map_err(|e| e.to_string())?;
+                     app_handle.emit_to("canon-control-panel", "canon-list-to-control-panel",  json_string).map_err(|e| e.to_string())?;
+                    Ok("Canon list emitted to control panel".to_string())
+                }
+                Err(e) => {
+                    let error_message = format!("Failed to fetch canon documents: {}", e);
+                    let new_logger = NewLogger::new(app_handle.clone());
+                    new_logger.simple_log_message(
+                        error_message.clone(),
+                        "".to_string(),
+                        "error".to_string(),
+                    );
+                    log::error!("{}", error_message);
+                    Err(error_message)
+                }
+            } 
+        }
+
+
+        #[tauri::command]
         async fn toggle_rag_pause(
             app_state: tauri::State<'_, AppState>,
             app_handle: tauri::AppHandle,
@@ -1603,6 +1616,38 @@ async fn search_similarity(
         
         
         
+        #[tauri::command]
+        async fn update_document_details(
+            app_state: tauri::State<'_, AppState>,
+            app_handle: tauri::AppHandle,
+            doc_id: String,
+            name: String,
+            notes: String,
+        ) -> Result<String, String> {
+            let doc_store = Arc::clone(&app_state.doc_store);
+            let store = doc_store.lock().await;
+            
+            // Parse the doc_id from string to i64
+            let doc_id_int = match doc_id.parse::<i64>() {
+                Ok(id) => id,
+                Err(e) => {
+                    return Err(format!("Invalid document ID: {}", e));
+                }
+            };
+            
+            match store.update_document_details(doc_id_int, name.clone(), notes.clone()).await {
+                Ok(_) => {
+                    log_message!(app_handle, LOG_INFO, "Updated document details for ID {}: name={}", doc_id, name);
+                    Ok("Document updated successfully".to_string())
+                },
+                Err(e) => {
+                    log_message!(app_handle, LOG_ERROR, "Failed to update document details: {}", e);
+                    Err(format!("Failed to update document: {}", e))
+                }
+            }
+        }
+        
+        
         pub fn run() {
             
             //let a_embedding_generator = EmbeddingGenerator::new(Client::new());
@@ -1783,9 +1828,9 @@ async fn search_similarity(
             get_model_names,
             toggle_rag_pause,
             shot_clock_complete,
-            open_canon_control_panel,
-            close_canon_control_panel,
             toggle_canon_control_panel,
+            list_canon_docs_to_canon_control_panel,
+            update_document_details,
             ])
             .run(tauri::generate_context!())
             .expect("error while running tauri application");

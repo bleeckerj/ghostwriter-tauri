@@ -1014,6 +1014,26 @@ impl DocumentStore {
             }
             Ok(())
         }
+
+        pub async fn update_document_details(
+            &self,
+            doc_id: i64,
+            name: String,
+            notes: String,
+        ) -> Result<(), Box<dyn std::error::Error>> {
+            let conn = self.conn.lock().await;
+            
+            // Update the document details in the database
+            conn.execute(
+                "UPDATE documents SET name = ?1, notes = ?2 WHERE id = ?3",
+                params![name, notes, doc_id],
+            )?;
+            
+            log::info!("Updated document details for document {}: name = {}, notes length = {}", 
+                doc_id, name, notes.len());
+            
+            Ok(())
+        }
     }
     
     // Helper function for cosine similarity
@@ -1065,6 +1085,5 @@ impl DocumentStore {
         
         chunks
     }
-    
-    
-    
+
+
