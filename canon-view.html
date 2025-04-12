@@ -8,12 +8,12 @@
   <script type="module" src="/src/canon-view.js" defer></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
-<body>
+<body class="flex flex-col h-screen overflow-hidden">
   <!-- Background fill for transparent window -->
-  <div class="fixed inset-0 bg-gray-200 rounded-t-[10px] -z-10"></div>
+  <div class="fixed inset-0 bg-transparent -z-10"></div>
   
   <!-- Drag region for window movement -->
-  <div class="drag-region bg-blue-500 font-[ChicagoKare] rounded-t-[10px] text-white p-2 flex justify-between items-center" data-tauri-drag-region>
+  <div class="drag-region bg-blue-500 font-[ChicagoKare] text-white p-2 flex justify-between items-center flex-shrink-0 rounded-t-[8px]" data-tauri-drag-region>
     <span>Canon Manager</span>
     <div class="flex gap-2">
       <select id="sort-select" class="text-xs bg-gray-700 border-none px-2">
@@ -23,12 +23,14 @@
       </select>
     </div>
   </div>
+  <!-- Top row with 10px height -->
+  <div class="bg-gray-200 h-[0.2em] w-full flex-shrink-0 border-t-[0.5px] border-gray-600"></div>
 
-  <div class="flex h-[calc(100vh-32px)] pt-2 rounded-b-[10px]"> <!-- Adjusted height calculation -->
+  <!-- Main content area that will stop above the bottom row -->
+  <div class="flex flex-grow overflow-hidden">
     <!-- Left Column: Document List -->
     <div id="document-list" class="w-5/12 overflow-y-auto border-r text-white border-gray-300 bg-gray-800">
       <!-- Document items will be dynamically populated here -->
-      <!-- <div class="p-2 border-b-1 font-bold">Documents</div> -->
       <div id="document-items-container"></div>
     </div>
 
@@ -68,15 +70,22 @@
           </div>
           <div id="authors-list" class="mt-2 flex flex-wrap gap-2"></div>
         </div>
-        <div class="flex-grow min-h-0 mb-8">
+        <!-- Note container with fixed height -->
+        <div class="flex-grow flex flex-col min-h-[120px] mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-          <textarea id="detail-notes" class="w-full h-full min-h-[100px] p-2 border border-gray-300 rounded" placeholder="Notes"></textarea>
+          <div class="relative flex-grow">
+            <textarea id="detail-notes" class="w-full h-full absolute inset-0 p-2 border border-gray-300 rounded" placeholder="Notes"></textarea>
+          </div>
         </div>
-        <div class="flex-shrink-0 justify-end gap-2 mt-2">
-          <button id="detail-save-btn" class="canon-entry-button enabled">Save Changes</button>
+        <!-- Sticky button container with padding and background to separate from textarea -->
+        <div class="flex-shrink-0 sticky bottom-0 w-full pt-2 mt-auto">
+          <button id="detail-save-btn" class="canon-entry-button enabled w-full !bg-gray-100">Save Changes</button>
         </div>
       </div>
     </div>
   </div>
+  
+  <!-- Bottom row with 10px height -->
+  <div class="bg-gray-200 h-[1em] w-full flex-shrink-0 border-t-[0.5px] border-gray-600"></div>
 </body>
 </html>

@@ -12,8 +12,8 @@ let selectedDocumentId = null;
  */
 async function openFileInDefaultApp(filePath) {
   try {
-    await openUrl('https://github.com/tauri-apps/tauri');
-    //await openPath(filePath);
+    //await openUrl('https://github.com/tauri-apps/tauri');
+    await openPath(filePath);
   } catch (error) {
     console.error('Failed to open file:', error);
     alert(`Failed to open file: ${error}`);
@@ -237,7 +237,7 @@ function renderAuthorTags(authors) {
     if (!author.trim()) return; // Skip empty authors
     
     const tag = document.createElement('div');
-    tag.classList.add('bg-blue-100', 'text-blue-800', 'px-2', 'py-1', 'rounded', 'flex', 'items-center');
+    tag.classList.add('bg-gray-300', 'border-1', 'border-black', 'text-black', 'px-2', 'py-1', 'rounded', 'flex', 'items-center');
     
     const authorText = document.createElement('span');
     authorText.textContent = author;
@@ -245,7 +245,7 @@ function renderAuthorTags(authors) {
     
     const removeBtn = document.createElement('button');
     removeBtn.textContent = '×';
-    removeBtn.classList.add('ml-1', 'text-blue-500', 'hover:text-blue-700', 'font-bold');
+    removeBtn.classList.add('ml-1', 'text-gray-500', 'hover:text-blue-700', 'font-bold');
     removeBtn.onclick = () => {
       // Get the currently selected document
       const doc = allDocuments.find(d => d.id === selectedDocumentId);

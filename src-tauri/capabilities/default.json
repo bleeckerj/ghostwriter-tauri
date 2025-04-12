@@ -34,11 +34,26 @@
         }
       ]
     },
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "**/*"
+        },
+        {
+          "path": "$APPLOG/*"
+        },
+        {
+          "path": "$APPROOT/*"
+        }
+      ]
+    },
     "core:default",
     "opener:allow-open-path",
     "opener:allow-open-url",
     "opener:allow-reveal-item-in-dir",
     "opener:allow-default-urls",
+    "opener:default",
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-message",
@@ -100,6 +115,9 @@
     "core:menu:allow-set-icon",
     "fs:read-files",
     "fs:write-files",
+    "fs:allow-open",
+    "fs:allow-read",
+    "fs:allow-write",
     "fs:allow-applocaldata-read",
     "fs:allow-applocaldata-write",
     "fs:allow-applog-read",
