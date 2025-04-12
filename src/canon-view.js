@@ -1,9 +1,38 @@
+// Import Tauri v2 APIs
 import { listen } from '@tauri-apps/api/event';
+import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 const { invoke } = window.__TAURI__.core;
 
 // Store the current documents
 let allDocuments = [];
 let selectedDocumentId = null;
+
+/**
+ * Open the file in the default application
+ */
+async function openFileInDefaultApp(filePath) {
+  try {
+    await openUrl('https://github.com/tauri-apps/tauri');
+    //await openPath(filePath);
+  } catch (error) {
+    console.error('Failed to open file:', error);
+    alert(`Failed to open file: ${error}`);
+  }
+}
+
+/**
+ * Open the folder containing the file
+ */
+async function openContainingFolder(filePath) {
+  try {
+    // Get the directory path by removing the filename
+    //const dirPath = filePath.substring(0, filePath.lastIndexOf('/')+1);
+    await revealItemInDir(filePath);
+  } catch (error) {
+    console.error('Failed to open folder:', error);
+    alert(`Failed to open folder: ${error}`);
+  }
+}
 
 /**
  * Populate the document list with the provided documents
@@ -29,49 +58,85 @@ function populateDocumentList(documents) {
       'flex', 
       'flex-col',
       'cursor-pointer',
-      'h-[3.5em]',
+      'gap-2', // Add gap between rows
+      'py-3', // Increase vertical padding
+      'min-h-[5em]', // Ensure minimum height
     );
     itemDiv.dataset.docId = doc.id;
     
     // If the document is paused, add visual indication
     if (doc.paused) {
-      itemDiv.classList.add('bg-amber-500', '!text-black');
+      itemDiv.classList.add('bg-gray-600', '!text-black');
     }
     
     // When clicking on the item, show the document details
     itemDiv.onclick = () => selectDocument(doc.id);
 
-    // Upper row with document name and buttons
-    const mainRow = document.createElement('div');
-    mainRow.classList.add('flex', 'justify-between', 'items-center', 'w-full');
-
+    // First row: Document name
+    const nameRow = document.createElement('div');
+    nameRow.classList.add('w-full');
+    
     // Document name
     const nameSpan = document.createElement('span');
-    nameSpan.classList.add('flex-grow', 'truncate', 'pr-2', 'text-[0.7em]', 'font-[InputMonoCondensed]');
+    nameSpan.classList.add(
+'flex-grow', 
+      'truncate',
+      'text-wrap', 
+'font-[InputMonoCondensed]', 
+      'font-medium',
+      'text-sm',
+      '!leading-tight', // Add explicit line-height
+      'block', // Make it a block element to respect line height
+      'pb-1' // Add some padding at the bottom
+);
     nameSpan.textContent = doc.name;
-    mainRow.appendChild(nameSpan);
+    nameRow.appendChild(nameSpan);
     
-    // Button container
+    // Second row: Authors (always show the row, even if empty)
+    const authorsRow = document.createElement('div');
+    authorsRow.classList.add('text-xs', 'text-gray-400', 'font-[InputMonoCondensed]');
+    
+    if (doc.authors && doc.authors.length > 0) {
+      const authorsLabel = document.createElement('span');
+      authorsLabel.classList.add('font-medium', 'mr-1');
+      authorsLabel.textContent = 'Authors:';
+      authorsRow.appendChild(authorsLabel);
+      
+      const authorsText = document.createElement('span');
+      authorsText.textContent = doc.authors.join(', ');
+      authorsRow.appendChild(authorsText);
+    } else {
+      authorsRow.textContent = 'No authors';
+      authorsRow.classList.add('italic');
+    }
+    
+    // Third row: Buttons
+    const btnRow = document.createElement('div');
+    btnRow.classList.add('flex', 'justify-between', 'items-center', 'w-full', 'mt-1');
+    
+    // Model name (left side of button row)
+    const modelSpan = document.createElement('span');
+    modelSpan.classList.add('text-xs', 'text-gray-500');
+    modelSpan.textContent = doc.embedding_model_name;
+    btnRow.appendChild(modelSpan);
+    
+    // Button container (right side of button row)
     const btnContainer = document.createElement('div');
     btnContainer.classList.add('flex', 'gap-1');
     
     // Pause/Resume button
     const pauseBtn = document.createElement('button');
     pauseBtn.textContent = doc.paused ? 'RESUME' : 'PAUSE';
-   // pauseBtn.title = doc.paused ? 'Resume' : 'Pause';
     pauseBtn.classList.add(
-    'canon-entry-button', 
-        'text-xs',
-    //   'px-2', 
-    //   'py-1', 
-    //   'rounded', 
+      'canon-entry-button', 
+      'text-xs',
       'enabled',
     );
     if (doc.paused) {
       pauseBtn.classList.add('pause', 'button-in', '!bg-amber-300', '!text-gray-600');
     } else {
-        pauseBtn.classList.remove('pause', 'button-in');
-        pauseBtn.classList.add('button-out');
+      pauseBtn.classList.remove('pause', 'button-in');
+      pauseBtn.classList.add('button-out');
     }   
     pauseBtn.onclick = (e) => {
       e.stopPropagation(); // Prevent triggering the item click
@@ -81,9 +146,8 @@ function populateDocumentList(documents) {
     // Delete button
     const delBtn = document.createElement('button');
     delBtn.textContent = 'DELETE';
-    //delBtn.title = 'Delete';
     delBtn.classList.add(
-        'canon-entry-button', 'enabled', 'del', 'text-xs'
+      'canon-entry-button', 'enabled', 'del', 'text-xs'
     );
     delBtn.onclick = (e) => {
       e.stopPropagation(); // Prevent triggering the item click
@@ -94,26 +158,12 @@ function populateDocumentList(documents) {
     
     btnContainer.appendChild(pauseBtn);
     btnContainer.appendChild(delBtn);
-    mainRow.appendChild(btnContainer);
+    btnRow.appendChild(btnContainer);
     
-    itemDiv.appendChild(mainRow);
-    
-    // Add authors row if authors exist
-    if (doc.authors && doc.authors.length > 0) {
-      const authorsRow = document.createElement('div');
-      authorsRow.classList.add('text-xs', 'text-gray-400', 'mt-1', 'font-[InputMonoCondensed]');
-      
-      const authorsLabel = document.createElement('span');
-      authorsLabel.classList.add('font-medium', 'mr-1');
-      authorsLabel.textContent = 'Authors:';
-      authorsRow.appendChild(authorsLabel);
-      
-      const authorsText = document.createElement('span');
-      authorsText.textContent = doc.authors.join(', ');
-      authorsRow.appendChild(authorsText);
-      
-      itemDiv.appendChild(authorsRow);
-    }
+    // Append all rows to the item
+    itemDiv.appendChild(nameRow);
+    itemDiv.appendChild(authorsRow);
+    itemDiv.appendChild(btnRow);
     
     container.appendChild(itemDiv);
   });
@@ -364,6 +414,21 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Reselect the current document if there was one
     if (selectedDocumentId) {
       selectDocument(selectedDocumentId);
+    }
+  });
+  
+  // Set up event listeners for file and folder buttons
+  document.getElementById('open-file-btn').addEventListener('click', () => {
+    const doc = allDocuments.find(d => d.id === selectedDocumentId);
+    if (doc && doc.file_path) {
+      openFileInDefaultApp(doc.file_path);
+    }
+  });
+  
+  document.getElementById('open-folder-btn').addEventListener('click', () => {
+    const doc = allDocuments.find(d => d.id === selectedDocumentId);
+    if (doc && doc.file_path) {
+      openContainingFolder(doc.file_path);
     }
   });
   

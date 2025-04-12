@@ -11,21 +11,37 @@
     "canon-control-panel"
   ],
   "remote": {
-    "urls": ["http://*:*", "https://*"]
+    "urls": [
+      "http://*:*",
+      "https://*"
+    ]
   },
   "permissions": [
     {
-    "identifier": "fs:default",
+      "identifier": "fs:default",
       "allow": [
-        { "path": "/tmp/*" },
-        { "path": "$APPLOCALDATA/*"},
-        { "path": "$APPLOG/*"},
-        { "path": "$APPROOT/*"}
-
+        {
+          "path": "/tmp/*"
+        },
+        {
+          "path": "$APPLOCALDATA/*"
+        },
+        {
+          "path": "$APPLOG/*"
+        },
+        {
+          "path": "$APPROOT/*"
+        }
       ]
     },
     "core:default",
-    "opener:default",
+    "opener:allow-open-path",
+    "opener:allow-open-url",
+    "opener:allow-reveal-item-in-dir",
+    "opener:allow-default-urls",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "dialog:allow-message",
     "dialog:default",
     "clipboard-manager:allow-clear",
     "clipboard-manager:allow-read-image",
@@ -88,5 +104,5 @@
     "fs:allow-applocaldata-write",
     "fs:allow-applog-read",
     "fs:allow-applog-write"
-  ]
+    ]
 }
