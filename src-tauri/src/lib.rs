@@ -601,7 +601,7 @@ async fn load_openai_api_key_from_keyring(
 
 #[tauri::command]
 async fn toggle_canon_control_panel(app_handle: tauri::AppHandle) -> Result<(), String> {
-    if let Some(window) = app_handle.get_webview_window("control-panel") {
+    if let Some(window) = app_handle.get_webview_window("canon-control-panel") {
         // If the window exists, close it
         window.close().map_err(|e| format!("Failed to close control panel: {}", e))?;
     } else {
