@@ -150,9 +150,6 @@ async function restartVibeMode() {
     }
   }
   
-  
-  
-  
   async function openDialogForFileSave(options) {
     // Open a dialog
     
@@ -525,6 +522,7 @@ function emanateNavigableNodeToEditor(content) {
       }
     });    
     
+    
     // PREFERENCES PANEL
     prefsMainPromptTextArea = document.querySelector("#prefs-main-prompt");
     prefsMainPromptTextArea.addEventListener("dblclick", () => {
@@ -592,9 +590,34 @@ function emanateNavigableNodeToEditor(content) {
     // greetBtnEl.addEventListener("click", greet);
     incantBtnEl = document.querySelector("#incant-btn");
     incantBtnEl.addEventListener("click", completionFromContext);
-    listCanonBtnEl = document.querySelector("#list-canon-btn");
+    //
+    // CANON button handling
+    //
+    listCanonBtnEl = document.getElementById('list-canon-btn');
+    let canonViewOpen = false; // Track if canon view is currently open
+    
+    listCanonBtnEl.addEventListener('click', () => {
+      // Toggle the button state
+      canonViewOpen = !canonViewOpen;
+      // Open canon view window
+      invoke('toggle_canon_control_panel').catch(e => {
+        console.error('Failed to show canon control panel:', e);
+      });
+
+      if (canonViewOpen) {
+        // Push button in when canon view is open
+        //listCanonBtnEl.classList.remove('button-out');
+        listCanonBtnEl.classList.add('button-in');   
+      } else {
+        // Push button out when canon view is closed
+        listCanonBtnEl.classList.remove('button-in');
+        //listCanonBtnEl.classList.add('button-out');
+      }
+    });
+
+
     //listCanonBtnEl.addEventListener("click", showCanonList);
-    listCanonBtnEl.addEventListener("click", toggleCanonControlPanelWindow);
+    //listCanonBtnEl.addEventListener("click", toggleCanonControlPanelWindow);
     similaritySearchBtnEl = document.querySelector("#similarity-search-btn");
     similaritySearchBtnEl.addEventListener("click", searchSimilarity);
     ingestBtnEl = document.querySelector("#ingest-btn");
@@ -1607,21 +1630,6 @@ function emanateNavigableNodeToEditor(content) {
     }
   }
   
-  async function toggleCanonControlPanelWindow() {
-    // Check if button is currently enabled
-    // If so, turn it off and the backend should handle the rest
-    // including closing the control panel
-    if (listCanonBtnEl.classList.contains('button-in')) {
-      listCanonBtnEl.classList.remove('button-in');
-    } else {
-      listCanonBtnEl.classList.add('button-in');
-    }
-    invoke('toggle_canon_control_panel').then((res) => {
-      console.log('Canon Control Panel Response:', res);
-    });
-    
-  }
-  
   function addSimpleLogEntry(entry) {
     let pos = diagnostics.state.selection.from + 2
     diagnostics.commands.setTextSelection(pos)
@@ -1824,11 +1832,6 @@ function emanateNavigableNodeToEditor(content) {
         bottomArea.style.flex = '0';
         return;
       }
-      
-      // Check if bottom area would exceed max height (dragging up)
-      // if (newBottomHeight > maxHeight) {
-      //   return;
-      // }
       
       // Check if top area would become too small (dragging up)
       if (newTopHeight < MIN_HEIGHT_TOP) {

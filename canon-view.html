@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <link rel="stylesheet" href="/src/canon-manager.css" />
   <link rel="stylesheet" href="/fonts.css" />
+  <link rel="stylesheet" href="/src/drag-region-height-fix.css" />
   <script type="module" src="/src/canon-view.js" defer></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
@@ -13,13 +14,14 @@
   <div class="fixed inset-0 bg-transparent -z-10"></div>
   
   <!-- Drag region for window movement -->
-  <div class="drag-region bg-blue-500 font-[ChicagoKare] text-white p-2 flex justify-between items-center flex-shrink-0 rounded-t-[8px]" data-tauri-drag-region>
-    <span>Canon Manager</span>
+  <div class="drag-region w-full bg-blue-500 font-[ChicagoKare] text-white p-2 flex justify-between items-center flex-shrink-0 rounded-t-[8px]" data-tauri-drag-region>
+    <span class="mx-auto">Canon Manager</span>
     <div class="flex gap-2">
       <select id="sort-select" class="text-xs bg-gray-700 border-none px-2">
         <option value="name">Sort by Name</option>
         <option value="date">Sort by Date</option>
         <option value="model">Sort by Model</option>
+        <option value="authors">Sort by Authors</option>
       </select>
     </div>
   </div>
@@ -49,8 +51,8 @@
           <div class="flex flex-col gap-2">
             <div id="detail-file-path" class="text-gray-600 text-sm font-['InputMono'] bg-gray-50 p-2 rounded border border-gray-200 break-all"></div>
             <div class="flex gap-2">
-              <button id="open-file-btn" class="canon-entry-button enabled">Open File</button>
-              <button id="open-folder-btn" class="canon-entry-button enabled">Open Folder</button>
+              <button id="open-file-btn" class="canon-entry-button enabled !px-[8px] !py-[0.2em]">OPEN FILE</button>
+              <button id="open-folder-btn" class="canon-entry-button enabled  !px-[8px] !py-[0.2em]">OPEN FOLDER</button>
             </div>
           </div>
         </div>
@@ -78,14 +80,21 @@
           </div>
         </div>
         <!-- Sticky button container with padding and background to separate from textarea -->
-        <div class="flex-shrink-0 sticky bottom-0 w-full pt-2 mt-auto">
-          <button id="detail-save-btn" class="canon-entry-button enabled w-full !bg-gray-100">Save Changes</button>
+        <div class="flex-shrink-0 sticky bottom-0 w-full pt-2 mt-auto  w-full !bg-gray-100">
+          <button id="detail-save-btn" class="canon-entry-button enabled  !px-[8px] !py-[0.2em]">SAVE</button>
         </div>
       </div>
     </div>
   </div>
   
   <!-- Bottom row with 10px height -->
-  <div class="bg-gray-200 h-[1em] w-full flex-shrink-0 border-t-[0.5px] border-gray-600"></div>
+  <div class="bg-gray-200 h-[3em] w-full flex-shrink-0 border-t-[0.5px] border-gray-600">
+    <div class="ml-1 mt-[0.2em] flex gap-2 p-2">
+      <button id="toggle-pause" class="canon-entry-button enabled">TOGG</button>
+      <button id="" class="canon-entry-button disabled">CALC</button>
+      <button id="" class="canon-entry-button disabled">MARK</button>
+
+    </div>
+  </div>
 </body>
 </html>

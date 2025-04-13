@@ -183,6 +183,13 @@ function sortDocuments(sortBy) {
     case 'model':
       allDocuments.sort((a, b) => a.embedding_model_name.localeCompare(b.embedding_model_name));
       break;
+    case 'authors':
+      allDocuments.sort((a, b) => {
+        const aAuthors = (a.authors || []).join(', ');
+        const bAuthors = (b.authors || []).join(', ');
+        return aAuthors.localeCompare(bAuthors);
+    });
+    break;
   }
 }
 

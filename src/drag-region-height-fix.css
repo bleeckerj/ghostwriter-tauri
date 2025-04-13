@@ -1,0 +1,28 @@
+/* Custom styles to reduce the height of the drag-region element */
+.drag-region {
+  height: 1.7rem !important; /* Smaller height */
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.15rem !important;
+  min-height: unset !important;
+  -webkit-app-region: drag;
+  cursor: pointer;
+}
+
+/* Adjust any internal elements to fit the smaller height */
+.drag-region select,
+.drag-region span,
+.drag-region button {
+  height: 1.2rem !important;
+  line-height: 1rem !important;
+  font-size: 1rem !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  min-height: unset !important;
+}
+
+/* Prevent interactive elements from being draggable */
+.drag-region button,
+.drag-region input {
+    -webkit-app-region: no-drag;
+    cursor: default;
+}
