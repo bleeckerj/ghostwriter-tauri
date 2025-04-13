@@ -6,6 +6,9 @@ const { invoke } = window.__TAURI__.core;
 // Store the current documents
 let allDocuments = [];
 let selectedDocumentId = null;
+// Track the unique model names and currently selected model filter
+let uniqueModels = [];
+let currentModelFilter = null;
 
 /**
  * Open the file in the default application
@@ -35,19 +38,97 @@ async function openContainingFolder(filePath) {
 }
 
 /**
- * Populate the document list with the provided documents
+ * Creates model filter buttons based on unique models in the document list
  */
-function populateDocumentList(documents) {
+function createModelFilterButtons() {
+  const modelButtonsContainer = document.getElementById('model-canon-buttons');
+  
+  // Clear existing buttons
+  modelButtonsContainer.innerHTML = '';
+  
+  // Create a button for each unique model
+  uniqueModels.forEach(model => {
+    const button = document.createElement('button');
+    button.textContent = model.toUpperCase();
+    button.classList.add(
+      'canon-entry-button',
+      'enabled',
+      'text-xs'
+    );
+    
+    // If this model is the current filter, add visual indication
+    if (currentModelFilter === model) {
+      button.classList.add('button-in');
+    }
+    
+    // Add click event to filter documents
+    button.addEventListener('click', () => {
+      // Toggle filter - if already selected, turn off filter
+      if (currentModelFilter === model) {
+        currentModelFilter = null;
+        button.classList.remove('button-in');
+      } else {
+        // Remove button-in class from all buttons
+        document.querySelectorAll('#model-canon-buttons button').forEach(btn => {
+          btn.classList.remove('button-in');
+        });
+        
+        // Set this model as the filter and add visual indication
+        currentModelFilter = model;
+        button.classList.add('button-in');
+      }
+      
+      // Refresh document list with the filter
+      refreshDocumentList();
+    });
+    
+    modelButtonsContainer.appendChild(button);
+  });
+}
+
+/**
+ * Extract unique model names from all documents
+ */
+function extractUniqueModels(documents) {
+  // Get all unique embedding model names
+  const models = new Set(documents.map(doc => doc.embedding_model_name));
+  uniqueModels = Array.from(models);
+  
+  // Create buttons for these models
+  createModelFilterButtons();
+}
+
+/**
+ * Refresh the document list based on current filters
+ */
+function refreshDocumentList() {
+  // Make a copy of all documents
+  let filteredDocs = [...allDocuments];
+  
+  // Apply model filter if active
+  if (currentModelFilter) {
+    filteredDocs = filteredDocs.filter(doc => 
+      doc.embedding_model_name === currentModelFilter
+    );
+  }
+  
+  // Repopulate with filtered documents
+  renderDocumentList(filteredDocs);
+}
+
+/**
+ * Render the document list based on provided documents
+ */
+function renderDocumentList(documents) {
   const container = document.getElementById('document-items-container');
   container.innerHTML = '';
-  allDocuments = documents;
   
   // Sort documents based on the selected sort option
   const sortSelect = document.getElementById('sort-select');
-  sortDocuments(sortSelect.value);
+  documents = sortDocuments(documents, sortSelect.value);
 
   // Render each document in the list
-  allDocuments.forEach(doc => {
+  documents.forEach(doc => {
     const itemDiv = document.createElement('div');
     itemDiv.classList.add(
       'document-item', 
@@ -66,7 +147,7 @@ function populateDocumentList(documents) {
     
     // If the document is paused, add visual indication
     if (doc.paused) {
-      itemDiv.classList.add('bg-gray-600', '!text-black');
+      itemDiv.classList.add('bg-gray-600', '!text-gray-300');
     }
     
     // When clicking on the item, show the document details
@@ -170,27 +251,44 @@ function populateDocumentList(documents) {
 }
 
 /**
+ * Populate the document list with the provided documents
+ */
+function populateDocumentList(documents) {
+  allDocuments = documents;
+
+  // Extract unique models and create filter buttons
+  extractUniqueModels(documents);
+  
+  // Render document list (applying any active filters)
+  refreshDocumentList();
+}
+
+/**
  * Sort documents by the specified field
  */
-function sortDocuments(sortBy) {
+function sortDocuments(documents, sortBy) {
+  const sortedDocs = [...documents]; // Make a copy to avoid modifying original array
+  
   switch (sortBy) {
     case 'name':
-      allDocuments.sort((a, b) => a.name.localeCompare(b.name));
+      sortedDocs.sort((a, b) => a.name.localeCompare(b.name));
       break;
     case 'date':
-      allDocuments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      sortedDocs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       break;
     case 'model':
-      allDocuments.sort((a, b) => a.embedding_model_name.localeCompare(b.embedding_model_name));
+      sortedDocs.sort((a, b) => a.embedding_model_name.localeCompare(b.embedding_model_name));
       break;
     case 'authors':
-      allDocuments.sort((a, b) => {
+      sortedDocs.sort((a, b) => {
         const aAuthors = (a.authors || []).join(', ');
         const bAuthors = (b.authors || []).join(', ');
         return aAuthors.localeCompare(bAuthors);
     });
     break;
   }
+  
+  return sortedDocs;
 }
 
 /**
@@ -339,6 +437,68 @@ async function togglePauseDocument(docId, pauseState) {
 }
 
 /**
+ * Set the pause state for all documents
+ */
+async function setAllPause(pauseState) {
+  try {
+    // Create an array of promises to update all documents
+    const promises = allDocuments.map(doc => 
+      invoke('toggle_rag_pause', { id: doc.id.toString(), paused: pauseState })
+    );
+    
+    // Wait for all updates to complete
+    await Promise.all(promises);
+    
+    // Update local data
+    allDocuments.forEach(doc => {
+      doc.paused = pauseState;
+    });
+    
+    // Refresh the document list to reflect changes
+    populateDocumentList(allDocuments);
+    
+    // If there was a selected document, reselect it to update the view
+    if (selectedDocumentId) {
+      selectDocument(selectedDocumentId);
+    }
+  } catch (error) {
+    console.error('Failed to set all pause states:', error);
+    alert('Failed to update document states');
+  }
+}
+
+/**
+ * Toggle the pause state of all documents
+ */
+async function toggleAllPause() {
+  try {
+    // Create an array of promises to update each document with its opposite state
+    const promises = allDocuments.map(doc => 
+      invoke('toggle_rag_pause', { id: doc.id.toString(), paused: !doc.paused })
+    );
+    
+    // Wait for all updates to complete
+    await Promise.all(promises);
+    
+    // Update local data by flipping each document's paused state
+    allDocuments.forEach(doc => {
+      doc.paused = !doc.paused;
+    });
+    
+    // Refresh the document list to reflect changes
+    populateDocumentList(allDocuments);
+    
+    // If there was a selected document, reselect it to update the view
+    if (selectedDocumentId) {
+      selectDocument(selectedDocumentId);
+    }
+  } catch (error) {
+    console.error('Failed to toggle all pause states:', error);
+    alert('Failed to update document states');
+  }
+}
+
+/**
  * Delete a document
  */
 async function deleteDocument(docId) {
@@ -415,8 +575,7 @@ async function saveDocumentChanges() {
 window.addEventListener('DOMContentLoaded', async () => {
   // Set up event listener for sorting
   document.getElementById('sort-select').addEventListener('change', (e) => {
-    sortDocuments(e.target.value);
-    populateDocumentList(allDocuments);
+    refreshDocumentList();
     
     // Reselect the current document if there was one
     if (selectedDocumentId) {
@@ -457,6 +616,17 @@ window.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
     }
   });
+  
+  // Set up event listeners for the batch document control buttons
+  document.getElementById('all-off').addEventListener('click', () => {
+    setAllPause(true); // Pause all documents
+  });
+  
+  document.getElementById('all-on').addEventListener('click', () => {
+    setAllPause(false); // Unpause all documents
+  });
+  
+  document.getElementById('toggle-pause').addEventListener('click', toggleAllPause);
   
   // Listen for document list updates from the backend
   await listen('canon-list-to-control-panel', (event) => {

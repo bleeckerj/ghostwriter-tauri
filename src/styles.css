@@ -278,7 +278,7 @@ select#prefs-model-name option {
 
 .diagnostics-area-button.button-out {
   @apply font-['ESKlarheitKurrentMono'];
-  @apply relative w-fit px-1 py-[0.5px] rounded-sm;
+  @apply relative w-fit px-[0.5em] py-[0.5px] rounded-sm;
   @apply border border-black;
   @apply shadow-[3px_3px_0px_0px] shadow-black;
   @apply bg-gray-700;

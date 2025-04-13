@@ -89,11 +89,17 @@
   
   <!-- Bottom row with 10px height -->
   <div class="bg-gray-200 h-[3em] w-full flex-shrink-0 border-t-[0.5px] border-gray-600">
-    <div class="ml-1 mt-[0.2em] flex gap-2 p-2">
-      <button id="toggle-pause" class="canon-entry-button enabled">TOGG</button>
-      <button id="" class="canon-entry-button disabled">CALC</button>
-      <button id="" class="canon-entry-button disabled">MARK</button>
-
+    <div class="ml-1 mt-[0.2em] flex gap-2 p-2 w-full justify-start">
+      <div id="fixed-canon-buttons" class="flex gap-2">
+        <button id="toggle-pause" class="canon-entry-button enabled">TOGGLE</button>
+        <button id="all-off" class="canon-entry-button enabled">ALL OFF</button>
+        <button id="all-on" class="canon-entry-button enabled">ALL ON</button>
+        <button id="" class="canon-entry-button disabled">MARK</button>
+      </div>
+      
+      <div id="model-canon-buttons" class="flex gap-2 ml-8">
+        <div id="canon-buttons" class="flex gap-2"></div>
+      </div>
     </div>
   </div>
 </body>

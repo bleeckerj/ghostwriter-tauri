@@ -107,7 +107,7 @@ textarea,
 .canon-entry-button {
   grid-column: span 2; /* Span both columns */
   @apply font-['ESKlarheitKurrentMono'] text-[0.8em];
-  @apply relative w-fit px-0 py-[2px] rounded-sm;
+  @apply relative w-fit px-2 py-[2px] rounded-sm;
   @apply border border-black;
   @apply shadow-[3px_3px_0px_0px] shadow-black;
   @apply min-w-[60px] text-center;
