@@ -57,9 +57,10 @@ export const InlineActionItem = Node.create({
   // },
 
   addProseMirrorPlugins() {
-    const options = this.options
-    let waitingForTyping = false // not so sure about this..
-    let userTyping = false
+    const options = this.options;
+    let waitingForTyping = false;
+    let userTyping = false;
+    let timeout = null;
 
     return [
       new Plugin({
@@ -89,51 +90,67 @@ export const InlineActionItem = Node.create({
         },
 
         view(editorView) {
-          let timeout
           return {
             update: (view, prevState) => {
-              if (timeout) clearTimeout(timeout)
+              // Clear any existing timeout to avoid multiple timeouts running
+              if (timeout) {
+                clearTimeout(timeout);
+                timeout = null;
+              }
 
               // Reset waitingForTyping if content has changed and userTyping is true
               if (prevState && !view.state.doc.eq(prevState.doc) && userTyping) {
-                waitingForTyping = false
-                userTyping = false
-                console.log("waitingForTyping reset to false on user typing", waitingForTyping)
+                waitingForTyping = false;
+                userTyping = false;
+                console.log("waitingForTyping reset to false on user typing", waitingForTyping);
               }
               
-              // Check the options.disabled flag directly
-              if (options.disabled || waitingForTyping) return false;
+              // Check if we should proceed with showing the button
+              if (options.disabled || waitingForTyping) {
+                console.log("Not showing button because disabled:", options.disabled, "or waitingForTyping:", waitingForTyping);
+                return false;
+              }
               
-              const { selection } = view.state
-              if (!view.state.doc.textContent.trim().length) return false;
-
-              if (prevState && selection.eq(prevState.selection)) return false;
+              const { selection } = view.state;
+              if (!view.state.doc.textContent.trim().length) {
+                console.log("Not showing button because document is empty");
+                return false;
+              }
 
               // Check for existing button
-              let buttonExists = false
+              let buttonExists = false;
               view.state.doc.descendants((node) => {
                 if (node.type.name === 'inlineActionItem') {
-                  buttonExists = true
-                  return false
+                  buttonExists = true;
+                  return false;
                 }
-              })
+              });
               
+              // Only set timeout if button doesn't exist and extension is enabled
               if (!buttonExists && options.disabled === false) {
+                console.log("Setting timeout to show button in", options.timeout, "ms");
                 timeout = setTimeout(() => {
-                  // Check the options.disabled flag again because it might have changed
-                  if (options.disabled === true) return false;
-                  const node = view.state.schema.nodes.inlineActionItem.create()
-                  const tr = view.state.tr.insert(selection.from, node)
-                  view.dispatch(tr)
-                }, options.timeout)
+                  // Check again if disabled when timeout fires
+                  if (options.disabled === true || waitingForTyping) {
+                    console.log("Not showing button at timeout because disabled:", options.disabled, "or waitingForTyping:", waitingForTyping);
+                    return false;
+                  }
+                  console.log("Timeout fired, inserting button");
+                  const node = view.state.schema.nodes.inlineActionItem.create();
+                  const tr = view.state.tr.insert(selection.from, node);
+                  view.dispatch(tr);
+                }, options.timeout);
               }
             },
             destroy: () => {
-              if (timeout) clearTimeout(timeout)
+              if (timeout) {
+                clearTimeout(timeout);
+                timeout = null;
+              }
             }
-          }
+          };
         }
       })
-    ]
+    ];
   }
 })
