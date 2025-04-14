@@ -159,7 +159,7 @@ async function restartVibeMode() {
           editor.setEditable(true);
           
           //emanateToEditor(content);
-          emanateStringToEditor(content[0], 30, () => {
+          emanateStringToEditor(content[0], 50, () => {
             editor.setEditable(true);
             emanationInProgress = false;
             // we restart the vibe mode timer down in the handleTextInput 
@@ -303,6 +303,8 @@ async function completionFromContext() {
       }
     });
     
+    // Ensure content is visible after insertion
+    editor.commands.scrollIntoView();
     
     if (wasDisabled === false) {
       setTimeout(() => {
@@ -330,10 +332,18 @@ function emanateStringToEditor(content, timeout = 30, onComplete = null) {
   function sendNextCharacter() {
     if (index < content.length) {
       emanateCharacterToEditor(content[index]);
+      
+      // Use Tiptap's scrollIntoView command after each character insertion
+      editor.commands.scrollIntoView();
+      
       index++;
       setTimeout(sendNextCharacter, timeout); // Call the function again after timeout milliseconds
     } else {
       emanateCharacterToEditor('\u00A0'); // Add a space after the string
+      
+      // Final scroll to ensure the last character is visible
+      editor.commands.scrollIntoView();
+      
       if (onComplete) {
         onComplete(); // Call the completion handler if provided
       }
@@ -1459,11 +1469,15 @@ function emanateNavigableNodeToEditor(content) {
     // restart the timer if we're still in vibemode
     // and the timer isn't running
     onUpdate: ({ editor }) => {
+      // Scroll to make sure cursor is visible on updates
+      editor.commands.scrollIntoView();
+      
+      // Keep existing vibe mode behavior
       if (vibeMode == true && timer.isRunning() == false && emanationInProgress == false) {
-        //handleTextInput(editor);
+//handleTextInput(editor);
         setTimeout(() => {
           restartVibeMode();
-        }, 3000);
+        }, 1500);
       }
     },
   })
@@ -1508,6 +1522,10 @@ function emanateNavigableNodeToEditor(content) {
       DynamicTextMark,
       ProgressExtension,
     ],
+    onUpdate: ({ editor: diagEditor }) => {
+      // Scroll diagnostics to bottom when updated
+      diagEditor.commands.scrollIntoView();
+    },
   })
   
   // 1. Function to insert text with DynamicTextMark
@@ -1617,6 +1635,9 @@ function emanateNavigableNodeToEditor(content) {
     
     // Dispatch the transaction
     dispatch(tr);
+    
+    // After inserting content, ensure it's visible
+    editor.commands.scrollIntoView();
     
     return {
       from: position,
@@ -1733,7 +1754,7 @@ function emanateNavigableNodeToEditor(content) {
     pos = diagnostics.state.selection.from + 2
     diagnostics.commands.setTextSelection(pos)
     setTimeout(() => {
-      diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, 0);
   }
   
@@ -1761,7 +1782,7 @@ function emanateNavigableNodeToEditor(content) {
     pos = diagnostics.state.selection.from + 2
     diagnostics.commands.setTextSelection(pos)
     setTimeout(() => {
-      diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, 0);
   }
   
@@ -1781,7 +1802,7 @@ function emanateNavigableNodeToEditor(content) {
     pos = diagnostics.state.selection.from + 2
     diagnostics.commands.setTextSelection(pos)
     setTimeout(() => {
-      diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, 0);
   }
   
@@ -1832,7 +1853,7 @@ function emanateNavigableNodeToEditor(content) {
     pos = diagnostics.state.selection.from + 2
     diagnostics.commands.setTextSelection(pos)
     setTimeout(() => {
-      diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, 0);
   }
   
@@ -1971,3 +1992,6 @@ function emanateNavigableNodeToEditor(content) {
   
   // Make updateAllCanonEntries available globally
   window.updateAllCanonEntries = updateAllCanonEntries;
+
+  // Make the scrollEditorToSelection function available globally
+  window.scrollEditorToSelection = scrollEditorToSelection;

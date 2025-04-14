@@ -579,13 +579,13 @@ async fn load_openai_api_key_from_keyring(
             )
             .title("Canon Control Panel")
             .resizable(true)
-            .inner_size(600.0, 600.0)
+            .inner_size(800.0, 600.0)
             .always_on_top(false)
             .decorations(false)
             .transparent(true)
             .focused(true)
             .skip_taskbar(false)
-            .min_inner_size(400.0, 500.0)
+            .min_inner_size(700.0, 500.0)
             .build();
             // Now populate the window with the canon docs
             

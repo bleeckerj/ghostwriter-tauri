@@ -349,7 +349,7 @@ select#prefs-model-name option {
 .bg-gradient-animated {
   background: linear-gradient(270deg, #ffb3ba, #ffdfba, #ffffba, #baffc9, #bae1ff);
   background-size: 600% 600%;
-  animation: gradient 35s ease infinite;
+  animation: gradient 20s ease infinite;
 }
 
 @keyframes highlight {
