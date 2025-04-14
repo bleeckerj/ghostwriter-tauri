@@ -79,13 +79,45 @@ let emanationInProgress = false;
 async function toggleVibeMode(enabled) {
   try {
     if (enabled) {
+      // Get a custom system message for the vibe starter
+      const systemMessage = "You are a creative writing coach who provides inspiring opening phrases. Create a vivid, descriptive opener that could lead to a compelling narrative. Be concise, specific, and evocative.";
       
       await WebviewWindow.getCurrent().setTitle("Vibewriter"); // Change title when vibe mode is enabled
       document.querySelector('.element').classList.add('bg-gradient-animated');
       vibeMode = true; // Set vibeMode to true
       timer.show();
       addSimpleLogEntry({ "id": "", "timestamp": Date.now(), "message": "Vibe Mode On", "level": "info" });
-      restartVibeMode(); // Start the vibe mode timer
+      
+      // Generate a creative opening phrase before starting the timer
+      try {
+        const vibeStarter = await invoke("generate_vibe_starter", { 
+          systemMessage: systemMessage 
+        });
+        
+        if (vibeStarter) {
+          // Clear existing content and insert the generated starting phrase
+          editor.commands.clearContent();
+          editor.commands.insertContent(vibeStarter);
+          
+          addSimpleLogEntry({ 
+            "id": "", 
+            "timestamp": Date.now(), 
+            "message": `Vibe Mode generated starter: ${vibeStarter}`, 
+            "level": "info" 
+          });
+        }
+      } catch (error) {
+        console.error("Failed to generate vibe starter:", error);
+        addSimpleLogEntry({ 
+          "id": "", 
+          "timestamp": Date.now(), 
+          "message": `Failed to generate vibe starter: ${error}`, 
+          "level": "error" 
+        });
+      }
+      
+      // Start the timer after generating the starter
+      restartVibeMode();
     } else {
       await WebviewWindow.getCurrent().setTitle("Ghostwriter"); // Change title back when vibe mode is disabled
       document.querySelector('.element').classList.remove('bg-gradient-animated');
@@ -1149,6 +1181,62 @@ function emanateNavigableNodeToEditor(content) {
           });
         }
       });
+    });
+
+    // Add a key command for regenerating vibe starters
+    window.addEventListener("keydown", async (e) => {
+      // Check if we're in vibe mode and Ctrl+Shift+R is pressed (Command+Shift+R on Mac)
+      if (vibeMode && (e.key === 'r' || e.key === 'R') && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+        e.preventDefault();
+        
+        // Stop the current timer
+        timer.stop();
+        timer.hide();
+        
+        // Get a custom system message for the vibe starter
+        const systemMessage = "You are a creative writing coach who provides inspiring opening phrases. Create a vivid, descriptive opener that could lead to a compelling narrative. Be concise, specific, and evocative.";
+        
+        try {
+          addSimpleLogEntry({ 
+            "id": "", 
+            "timestamp": Date.now(), 
+            "message": "Regenerating vibe starter...", 
+            "level": "info" 
+          });
+          
+          // Generate a new creative opening phrase
+          const vibeStarter = await invoke("generate_vibe_starter", { 
+            systemMessage: systemMessage 
+          });
+          
+          if (vibeStarter) {
+            // Clear existing content and insert the generated starting phrase
+            editor.commands.clearContent();
+            editor.commands.insertContent(vibeStarter);
+            
+            addSimpleLogEntry({ 
+              "id": "", 
+              "timestamp": Date.now(), 
+              "message": `New vibe starter generated: ${vibeStarter}`, 
+              "level": "info" 
+            });
+            
+            // Restart the timer
+            restartVibeMode();
+          }
+        } catch (error) {
+          console.error("Failed to regenerate vibe starter:", error);
+          addSimpleLogEntry({ 
+            "id": "", 
+            "timestamp": Date.now(), 
+            "message": `Failed to regenerate vibe starter: ${error}`, 
+            "level": "error" 
+          });
+          
+          // Make sure to restart the timer even if generation fails
+          restartVibeMode();
+        }
+      }
     });
     
   });

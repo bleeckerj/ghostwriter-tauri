@@ -71,6 +71,15 @@ pub struct DocumentInfo {
     pub authors: Vec<String>,
     
 }
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DocumentChunk {
+    pub id: i64,
+    pub doc_id: i64,
+    pub content: String,
+    pub embedding_model_name: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct DocumentStore {
     conn: Arc<Mutex<Connection>>, // Change to tokio Mutex
@@ -1013,6 +1022,89 @@ impl DocumentStore {
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;
             }
             Ok(())
+        }
+
+        pub async fn get_document_chunks(&self, doc_id: i64) -> Result<Vec<DocumentChunk>, Box<dyn std::error::Error>> {
+            // Get the connection to the database
+            let conn = self.conn.lock().await;
+            
+            // Query all chunks for the specified document ID
+            let mut stmt = conn.prepare(
+                "SELECT id, doc_id, chunk, embedding_model_name 
+                 FROM embeddings 
+                 WHERE doc_id = ?1"
+            )?;
+            
+            let rows = stmt.query_map(params![doc_id], |row| {
+                Ok(DocumentChunk {
+                    id: row.get(0)?,
+                    doc_id: row.get(1)?,
+                    content: row.get(2)?,
+                    embedding_model_name: row.get(3)?,
+                })
+            })?;
+            
+            // Collect the results into a vector
+            let mut chunks = Vec::new();
+            for row in rows {
+                chunks.push(row?);
+            }
+            
+            Ok(chunks)
+        }
+        
+        pub async fn get_random_chunks_for_all_documents(&self) -> Result<Vec<DocumentChunk>, Box<dyn std::error::Error>> {
+            // Get the connection to the database
+            let conn = self.conn.lock().await;
+            
+            // First, get all active document IDs
+            let mut doc_stmt = conn.prepare(
+                "SELECT id FROM documents WHERE paused = 0 OR paused IS NULL"
+            )?;
+            
+            let doc_rows = doc_stmt.query_map([], |row| {
+                row.get::<_, i64>(0)
+            })?;
+            
+            // Collect document IDs
+            let mut doc_ids: Vec<i64> = Vec::new();
+            for doc_id in doc_rows {
+                doc_ids.push(doc_id?);
+            }
+            
+            // Shuffle the document IDs to randomize the order
+            use rand::seq::SliceRandom;
+            let mut rng = rand::thread_rng();
+            doc_ids.shuffle(&mut rng);
+            
+            // For each document ID, get one random chunk
+            let mut random_chunks = Vec::new();
+            for doc_id in doc_ids {
+                // Query to get a random chunk for this document
+                let chunk = conn.query_row(
+                    "SELECT id, doc_id, chunk, embedding_model_name 
+                     FROM embeddings 
+                     WHERE doc_id = ?1
+                     ORDER BY RANDOM() 
+                     LIMIT 1",
+                    params![doc_id],
+                    |row| {
+                        Ok(DocumentChunk {
+                            id: row.get(0)?,
+                            doc_id: row.get(1)?,
+                            content: row.get(2)?,
+                            embedding_model_name: row.get(3)?,
+                        })
+                    }
+                );
+                
+                // Add the chunk if found
+                if let Ok(chunk) = chunk {
+                    random_chunks.push(chunk);
+                }
+            }
+            
+            Ok(random_chunks)
         }
 
         pub async fn update_document_details(
