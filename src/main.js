@@ -111,8 +111,8 @@ async function toggleVibeMode(enabled) {
           waitingForUserInput = true;
 
           // Show timer without starting it
-          timer.show();
-          timer.setTime(prefsGameTimeSeconds.value);
+          // timer.show();
+          // timer.setTime(prefsGameTimeSeconds.value);
 
           // Add a hint to the user
           greetMsgEl.textContent = 'Start typing to begin the timer...';
@@ -1253,6 +1253,7 @@ function emanateNavigableNodeToEditor(content) {
             
             // Restart the timer
             restartVibeMode();
+            return;
           }
         } catch (error) {
           console.error("Failed to regenerate vibe starter:", error);
@@ -2023,4 +2024,4 @@ function emanateNavigableNodeToEditor(content) {
   window.updateAllCanonEntries = updateAllCanonEntries;
 
   // Make the scrollEditorToSelection function available globally
-  window.scrollEditorToSelection = scrollEditorToSelection;
+  //window.scrollEditorToSelection = scrollEditorToSelection;

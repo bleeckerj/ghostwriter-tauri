@@ -32,7 +32,16 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src ipc: http://ipc.localhost"
+      "csp": {
+        "default-src": "'self' https: http: data: ws: wss: blob: file: customprotocol: asset:",
+        "img-src": "'self' asset: data: blob: http: https: http://asset.localhost",
+        "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "connect-src": "'self' ipc: http://ipc.localhost http: https: ws: wss:",
+        "font-src": "'self' https://fonts.gstatic.com data: asset:",
+        "script-src": "'self' 'unsafe-eval' 'unsafe-inline'",
+        "frame-src": "'self' https: http:",
+        "media-src": "'self' https: http: blob: data: asset:"
+      }
     }
   },
   "bundle": {

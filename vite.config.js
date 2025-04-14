@@ -36,7 +36,8 @@ export default defineConfig({
         // this was just at /index.html and index.html was in the root of the project
         main: resolve(__dirname, '/index.html'),
         api_key: resolve(__dirname, 'public/api_key.html'),
-        view_log: resolve(__dirname, '/view-log.html')
+        view_log: resolve(__dirname, '/view-log.html'),
+        canon_control_panel: resolve(__dirname, '/canon-view.html')
       }
     }
   },
