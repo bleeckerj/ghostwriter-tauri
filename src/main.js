@@ -75,6 +75,7 @@ let closePreferencesBtnEl;
 let vibeMode = false;
 let timer = new Timer();
 let emanationInProgress = false;
+let waitingForUserInput = false;
 
 async function toggleVibeMode(enabled) {
   try {
@@ -105,6 +106,16 @@ async function toggleVibeMode(enabled) {
             "message": `Vibe Mode generated starter: ${vibeStarter}`, 
             "level": "info" 
           });
+
+          // Set the flag to wait for user input
+          waitingForUserInput = true;
+
+          // Show timer without starting it
+          timer.show();
+          timer.setTime(prefsGameTimeSeconds.value);
+
+          // Add a hint to the user
+          greetMsgEl.textContent = 'Start typing to begin the timer...';
         }
       } catch (error) {
         console.error("Failed to generate vibe starter:", error);
@@ -114,6 +125,7 @@ async function toggleVibeMode(enabled) {
           "message": `Failed to generate vibe starter: ${error}`, 
           "level": "error" 
         });
+        waitingForUserInput = false; // Reset the flag on error
       }
       
       // Start the timer after generating the starter
@@ -126,6 +138,7 @@ async function toggleVibeMode(enabled) {
       timer.hide();
       editor.setEditable(true);
       addSimpleLogEntry({ "id": "", "timestamp": Date.now(), "message": "Vibe Mode Off", "level": "info" });
+      waitingForUserInput = false; // Reset waiting flag when vibe mode is turned off
     }
   } catch (err) {
     console.error('Failed to toggle vibe mode:', err);
@@ -135,6 +148,11 @@ async function toggleVibeMode(enabled) {
 
 async function restartVibeMode() {
   if (vibeMode) {
+    // Don't start the timer if we're waiting for user input
+    if (waitingForUserInput || emanationInProgress) {
+      return;
+    }
+
     let seconds = prefsGameTimeSeconds.value; // default to 10 seconds if not specified
     
     timer.show();
@@ -162,12 +180,14 @@ async function restartVibeMode() {
           emanateStringToEditor(content[0], 50, () => {
             editor.setEditable(true);
             emanationInProgress = false;
-            // we restart the vibe mode timer down in the handleTextInput 
-            // so that the timer in vibe mode starts after the user starts 
-            // typing again
-            // setTimeout(() => {
-              //   restartVibeMode(); // Restart the vibe mode timer
-            // }, 4000);
+
+            // Set flag to wait for user input again
+            waitingForUserInput = true;
+
+            // Show the timer but don't start it
+            timer.show();
+            timer.setTime(prefsGameTimeSeconds.value);
+            greetMsgEl.textContent = 'Start typing to continue...';
           });
         })
         .catch((err) => {
@@ -1464,6 +1484,16 @@ function emanateNavigableNodeToEditor(content) {
         // }
         
         return false; // Not handled
+      },
+      // Add handler for key events
+      handleKeyDown(view, event) {
+        // When in vibe mode and waiting for user input, start timer on first keystroke
+        if (vibeMode && waitingForUserInput) {
+          waitingForUserInput = false;
+          greetMsgEl.textContent = 'Vibe Mode Active';
+          restartVibeMode();
+        }
+        return false; // Let default handler run
       }
     },
     // restart the timer if we're still in vibemode
@@ -1473,11 +1503,10 @@ function emanateNavigableNodeToEditor(content) {
       editor.commands.scrollIntoView();
       
       // Keep existing vibe mode behavior
-      if (vibeMode == true && timer.isRunning() == false && emanationInProgress == false) {
-//handleTextInput(editor);
+      if (vibeMode && !timer.isRunning() && !emanationInProgress && !waitingForUserInput) {
         setTimeout(() => {
           restartVibeMode();
-        }, 1500);
+        }, 3000);
       }
     },
   })
