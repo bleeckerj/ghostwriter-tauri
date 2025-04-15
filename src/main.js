@@ -76,67 +76,119 @@ let vibeMode = false;
 let timer = new Timer();
 let emanationInProgress = false;
 let waitingForUserInput = false;
+let vibeStatusIndicator; // Reference to the vibe status indicator element
 
-async function toggleVibeMode(enabled, backgroundClass = 'bg-gradient-animated') {
+// Function to update the vibe status indicator
+function updateVibeStatus(status) {
+  if (!vibeStatusIndicator) return;
+  
+  switch (status) {
+    case 'writing':
+      vibeStatusIndicator.textContent = '🧠';
+      vibeStatusIndicator.classList.remove('hidden');
+      break;
+    case 'emanating':
+      vibeStatusIndicator.textContent = '🤖';
+      vibeStatusIndicator.classList.remove('hidden');
+      break;
+    case 'waiting':
+      vibeStatusIndicator.textContent = '🤔';
+      vibeStatusIndicator.classList.remove('hidden');
+      break;
+    case 'off':
+      vibeStatusIndicator.classList.add('hidden');
+      break;
+  }
+}
+
+// Create and inject the vibe status indicator when DOM is loaded
+function createVibeStatusIndicator() {
+  // Create the status indicator element
+  vibeStatusIndicator = document.createElement('div');
+  vibeStatusIndicator.id = 'vibe-status-indicator';
+  vibeStatusIndicator.className = 'fixed bottom-2 left-2 text-2xl opacity-70 hidden z-10';
+  vibeStatusIndicator.textContent = '🧠';
+  
+  // Find the main editor container and append the indicator to it
+  const editorContainer = document.querySelector('.element');
+  if (editorContainer) {
+    editorContainer.appendChild(vibeStatusIndicator);
+  }
+}
+
+async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
   try {
     if (enabled) {
-      // Get a custom system message for the vibe starter
-      const systemMessage = "You are a creative writing coach who provides inspiring opening phrases. Create a vivid, descriptive opener that could lead to a compelling narrative. Be concise, specific, and evocative.";
+      // Get current text from editor
+      const currentText = editor.getText().trim();
+      const hasExistingContent = currentText.length > 0;
       
       await WebviewWindow.getCurrent().setTitle("Vibewriter"); // Change title when vibe mode is enabled
       document.querySelector('.element').classList.add(backgroundClass);
       vibeMode = true; // Set vibeMode to true
       timer.show();
+      updateVibeStatus('writing'); // Show the writing status indicator
       addSimpleLogEntry({ "id": "", "timestamp": Date.now(), "message": "Vibe Mode On", "level": "info" });
       
-      // Generate a creative opening phrase before starting the timer
-      try {
-        const vibeStarter = await invoke("generate_vibe_starter", { 
-          systemMessage: systemMessage 
-        });
+      // Only generate a creative opening phrase if the editor is empty
+      if (!hasExistingContent) {
+        // Get a custom system message for the vibe starter
+        const systemMessage = "You are a creative writing coach who provides inspiring opening phrases. Create a vivid, descriptive opener that could lead to a compelling narrative. Be concise, specific, and evocative.";
         
-        if (vibeStarter) {
-          // Clear existing content and insert the generated starting phrase
-          editor.commands.clearContent();
-          editor.commands.insertContent(vibeStarter);
+        try {
+          const vibeStarter = await invoke("generate_vibe_starter", { 
+            systemMessage: systemMessage 
+          });
           
+          if (vibeStarter) {
+            // Clear existing content and insert the generated starting phrase
+            editor.commands.clearContent();
+            editor.commands.insertContent(vibeStarter);
+            
+            addSimpleLogEntry({ 
+              "id": "", 
+              "timestamp": Date.now(), 
+              "message": `Vibe Mode generated starter: ${vibeStarter}`, 
+              "level": "info" 
+            });
+          }
+        } catch (error) {
+          console.error("Failed to generate vibe starter:", error);
           addSimpleLogEntry({ 
             "id": "", 
             "timestamp": Date.now(), 
-            "message": `Vibe Mode generated starter: ${vibeStarter}`, 
-            "level": "info" 
+            "message": `Failed to generate vibe starter: ${error}`, 
+            "level": "error" 
           });
-
-          // Set the flag to wait for user input
-          waitingForUserInput = true;
-
-          // Show timer without starting it
-          // timer.show();
-          // timer.setTime(prefsGameTimeSeconds.value);
-
-          // Add a hint to the user
-          greetMsgEl.textContent = 'Start typing to begin the timer...';
         }
-      } catch (error) {
-        console.error("Failed to generate vibe starter:", error);
+      } else {
+        // Log that we're using existing content
         addSimpleLogEntry({ 
           "id": "", 
           "timestamp": Date.now(), 
-          "message": `Failed to generate vibe starter: ${error}`, 
-          "level": "error" 
+          "message": `Vibe Mode activated with existing content: "${currentText.substring(0, 50)}${currentText.length > 50 ? '...' : ''}"`, 
+          "level": "info" 
         });
-        waitingForUserInput = false; // Reset the flag on error
       }
+      
+      // Set the flag to wait for user input
+      waitingForUserInput = true;
+      updateVibeStatus('writing'); // Show writing status initially
+
+      // Show timer without starting it
+      greetMsgEl.textContent = 'Start typing to begin the timer...';
       
       // Start the timer after generating the starter
       restartVibeMode();
     } else {
+      // Vibe mode is being turned OFF
       await WebviewWindow.getCurrent().setTitle("Ghostwriter"); // Change title back when vibe mode is disabled
-      document.querySelector('.element').classList.remove('bg-gradient-animated');
+      document.querySelector('.element').classList.remove(backgroundClass);
       vibeMode = false; // Set vibeMode to false
       timer.stop();
       timer.hide();
       editor.setEditable(true);
+      updateVibeStatus('off'); // Hide the status indicator
       addSimpleLogEntry({ "id": "", "timestamp": Date.now(), "message": "Vibe Mode Off", "level": "info" });
       waitingForUserInput = false; // Reset waiting flag when vibe mode is turned off
     }
@@ -271,6 +323,9 @@ async function completionFromContext() {
   let dots = 0;
   let wasDisabled = false;
   
+  // Update the vibe status indicator to show we're waiting for the LLM
+  updateVibeStatus('waiting');
+  
   const loadingInterval = setInterval(() => {
     dots = (dots + 1) % 8;
     greetMsgEl.textContent = `Emanating${'.'.repeat(dots)}`;
@@ -307,6 +362,10 @@ async function completionFromContext() {
     clearInterval(loadingInterval);
     //console.log(completion);
     greetMsgEl.textContent = 'Emanation Complete';
+    
+    // Update the vibe status indicator to show we're back to writing mode
+    updateVibeStatus('writing');
+    
     //console.log("Completion content:", content);
     //emanateToEditor(content);
     //emanateNavigableNodeToEditor(content);
@@ -343,11 +402,17 @@ async function completionFromContext() {
     clearInterval(loadingInterval);
     greetMsgEl.textContent = 'Error occurred '+err;
     console.error(err);
+    
+    // Update the vibe status indicator to show we're back to writing mode even after an error
+    updateVibeStatus('writing');
   });
 }
 
 function emanateStringToEditor(content, timeout = 30, onComplete = null) {
   let index = 0;
+  
+  // Show the robot emoticon during emanation
+  updateVibeStatus('emanating');
   
   function sendNextCharacter() {
     if (index < content.length) {
@@ -363,6 +428,9 @@ function emanateStringToEditor(content, timeout = 30, onComplete = null) {
       
       // Final scroll to ensure the last character is visible
       editor.commands.scrollIntoView();
+      
+      // Switch back to writing mode when emanation is complete
+      updateVibeStatus('writing');
       
       if (onComplete) {
         onComplete(); // Call the completion handler if provided
@@ -451,6 +519,11 @@ function emanateNavigableNodeToEditor(content) {
   
   
   window.addEventListener("DOMContentLoaded", async () => {
+    // Create the vibe status indicator element
+    createVibeStatusIndicator();
+    
+    // Initialize the vibe status indicator reference
+    vibeStatusIndicator = document.getElementById('vibe-status-indicator');
     
     const refreshModelsBtn = document.getElementById('refresh-models-btn');
     const modelsContainer = document.getElementById('models-container');
@@ -1511,10 +1584,6 @@ function emanateNavigableNodeToEditor(content) {
       }
     },
   })
-  
-  const handleTextInput = debounce((editor) => {
-    console.log('Updated text:', editor.getText());
-  }, 80); // Wait 300ms before firing the event
   
   const diagnostics = new Editor({
     element: document.querySelector('.diagnostics'),
