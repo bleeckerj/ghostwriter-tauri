@@ -77,14 +77,14 @@ let timer = new Timer();
 let emanationInProgress = false;
 let waitingForUserInput = false;
 
-async function toggleVibeMode(enabled) {
+async function toggleVibeMode(enabled, backgroundClass = 'bg-gradient-animated') {
   try {
     if (enabled) {
       // Get a custom system message for the vibe starter
       const systemMessage = "You are a creative writing coach who provides inspiring opening phrases. Create a vivid, descriptive opener that could lead to a compelling narrative. Be concise, specific, and evocative.";
       
       await WebviewWindow.getCurrent().setTitle("Vibewriter"); // Change title when vibe mode is enabled
-      document.querySelector('.element').classList.add('bg-gradient-animated');
+      document.querySelector('.element').classList.add(backgroundClass);
       vibeMode = true; // Set vibeMode to true
       timer.show();
       addSimpleLogEntry({ "id": "", "timestamp": Date.now(), "message": "Vibe Mode On", "level": "info" });
@@ -518,12 +518,12 @@ function emanateNavigableNodeToEditor(content) {
       // If so, turn vibe mode OFF
       if (vibemButton.classList.contains("button-in")) {
         vibemButton.classList.remove("button-in");
-        toggleVibeMode(false);
+        toggleVibeMode(false, 'bg-blue-200'); // bg-animated-gradient
         
       } else {
         // otherwise vibe mode ON
-        toggleVibeMode(true);
-        vibemButton.classList.add("button-in");
+        toggleVibeMode(true, 'bg-blue-200');
+        vibemButton.classList.add("button-in"); // bg-animated-gradient
       }    
     });
     
