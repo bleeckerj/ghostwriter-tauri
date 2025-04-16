@@ -80,7 +80,11 @@ let vibeStatusIndicator; // Reference to the vibe status indicator element
 
 // Function to update the vibe status indicator
 function updateVibeStatus(status) {
-  if (!vibeStatusIndicator) return;
+  if (!vibeStatusIndicator) {
+    // Try to find the indicator if not already set
+    vibeStatusIndicator = document.getElementById('vibe-status-indicator');
+    if (!vibeStatusIndicator) return; // Still not found
+  }
   
   switch (status) {
     case 'writing':
@@ -91,7 +95,7 @@ function updateVibeStatus(status) {
       vibeStatusIndicator.textContent = '🤖';
       vibeStatusIndicator.classList.remove('hidden');
       break;
-    case 'waiting':
+    case 'thinking':
       vibeStatusIndicator.textContent = '🤔';
       vibeStatusIndicator.classList.remove('hidden');
       break;
@@ -101,24 +105,27 @@ function updateVibeStatus(status) {
   }
 }
 
-// Create and inject the vibe status indicator when DOM is loaded
-function createVibeStatusIndicator() {
-  // Create the status indicator element
-  vibeStatusIndicator = document.createElement('div');
-  vibeStatusIndicator.id = 'vibe-status-indicator';
-  vibeStatusIndicator.className = 'fixed bottom-2 left-2 text-2xl opacity-70 hidden z-10';
-  vibeStatusIndicator.textContent = '🧠';
+// // Create and inject the vibe status indicator when DOM is loaded
+// function createVibeStatusIndicator() {
+//   // Create the status indicator element
+//   vibeStatusIndicator = document.createElement('div');
+//   vibeStatusIndicator.id = 'vibe-status-indicator';
+//   vibeStatusIndicator.classList.toggle('hidden', true);
+//   //vibeStatusIndicator.className = 'fixed bottom-2 left-2 text-2xl opacity-70 hidden z-10';
+//   vibeStatusIndicator.textContent = '🧠';
   
-  // Find the main editor container and append the indicator to it
-  const editorContainer = document.querySelector('.element');
-  if (editorContainer) {
-    editorContainer.appendChild(vibeStatusIndicator);
-  }
-}
+//   // Find the main editor container and append the indicator to it
+//   const editorContainer = document.querySelector('.element');
+//   if (editorContainer) {
+//     editorContainer.appendChild(vibeStatusIndicator);
+//   }
+// }
 
 async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
   try {
     if (enabled) {
+      let vibemButton = document.querySelector("#vibem-inline-action-item");
+
       // Get current text from editor
       const currentText = editor.getText().trim();
       const hasExistingContent = currentText.length > 0;
@@ -136,6 +143,8 @@ async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
         const systemMessage = "You are a creative writing coach who provides inspiring opening phrases. Create a vivid, descriptive opener that could lead to a compelling narrative. Be concise, specific, and evocative.";
         
         try {
+          vibemButton.classList.toggle("button-inactive");
+          updateVibeStatus('thinking');
           const vibeStarter = await invoke("generate_vibe_starter", { 
             systemMessage: systemMessage 
           });
@@ -152,8 +161,10 @@ async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
               "level": "info" 
             });
           }
+          vibemButton.classList.toggle("button-inactive");
         } catch (error) {
           console.error("Failed to generate vibe starter:", error);
+          vibemButton.classList.toggle("button-inactive");
           addSimpleLogEntry({ 
             "id": "", 
             "timestamp": Date.now(), 
@@ -217,6 +228,7 @@ async function restartVibeMode() {
       () => {
         // Called when timer completes
         emanationInProgress = true;
+        updateVibeStatus('thinking');
         timer.stop();
         timer.hide();
         editor.setEditable(false);
@@ -324,7 +336,7 @@ async function completionFromContext() {
   let wasDisabled = false;
   
   // Update the vibe status indicator to show we're waiting for the LLM
-  updateVibeStatus('waiting');
+  updateVibeStatus('thinking');
   
   const loadingInterval = setInterval(() => {
     dots = (dots + 1) % 8;
@@ -520,7 +532,7 @@ function emanateNavigableNodeToEditor(content) {
   
   window.addEventListener("DOMContentLoaded", async () => {
     // Create the vibe status indicator element
-    createVibeStatusIndicator();
+    //createVibeStatusIndicator();
     
     // Initialize the vibe status indicator reference
     vibeStatusIndicator = document.getElementById('vibe-status-indicator');

@@ -14,9 +14,7 @@
 <body>
   
   <main class="container">
-    <div id="floating-timer" class="floating-timer">
-      00:00
-    </div>
+
     <!-- URL Top Panel -->
     <div id="url-panel" class="url-panel-hidden border-[0.5px] relative w-full z-50 rounded-sm">
       <div class="flex items-center gap-2 p-2">
@@ -29,10 +27,10 @@
     
     
     <div class="scroll-area">
-      <div class="editor-content h-full">
+      <div id="floating-timer" class="floating-timer">
+        00:00
+      </div>
         <div autocomplete="off" spellcheck="false" autocapitalize="off" id="main-editor" class="element"></div>
-        <!-- Vibe mode status indicator -->
-        <div id="vibe-status-indicator" class="fixed bottom-2 left-2 text-2xl opacity-70 hidden z-10">🧠</div>
       </div>
     </div>
     
@@ -57,9 +55,11 @@
         <!-- <span id="openai-api-key-btn" class="diagnostics-area-button enabled">OPNAI</span> -->
         <span id="ingest-url-btn" class="diagnostics-area-button enabled">NGSTU</span>
         
-        <div class="absolute right-4 top-2 z-10 flex items-center transparent rounded-full shadow-sm shadow-black">
+        <div id="icon-area" class="absolute right-4 top-2 z-10 flex items-center transparent rounded-full shadow-none shadow-black">
           <img class="h-[2.2em]" src="/images/icons/LaboratoryCircle_Guy_01_CircleTeal.webp" />
-        </div>
+          <div id="vibe-status-indicator" class="text-[30px] ml-2 opacity-90">🧠</div>
+       
+           </div>
       </div>
       <div id="diagnostics-editor" class="diagnostics-content bg-blue-700 h-full bg-2 rounded-sm">
         <div class="diagnostics bg-blue-700 rounded-sm mb-2"></div>
@@ -218,7 +218,7 @@
           class="h-4 w-4 opacity-70">
           <path
           fill-rule="evenodd"
-          d="M14 6a4 4 0 0 1-4.899 3.899l-1.955 1.955a.5.5 0 0 1-.353.146H5v1.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2.293a.5.5 0 0 1 .146-.353l3.955-3.955A4 4 0 1 1 14 6Zm-4-2a.75.75 0 0 0 0 1.5.5.5 0 0 1 .5.5.75.75 0 0 0 1.5 0 2 2 0 0 0-2-2Z"
+          d="M14 6a4 4 0 0 1-4.899 3.899l-1.955 1.955a.5.5 0 0 1-.353.146H5v1.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2.293a.5.5 0 0 1-.146-.353l3.955-3.955A4 4 0 1 1 14 6Zm-4-2a.75.75 0 0 0 0 1.5.5.5 0 0 1 .5.5.75.75 0 0 0 1.5 0 2 2 0 0 0-2-2Z"
           clip-rule="evenodd" />
         </svg>
         <div class="flex grow items-center !shadow-none">
