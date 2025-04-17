@@ -728,7 +728,6 @@ function emanateNavigableNodeToEditor(content) {
     
     prefsOllamaUrl = document.querySelector("#prefs-ollama-url");
     prefsLMStudioUrl = document.querySelector("#prefs-lmstudio-url");
-    prefsOllamaUrl = document.querySelector("#prefs-ollama-url");
     
     greetInputEl = document.querySelector("#greet-input");
     greetMsgEl = document.querySelector("#greet-msg");
@@ -1988,7 +1987,7 @@ function emanateNavigableNodeToEditor(content) {
     setSelectedAIProvider(res.ai_provider);
     setSelectedAIModel(res.ai_model_name);
     prefsOllamaUrl.value = res.ollama_url;
-    prefsLMStudioUrl.value = res.lmstudio_url;
+    prefsLMStudioUrl.value = res.lm_studio_url;
     invoke("load_openai_api_key_from_keyring", {}).then((res) => {
       openaiApiKeyEl.value = res;
     });

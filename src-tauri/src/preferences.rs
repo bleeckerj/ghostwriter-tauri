@@ -55,7 +55,7 @@ impl Preferences {
     pub const DEFAULT_PROSE_STYLE: &'static str = "A style that is consistent with the input text.";
     pub const GAME_TIMER_MS_DEFAULT: usize = 30000;
     pub const OLLAMA_URL: &'static str = "http://localhost:11434";
-    pub const LM_STUDIO_URL: &'static str = "http://localhost:1234";
+    pub const LM_STUDIO_URL: &'static str = "http://localhost:1234/v1";
     /// Load preferences and ensure no empty fields
     pub fn load_with_defaults(app_state: &AppState, app_handle: AppHandle) -> Self {
         let mut prefs: Preferences = match confy::load("ghostwriter", "preferences") {

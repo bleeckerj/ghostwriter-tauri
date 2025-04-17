@@ -268,8 +268,8 @@ async fn get_model_names(
             providers::create_provider(ProviderType::Ollama, &ollama_url)
         },
         "lmstudio" => {
-            let lmstudio_url = preferences.lm_studio_url.clone();
-            providers::create_provider(ProviderType::LMStudio, &lmstudio_url)
+            let lm_studio_url = preferences.lm_studio_url.clone();
+            providers::create_provider(ProviderType::LMStudio, &lm_studio_url)
         },
         "openai" => {
             let openai_api_key = get_api_key(&app_handle).map_err(|e| e.to_string())?;
@@ -1236,8 +1236,8 @@ async fn load_openai_api_key_from_keyring(
                 providers::create_provider(ProviderType::Ollama, &ollama_url)
             },
             "lmstudio" => {
-                let lmstudio_url = preferences.lm_studio_url.clone();
-                providers::create_provider(ProviderType::LMStudio, &lmstudio_url)
+                let lm_studio_url = preferences.lm_studio_url.clone();
+                providers::create_provider(ProviderType::LMStudio, &lm_studio_url)
             },
             "openai" | _ => {
                 let openai_api_key = get_api_key(&_app_handle.ok_or("AppHandle is None")?).map_err(|e| e.to_string())?;

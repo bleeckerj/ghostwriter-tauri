@@ -399,8 +399,9 @@ impl EmbeddingProvider for LMStudioProvider {
 
 impl PreferredEmbeddingModel for LMStudioProvider {
     fn get_preferred_embedding_model(&self) -> String {
+        "text-embedding-nomic-embed-text-v1.5".to_string()
         // LM Studio doesn't have a preferred embedding model
-        unimplemented!("LM Studio does not yet support a preferred embedding model");
+        //unimplemented!("LM Studio does not yet support a preferred embedding model");
     }
     
 }
