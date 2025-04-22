@@ -848,20 +848,25 @@ async fn load_openai_api_key_from_keyring(
         }
         
         
-        if(similar_docs.len() == 0) {
-            new_logger.simple_log_message(
-                "No similar documents found. No emanations will issue.".to_string(),
-                "".to_string(),
-                "info".to_string()
-            );
-            return Err("No similar documents found. No emanations will issue.".to_string());
-        } else {
-            new_logger.simple_log_message(
-                format!("Found {} cosine similar documents ({})", similar_docs.len(), similarity_threshold),
-                "".to_string(),
-                "info".to_string()
-            );
-        }
+        // if(similar_docs.len() == 0) {
+        //     new_logger.simple_log_message(
+        //         "No similar documents found. No emanations will issue.".to_string(),
+        //         "".to_string(),
+        //         "info".to_string()
+        //     );
+        //     return Err("No similar documents found. No emanations will issue.".to_string());
+        // } else {
+        //     new_logger.simple_log_message(
+        //         format!("Found {} cosine similar documents ({})", similar_docs.len(), similarity_threshold),
+        //         "".to_string(),
+        //         "info".to_string()
+        //     );
+        // }
+        new_logger.simple_log_message(
+                    format!("Found {} cosine similar documents ({})", similar_docs.len(), similarity_threshold),
+                    "".to_string(),
+                    "info".to_string()
+                );
         // Prepare the context for the LLM
         // This has all the document metadata..is that okay?
         let mut context = String::new();
@@ -1312,7 +1317,7 @@ async fn load_openai_api_key_from_keyring(
             app_handle: tauri::AppHandle,
             message: String,
         ) -> Result<String, String> {
-            println!("Time here looks like {}", chrono::Local::now().to_rfc3339());
+            //println!("Time here looks like {}", chrono::Local::now().to_rfc3339());
             // Step 1: Create rich log
             let rich_log_data = RichLog {
                 message:message.to_string(),
