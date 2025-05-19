@@ -13,31 +13,129 @@ Ghostwriter is:
 - 🧠 A **semantic memory engine** that embeds and indexes your writing corpus
 - ✨ A **context-aware autocompleter** powered by GPT-4, Ollama, or LM Studio
 - 💻 A **terminal-based co-writer** with a beautiful TUI interface
-- 🌀 A **creative mode** for co-authoring with AI in real-time called **Vibewriter™**
+- 🌀 A **creative challenge mode** the world's first patented real-time writing exercise-for-your-brain —  **Vibewriter™ Mode**
 
 ---
 
 ## 🌟 What Users Say
 
-> “Ghostwriter doesn’t just finish my sentences — it finishes my thoughts.”  
-> — *Wm. Branson, Journalist & Novelist*
-
-> “It’s like having a future version of me in the loop.”  
-> — *Larry Greenberg, Writing Coach*
-
-> “Ghostwriter has become part of my writing ritual. I can’t imagine drafting without it.”  
-> — *Chaya Trent, Tech Strategist*
-
+<p>
+  <strong>“Ghostwriter doesn’t just finish my sentences — it finishes my thoughts.”</strong><br/>
+  <em>— Wm. Branson, Jr., Executive</em><br/>
+  <span style="color: #fbbf24;">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
       <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
     </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+  </span>
+</p>
+
+<p>
+  <strong>“This is the tool I use in my writing seminars, and its been approved by the college whereas vanilla AI still raises eyebrows. When will ”</strong><br/>
+  <em>— G. Beato Mason, Creative Writing Tutor at Oberlin College</em><br/>
+  <span style="color: #fbbf24;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="12 2 15 8.5 22 9.3 17 14.1 18.3 21 12 17.8 5.7 21 7 14.1 2 9.3 9 8.5 12 2"/>
+  </svg>
+  </span>
+</p>
+
+<p>
+  <strong>“It’s like having that voice in my head able to actual write with me rather than just bug me to write!”</strong><br/>
+  <em>— A. Rosenthal, Retired Financial Analyst</em><br/>
+  <span style="color: #fbbf24;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+  </span>
+</p>
+
+<p>
+  <strong>An integral part of my morning writing ritual. The blank page doesn't feel so lonely anymore.”</strong><br/>
+  <em>— Chaya Trent, Tech Strategist</em><br/>
+  <span style="color: #fbbf24;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+  </span>
+</p>
+
+<p>
+  <strong>“It helps me finishes my thoughts in words, which is exceptionally helpful esp. when my attention tends to wander or I have trouble connecting multiple entangled thoughts.”</strong><br/>
+  <em>— Thomas Cornell, Fractional Novelist</em><br/>
+  <span style="color: #fbbf24;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="12 2 15 8.5 22 9.3 17 14.1 18.3 21 12 17.8 5.7 21 7 14.1 2 9.3 9 8.5 12 2"/>
+  </svg>
+  </span>
+</p>
+
 
 ---
 
 ## 🌟 Key Features
 
 ### 📚 Personal Document Memory
-Ghostwriter ingests `.txt`, `.md`, and `.pdf` files and embeds them with `text-embedding-ada-002` (or your model). It stores them in a local SQLite vector store and recalls them using cosine similarity to enrich completions.
+Ghostwriter ingests `.txt`, `.md`, and `.pdf` files and embeds them with your text embedding model of choice (eg `text-embedding-ada-002`, `nomic-embed-text-v1.5-GGUF`, etc.) It stores embeddings in a local vector store and recalls them using cosine similarity to enrich and make relevant completions.
 
 ### 🔍 Contextual Autocomplete
 When you type a sentence fragment, Ghostwriter finds semantically similar excerpts from your archive and builds an LLM prompt with:
@@ -49,12 +147,9 @@ Then it completes your thought — in your own voice.
 
 ### 🧠 Model Agnostic
 Choose your backend:
-- ✅ **OpenAI** (GPT-4, GPT-3.5)
-- ✅ **Ollama** (run open-source models locally)
+- ✅ **OpenAI** (GPT-4o)
+- ✅ **Ollama** (run Gemma3, Qwen3, and other open-source models locally)
 - ✅ **LM Studio** (point to a local inference server)
-
-> *Ghostwriter doesn’t care who’s talking — as long as it remembers who you are.
-
 
 
 ### ⏱️ Vibewriter™ Mode
@@ -67,7 +162,11 @@ Vibewriter is a timed, improvisational writing mode where you and the Ghost take
 
 🎯 Use it to: break creative ruts, riff toward new ideas, warm up for writing, or just have fun.
 
-“Vibewriter feels like jamming with my muse, the source, not wrestling with my own brain.” — Beta tester
+  <strong>“Vibewriter feels like jamming with my muse, the source, not wrestling with my own sometimes reluctant brain.”</strong><br/>
+  <em>— Trevor R., Creative Writing Coach and Beta Tester</em><br/>
+
+  <strong>“I think Vibewriter is a stand-alone product, tbh. It's like the gymnasium everyone who writes needs to hit every morning! 🏋🏽‍♂️🧠”</strong><br/>
+  <em>— B. Pilshaw, Generalist & Tarot Muse</em><br/>
 
 
 > _“Vibewriter feels like jamming with a ghost version of my own brain.”_ — Beta tester
@@ -89,10 +188,13 @@ Every prompt, vector match, and AI response is saved as a `.jsonl` log entry so 
 ---
 
 🤖 How It Works
-- Ingest: Drop .txt, .md, or .pdf files into the docs/ folder
+- Ghostwriter uses both inference and RAG-based patterns for collaborating with you and keeping subject matter on point
+- Ingest: Drop .txt, .md, .epub, or .pdf files
+- URLs: Ingest from a URL
 - Chunk: Text is divided into overlapping chunks
-- Embed: Each chunk gets a vector representation
-- Store: Chunks + embeddings saved in SQLite DB
+- Embed: Each chunk gets a unique vector representation produced by the appropriate embedding model
+- Store: Chunks + embeddings saved in a bundled vector store called a Corpus.
+- Corpus: You can have multiple Corpus databases, representing different projects.
 - Search: Input is embedded and matched to similar chunks
 - Prompt: LLM gets context-rich prompt to generate completion
 - Complete: You write — Ghostwriter listens and responds
@@ -106,7 +208,7 @@ Every prompt, vector match, and AI response is saved as a `.jsonl` log entry so 
 - **Multi-agent Collaboration** — have Ghostwriter integrate with Conversseract, and form an Pilshaw compliant Oraculator network — all in one interface.
 
 ---
-# Ghostwriter Tauri Tiptap Vanilla Javascript
+<!-- # Ghostwriter Tauri Tiptap Vanilla Javascript
 
 `2025-02-04T22:50:52-08:00`
 Seems to build. Communicates from front to back to front again.
@@ -122,4 +224,4 @@ This template should help get you started developing with Tauri in vanilla HTML,
 
 ## Recommended IDE Setup
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer) -->
