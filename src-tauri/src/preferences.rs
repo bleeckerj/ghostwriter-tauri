@@ -109,11 +109,11 @@ impl Preferences {
                 Preferences::default()
             }
         };
-        app_handle.emit("simple-log-message", json!({
-            "message": format!("Preferences loaded: {:?}", prefs),
-            "timestamp": chrono::Local::now().to_rfc3339(),
-            "level": "info"
-        }));
+        // app_handle.emit("simple-log-message", json!({
+        //     "message": format!("Preferences loaded: {:?}", prefs),
+        //     "timestamp": chrono::Local::now().to_rfc3339(),
+        //     "level": "info"
+        // }));
         prefs
     }
     

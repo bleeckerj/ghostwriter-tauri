@@ -298,11 +298,11 @@ async fn get_model_names(
     };
     models.iter().for_each(|model| {
         log::debug!("Model: {:?}", model);
-        new_logger.simple_log_message(
-            format!("Model: {:?}", model),
-            "models".to_string(),
-            "debug".to_string()
-        );
+        // new_logger.simple_log_message(
+        //     format!("Model: {:?}", model),
+        //     "models".to_string(),
+        //     "debug".to_string()
+        // );
     });
     let model_names: Vec<String> = models.iter().map(|model| model.name.clone()).collect();
     Ok(model_names)
@@ -477,11 +477,11 @@ async fn load_openai_api_key_from_keyring(
                 match key {
                     Some(k) => {
                         log::debug!("API key successfully loaded from keychain");
-                        new_logger.simple_log_message(
-                            format!("{} API key successfully loaded from keychain", k),
-                            "keychain".to_string(),
-                            "debug".to_string()
-                        );
+                        // new_logger.simple_log_message(
+                        //     format!("{} API key successfully loaded from keychain", k),
+                        //     "keychain".to_string(),
+                        //     "debug".to_string()
+                        // );
                         Ok(k)
                     }
                     None => {
@@ -521,7 +521,7 @@ async fn load_openai_api_key_from_keyring(
         // Attempt to store the key
         match KeychainHandler::store_api_key(&key) {
             Ok(_) => {
-                log::info!("API key successfully stored in keychain");
+                log::debug!("API key successfully stored in keychain");
                 new_logger.simple_log_message(
                     "API key successfully stored in keychain".to_string(),
                     "keychain".to_string(),
@@ -761,11 +761,11 @@ async fn load_openai_api_key_from_keyring(
         lm_models.iter().for_each(|models| {
             models.iter().for_each(|model| {
                 log::debug!("Model: {:?}", model.name);
-                new_logger.simple_log_message(
-                    format!("Model: {:?}", model.name),
-                    "models".to_string(),
-                    "debug".to_string()
-                );
+                // new_logger.simple_log_message(
+                //     format!("Model: {:?}", model.name),
+                //     "models".to_string(),
+                //     "debug".to_string()
+                // );
             });
         });
         
@@ -847,7 +847,7 @@ async fn load_openai_api_key_from_keyring(
             similar_docs.shuffle(&mut rng);
         }
         
-        
+        // We don't care if we don't find any similar docs
         // if(similar_docs.len() == 0) {
         //     new_logger.simple_log_message(
         //         "No similar documents found. No emanations will issue.".to_string(),
@@ -914,9 +914,9 @@ async fn load_openai_api_key_from_keyring(
         system_content.push_str("<response_limit>\nStrictly follow these explicit instructions in terms of quantity and length of your response:\n");
         system_content.push_str(&response_limit);
         system_content.push_str("</response_limit>");
-        //system_content.push_str("<previous_exchanges>");
-        //system_content.push_str(&conversation_context);
-        //system_content.push_str("</previous_exchanges>");
+        system_content.push_str("<previous_exchanges>");
+        system_content.push_str(&conversation_context);
+        system_content.push_str("</previous_exchanges>");
         system_content.push_str("<context>");
         system_content.push_str(&context);
         system_content.push_str("</context>");

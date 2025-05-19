@@ -548,7 +548,7 @@ function emanateNavigableNodeToEditor(content) {
       addSimpleLogEntry({
         id: "",
         timestamp: Date.now(),
-        message: 'Preferences loaded<br/>'+resJson,
+        message: 'Preferences loaded',//<br/>'+resJson,
         level: 'info'
       });
       setPreferencesUI(res);
@@ -603,11 +603,12 @@ function emanateNavigableNodeToEditor(content) {
       // If so, turn vibe mode OFF
       if (vibemButton.classList.contains("button-in")) {
         vibemButton.classList.remove("button-in");
-        toggleVibeMode(false, 'bg-blue-200'); // bg-animated-gradient
+        vibemButton.classList.add("enabled");
+        toggleVibeMode(false, 'bg-stone-200'); // bg-animated-gradient
         
       } else {
         // otherwise vibe mode ON
-        toggleVibeMode(true, 'bg-blue-200');
+        toggleVibeMode(true, 'bg-stone-200');
         vibemButton.classList.add("button-in"); // bg-animated-gradient
       }    
     });
@@ -786,7 +787,7 @@ function emanateNavigableNodeToEditor(content) {
         addSimpleLogEntry({
           id: "",
           timestamp: Date.now(),
-          message: 'Preferences loaded<br/>'+resJson,
+          message: 'Preferences loaded',//<br/>'+resJson,
           level: 'info'
         });
         setPreferencesUI(res);
@@ -914,11 +915,11 @@ function emanateNavigableNodeToEditor(content) {
       console.log('Toggling panel');
       // console.log('Panel before:', panel.classList.contains('open')); 
       invoke("load_preferences").then((res) => {
-        console.log('Preferences Loaded:', res);
+        //console.log('Preferences Loaded:', res);
         addSimpleLogEntry({
           id: "",
           timestamp: Date.now(),
-          message: 'Preferences loaded<br/>'+JSON.stringify(res, null, 2),
+          message: 'Preferences loaded<br/>',//+JSON.stringify(res, null, 2),
           level: 'info'
         });
         setPreferencesUI(res);

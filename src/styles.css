@@ -1005,12 +1005,12 @@ select#prefs-model-name option {
 /* Timer styles */
 .floating-timer {
   @apply hover:opacity-0;
-  @apply absolute bottom-3 right-2 z-50; /* Changed from fixed to absolute and adjusted position */
+  @apply absolute top-3 left-2 z-50; /* Changed from fixed to absolute and adjusted position */
   @apply font-['ESKlarheitKurrentMono'];
-  @apply text-[2em];
+  @apply text-[1.5em];
   @apply px-4 py-2;
   @apply rounded-md;
-  @apply bg-black/20;
+  @apply bg-black/10;
   @apply text-white;
   @apply shadow-lg;
   @apply backdrop-blur-sm;
