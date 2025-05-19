@@ -110,6 +110,7 @@ Ghostwriter is:
 <p>
   <strong>“It helps me finishes my thoughts in words, which is exceptionally helpful esp. when my attention tends to wander or I have trouble connecting multiple entangled thoughts.”</strong><br/>
   <em>— Thomas Cornell, Fractional Novelist</em><br/>
+  ⭐⭐⭐⭐<br/>
   <span style="color: #fbbf24;">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
       <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
