@@ -28,8 +28,9 @@ Ghostwriter is:
 > “Ghostwriter has become part of my writing ritual. I can’t imagine drafting without it.”  
 > — *Chaya Trent, Tech Strategist*
 
-
-
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24 7.45 13.97 5.82 21z"/>
+    </svg>
 
 ---
 
