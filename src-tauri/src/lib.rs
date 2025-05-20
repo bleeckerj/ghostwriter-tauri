@@ -933,7 +933,11 @@ async fn load_openai_api_key_from_keyring(
         // system_content.push_str(&input);
         // system_content.push_str("</user_input>");
         
-        
+        new_logger.simple_log_message(
+            format!("System prompt: {}", system_content),
+                "system_prompt".to_string(),
+            "debug".to_string()
+        );
         
         // Create message array in the generic format
         let messages = vec![
