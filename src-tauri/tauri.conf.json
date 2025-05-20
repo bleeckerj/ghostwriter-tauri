@@ -16,9 +16,9 @@
       {
         "title": "Ghostwriter",
         "label": "main",
-        "width": 820,
-        "height": 600,
-        "minWidth": 820,
+        "width": 800,
+        "height": 1000,
+        "minWidth": 720,
         "minHeight": 600,
         "resizable": true,
         "fullscreen": false,

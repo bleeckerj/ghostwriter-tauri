@@ -82,8 +82,10 @@ impl ModelProvider for LMStudioProvider {
         let url = format!("{}/models", self.base_url);
         
         let request = self.client.get(&url);
-        let request = self.add_auth_header(request);
-        
+        //let request = self.add_auth_header(request);
+        println!("Request URL: {}", url);
+        println!("Request {:?}", request);
+
         let response = request.send().await
             .map_err(|e| AIProviderError::APIError(format!("Network error: {}", e)))?;
             
@@ -132,7 +134,10 @@ impl ModelProvider for LMStudioProvider {
         
         let request = self.client.get(&url);
         let request = self.add_auth_header(request);
-        
+        println!("Request URL: {}", url);
+        println!("Request {:?}", request);
+
+
         let response = request.send().await
             .map_err(|e| AIProviderError::APIError(format!("Network error: {}", e)))?;
             
@@ -164,8 +169,28 @@ impl ModelProvider for LMStudioProvider {
     }
 
     async fn get_preferred_inference_model(&self, preference_model: &str) -> Result<AIModel, AIProviderError> {
-        // LM Studio doesn't have a preferred model
-        unimplemented!("LM Studio does not yet support a preferred model");
+        // Use the preferred_model_name if set, otherwise use the provided preference_model
+        let model_id = match &self.preferred_model_name {
+            Some(model) => model.clone(),
+            None => preference_model.to_string(),
+        };
+        
+        // Try to fetch the model info
+        match self.get_model(&model_id).await {
+            Ok(model) => Ok(model),
+            Err(AIProviderError::ModelNotAvailable(_)) => {
+                // If model isn't available, try to get the first available model
+                let models = self.list_models().await?;
+                if let Some(first_model) = models.first() {
+                    Ok(first_model.clone())
+                } else {
+                    Err(AIProviderError::ModelNotAvailable(format!(
+                        "No models available for LM Studio provider"
+                    )))
+                }
+            }
+            Err(err) => Err(err),
+        }
     }
 
     fn set_preferred_inference_model(&mut self, model_name: String) -> Result<(), AIProviderError> {
@@ -194,7 +219,7 @@ impl ChatCompletionProvider for LMStudioProvider {
         let url = format!("{}/chat/completions", self.base_url);
         
         // Serialize messages in OpenAI compatible format
-        #[derive(Serialize)]
+        #[derive(Serialize, Debug)]
         struct LMStudioMessage {
             role: String,
             content: String,
@@ -202,7 +227,7 @@ impl ChatCompletionProvider for LMStudioProvider {
             name: Option<String>,
         }
         
-        #[derive(Serialize)]
+        #[derive(Serialize, Debug)]
         struct LMStudioRequest {
             model: String,
             messages: Vec<LMStudioMessage>,
@@ -241,8 +266,27 @@ impl ChatCompletionProvider for LMStudioProvider {
             stop: None,
         };
         
+        // Debug: Print the serialized JSON for inspection
+        let json_string = serde_json::to_string_pretty(&lm_request)
+            .map_err(|e| AIProviderError::APIError(format!("Failed to serialize request: {}", e)))?;
+        
+        log::debug!("LMStudio request JSON: {}", json_string);
+        
+        // Generate equivalent curl command for debugging - no auth header needed for LM Studio
+        let curl_command = format!(
+            "curl -X POST {} -H \"Content-Type: application/json\" --data '{}'",
+            url,
+            json_string.replace("'", "\\'") // Escape single quotes for shell safety
+        );
+        
+        log::debug!("Equivalent curl command: \n{}", curl_command);
+        
         let http_request = self.client.post(&url).json(&lm_request);
-        let http_request = self.add_auth_header(http_request);
+        let cloned_request = http_request.try_clone()
+            .ok_or_else(|| AIProviderError::APIError("Failed to clone request".to_string()))?;
+        // Add additional debugging for the raw request
+        log::debug!("LMStudio request URL: {}", url);
+        log::debug!("LMStudio request headers: {:?}", cloned_request.build().unwrap().headers());
         
         let response = http_request.send().await
             .map_err(|e| AIProviderError::APIError(format!("Network error: {}", e)))?;
@@ -399,8 +443,9 @@ impl EmbeddingProvider for LMStudioProvider {
 
 impl PreferredEmbeddingModel for LMStudioProvider {
     fn get_preferred_embedding_model(&self) -> String {
+        "text-embedding-nomic-embed-text-v1.5".to_string()
         // LM Studio doesn't have a preferred embedding model
-        unimplemented!("LM Studio does not yet support a preferred embedding model");
+        //unimplemented!("LM Studio does not yet support a preferred embedding model");
     }
     
 }

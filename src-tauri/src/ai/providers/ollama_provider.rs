@@ -194,8 +194,8 @@ impl ChatCompletionProvider for OllamaProvider {
         .top_p(0.25);
     
         let request = GenerationRequest::new(model, prompt.clone()).options(options);
-        println!("***Request: {:?}", request.clone());
-        println!("***Prompt: {:?}", prompt.clone());
+        //println!("***Request: {:?}", request.clone());
+        //println!("***Prompt: {:?}", prompt.clone());
         let res = self.client
             .generate(request)
             .await
@@ -205,7 +205,7 @@ impl ChatCompletionProvider for OllamaProvider {
         //     .generate(GenerationRequest::new(model, prompt).options(options))
         //     .await;
     
-        println!("Response: {:?}", res);
+        //println!("Response: {:?}", res);
 
         Ok(ChatCompletionResponse {
             id: uuid::Uuid::new_v4().to_string(),

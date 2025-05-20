@@ -49,6 +49,7 @@ let prefsMainPromptTextArea;
 let prefsResponseLimitTextArea;
 let prefsFinalPreambleTextArea;
 let prefsProseStyleTextArea;
+let prefsVibeModeContextTextArea;
 let prefsSimilarityThreshold;
 let prefsSimilarityThresholdValue;
 let prefsTemperature;
@@ -76,67 +77,160 @@ let vibeMode = false;
 let timer = new Timer();
 let emanationInProgress = false;
 let waitingForUserInput = false;
+let vibeStatusIndicator; // Reference to the vibe status indicator element
 
-async function toggleVibeMode(enabled, backgroundClass = 'bg-gradient-animated') {
+// Function to update the vibe status indicator
+function updateVibeStatus(status) {
+  if (!vibeStatusIndicator) {
+    // Try to find the indicator if not already set
+    vibeStatusIndicator = document.getElementById('vibe-status-indicator');
+    if (!vibeStatusIndicator) return; // Still not found
+  }
+  
+  switch (status) {
+    case 'writing':
+      vibeStatusIndicator.textContent = '🧠';
+      vibeStatusIndicator.classList.remove('hidden');
+      vibeStatusIndicator.classList.remove('thinking-mode');
+      removeStandByIndicator(); // Remove the standby text when done
+      break;
+    case 'emanating':
+      vibeStatusIndicator.textContent = '🤖';
+      vibeStatusIndicator.classList.remove('hidden');
+      vibeStatusIndicator.classList.remove('thinking-mode');
+      removeStandByIndicator(); // Remove the standby text when done
+      break;
+    case 'thinking':
+      vibeStatusIndicator.textContent = '🤔';
+      vibeStatusIndicator.classList.remove('hidden');
+      vibeStatusIndicator.classList.add('thinking-mode'); // Add the animation class
+      addStandByIndicator(); // Call the new function we'll create
+      break;
+    case 'off':
+      vibeStatusIndicator.classList.add('hidden');
+      removeStandByIndicator(); // Remove the standby text when done
+      break;
+  }
+}
+
+// Add these functions after the updateVibeStatus function
+
+function addStandByIndicator() {
+  // Remove any existing indicator first
+  removeStandByIndicator();
+  
+  // Create new standby indicator
+  const standby = document.createElement('div');
+  standby.id = 'standby-indicator';
+  standby.className = 'standby-indicator';
+  standby.textContent = 'Conjuring...Standby...';
+  
+  // Find the scroll area and append the indicator
+  const scrollArea = document.querySelector('.scroll-area');
+  if (scrollArea) {
+    scrollArea.appendChild(standby);
+    
+    // Ensure it's visible by fading it in
+    setTimeout(() => {
+      standby.style.display = 'block';
+    }, 10);
+  }
+}
+
+function removeStandByIndicator() {
+  const standby = document.getElementById('standby-indicator');
+  if (standby) {
+    standby.remove();
+  }
+}
+
+async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
   try {
     if (enabled) {
-      // Get a custom system message for the vibe starter
-      const systemMessage = "You are a creative writing coach who provides inspiring opening phrases. Create a vivid, descriptive opener that could lead to a compelling narrative. Be concise, specific, and evocative.";
+      let vibemButton = document.querySelector("#vibem-inline-action-item");
+
+      // Get current text from editor
+      const currentText = editor.getText().trim();
+      const hasExistingContent = currentText.length > 0;
       
       await WebviewWindow.getCurrent().setTitle("Vibewriter"); // Change title when vibe mode is enabled
       document.querySelector('.element').classList.add(backgroundClass);
+      
+      // Add vibe mode class to the scroll area for styling
+      document.querySelector('.scroll-area').classList.add('vibe-mode-active');
+      
       vibeMode = true; // Set vibeMode to true
       timer.show();
+      updateVibeStatus('writing'); // Show the writing status indicator
       addSimpleLogEntry({ "id": "", "timestamp": Date.now(), "message": "Vibe Mode On", "level": "info" });
       
-      // Generate a creative opening phrase before starting the timer
-      try {
-        const vibeStarter = await invoke("generate_vibe_starter", { 
-          systemMessage: systemMessage 
-        });
+      // Only generate a creative opening phrase if the editor is empty
+      if (!hasExistingContent) {
+        // Get a custom system message for the vibe starter
+        const systemMessage = "You are a creative writing coach who provides inspiring opening phrases. Create a vivid, descriptive opener that could lead to a compelling narrative. Be concise, specific, and evocative.";
         
-        if (vibeStarter) {
-          // Clear existing content and insert the generated starting phrase
-          editor.commands.clearContent();
-          editor.commands.insertContent(vibeStarter);
+        try {
+          vibemButton.classList.toggle("button-inactive");
+          updateVibeStatus('thinking');
+          const vibeStarter = await invoke("generate_vibe_starter", { 
+            systemMessage: systemMessage 
+          });
           
+          if (vibeStarter) {
+            // Clear existing content and insert the generated starting phrase
+            editor.commands.clearContent();
+            editor.commands.insertContent(vibeStarter);
+            
+            addSimpleLogEntry({ 
+              "id": "", 
+              "timestamp": Date.now(), 
+              "message": `Vibe Mode generated starter: ${vibeStarter}`, 
+              "level": "info" 
+            });
+          }
+          vibemButton.classList.toggle("button-inactive");
+        } catch (error) {
+          console.error("Failed to generate vibe starter:", error);
+          vibemButton.classList.toggle("button-inactive");
           addSimpleLogEntry({ 
             "id": "", 
             "timestamp": Date.now(), 
-            "message": `Vibe Mode generated starter: ${vibeStarter}`, 
-            "level": "info" 
+            "message": `Failed to generate vibe starter: ${error}`, 
+            "level": "error" 
           });
-
-          // Set the flag to wait for user input
-          waitingForUserInput = true;
-
-          // Show timer without starting it
-          // timer.show();
-          // timer.setTime(prefsGameTimeSeconds.value);
-
-          // Add a hint to the user
-          greetMsgEl.textContent = 'Start typing to begin the timer...';
         }
-      } catch (error) {
-        console.error("Failed to generate vibe starter:", error);
+      } else {
+        // Log that we're using existing content
         addSimpleLogEntry({ 
           "id": "", 
           "timestamp": Date.now(), 
-          "message": `Failed to generate vibe starter: ${error}`, 
-          "level": "error" 
+          "message": `Vibe Mode activated with existing content: "${currentText.substring(0, 50)}${currentText.length > 50 ? '...' : ''}"`, 
+          "level": "info" 
         });
-        waitingForUserInput = false; // Reset the flag on error
       }
+      
+      // Set the flag to wait for user input
+      waitingForUserInput = true;
+      updateVibeStatus('writing'); // Show writing status initially
+
+      // Show timer without starting it
+      greetMsgEl.textContent = 'Start typing to begin the timer...';
       
       // Start the timer after generating the starter
       restartVibeMode();
     } else {
+      // Vibe mode is being turned OFF
       await WebviewWindow.getCurrent().setTitle("Ghostwriter"); // Change title back when vibe mode is disabled
-      document.querySelector('.element').classList.remove('bg-gradient-animated');
+      document.querySelector('.element').classList.remove(backgroundClass);
+      
+      // Remove vibe mode class from the scroll area
+      document.querySelector('.scroll-area').classList.remove('vibe-mode-active');
+      
       vibeMode = false; // Set vibeMode to false
       timer.stop();
       timer.hide();
       editor.setEditable(true);
+      updateVibeStatus('off'); // Hide the status indicator
       addSimpleLogEntry({ "id": "", "timestamp": Date.now(), "message": "Vibe Mode Off", "level": "info" });
       waitingForUserInput = false; // Reset waiting flag when vibe mode is turned off
     }
@@ -165,6 +259,7 @@ async function restartVibeMode() {
       () => {
         // Called when timer completes
         emanationInProgress = true;
+        updateVibeStatus('thinking');
         timer.stop();
         timer.hide();
         editor.setEditable(false);
@@ -271,6 +366,9 @@ async function completionFromContext() {
   let dots = 0;
   let wasDisabled = false;
   
+  // Update the vibe status indicator to show we're waiting for the LLM
+  updateVibeStatus('thinking');
+  
   const loadingInterval = setInterval(() => {
     dots = (dots + 1) % 8;
     greetMsgEl.textContent = `Emanating${'.'.repeat(dots)}`;
@@ -307,6 +405,10 @@ async function completionFromContext() {
     clearInterval(loadingInterval);
     //console.log(completion);
     greetMsgEl.textContent = 'Emanation Complete';
+    
+    // Update the vibe status indicator to show we're back to writing mode
+    updateVibeStatus('writing');
+    
     //console.log("Completion content:", content);
     //emanateToEditor(content);
     //emanateNavigableNodeToEditor(content);
@@ -343,11 +445,17 @@ async function completionFromContext() {
     clearInterval(loadingInterval);
     greetMsgEl.textContent = 'Error occurred '+err;
     console.error(err);
+    
+    // Update the vibe status indicator to show we're back to writing mode even after an error
+    updateVibeStatus('writing');
   });
 }
 
 function emanateStringToEditor(content, timeout = 30, onComplete = null) {
   let index = 0;
+  
+  // Show the robot emoticon during emanation
+  updateVibeStatus('emanating');
   
   function sendNextCharacter() {
     if (index < content.length) {
@@ -363,6 +471,9 @@ function emanateStringToEditor(content, timeout = 30, onComplete = null) {
       
       // Final scroll to ensure the last character is visible
       editor.commands.scrollIntoView();
+      
+      // Switch back to writing mode when emanation is complete
+      updateVibeStatus('writing');
       
       if (onComplete) {
         onComplete(); // Call the completion handler if provided
@@ -451,6 +562,11 @@ function emanateNavigableNodeToEditor(content) {
   
   
   window.addEventListener("DOMContentLoaded", async () => {
+    // Create the vibe status indicator element
+    //createVibeStatusIndicator();
+    
+    // Initialize the vibe status indicator reference
+    vibeStatusIndicator = document.getElementById('vibe-status-indicator');
     
     const refreshModelsBtn = document.getElementById('refresh-models-btn');
     const modelsContainer = document.getElementById('models-container');
@@ -463,21 +579,11 @@ function emanateNavigableNodeToEditor(content) {
       addSimpleLogEntry({
         id: "",
         timestamp: Date.now(),
-        message: 'Preferences loaded<br/>'+resJson,
+        message: 'Preferences loaded',//<br/>'+resJson,
         level: 'info'
       });
       setPreferencesUI(res);
-      // prefsMainPromptTextArea.value = res.main_prompt;
-      // prefsResponseLimitTextArea.value = res.response_limit;
-      // prefsFinalPreambleTextArea.value = res.final_preamble;
-      // prefsProseStyleTextArea.value = res.prose_style;
-      // prefsMaxHistoryItems.value = res.max_history;
-      // prefsGameTimeSeconds.value = res.gametimerms / 1000;
-      // setSelectedAIProvider(res.ai_provider); // Set the selected AI provider
-      // prefsMaxOutputTokens.value = res.max_output_tokens;
-      // setSelectedAIModel(res.aimodelname); // Set the selected AI model
-      // prefsOllamaUrl.value = res.ollamaurl;
-      // prefsLMStudioUrl.value = res.lmstudiourl;
+
     });
     
     
@@ -518,11 +624,12 @@ function emanateNavigableNodeToEditor(content) {
       // If so, turn vibe mode OFF
       if (vibemButton.classList.contains("button-in")) {
         vibemButton.classList.remove("button-in");
-        toggleVibeMode(false, 'bg-blue-200'); // bg-animated-gradient
+        vibemButton.classList.add("enabled");
+        toggleVibeMode(false, 'bg-stone-200'); // bg-animated-gradient
         
       } else {
         // otherwise vibe mode ON
-        toggleVibeMode(true, 'bg-blue-200');
+        toggleVibeMode(true, 'bg-stone-200');
         vibemButton.classList.add("button-in"); // bg-animated-gradient
       }    
     });
@@ -603,6 +710,12 @@ function emanateNavigableNodeToEditor(content) {
       prefsProseStyleTextArea.select();
     });
     
+    prefsVibeModeContextTextArea = document.querySelector("#prefs-vibe-mode-context");
+    prefsVibeModeContextTextArea.addEventListener("dblclick", () => {
+      prefsVibeModeContextTextArea.select();
+    });
+    
+
     prefsTemperature = document.querySelector("#prefs-temperature");
     prefsTemperatureValue = document.querySelector("#prefs-temperature-value");
     prefsTemperature.addEventListener("input", () => {
@@ -643,7 +756,6 @@ function emanateNavigableNodeToEditor(content) {
     
     prefsOllamaUrl = document.querySelector("#prefs-ollama-url");
     prefsLMStudioUrl = document.querySelector("#prefs-lmstudio-url");
-    prefsOllamaUrl = document.querySelector("#prefs-ollama-url");
     
     greetInputEl = document.querySelector("#greet-input");
     greetMsgEl = document.querySelector("#greet-msg");
@@ -702,19 +814,11 @@ function emanateNavigableNodeToEditor(content) {
         addSimpleLogEntry({
           id: "",
           timestamp: Date.now(),
-          message: 'Preferences loaded<br/>'+resJson,
+          message: 'Preferences loaded',//<br/>'+resJson,
           level: 'info'
         });
         setPreferencesUI(res);
-        // prefsMainPromptTextArea.value = res.main_prompt;
-        // prefsResponseLimitTextArea.value = res.response_limit;
-        // prefsFinalPreambleTextArea.value = res.final_preamble;
-        // prefsProseStyleTextArea.value = res.prose_style;
-        // prefsMaxHistoryItems.value = res.max_history;
-        // prefsGameTimeSeconds.value = res.gametimerms / 1000;
-        // setSelectedAIProvider(res.ai_provider); // Set the selected AI provider
-        // prefsMaxOutputTokens.value = res.max_output_tokens;
-        // setSelectedAIModel(res.aimodelname); // Set the selected AI model
+
       });
       
       invoke("prefs_file_path").then((res) => { 
@@ -770,6 +874,7 @@ function emanateNavigableNodeToEditor(content) {
         mainprompt: prefsMainPromptTextArea.value,
         finalpreamble: prefsFinalPreambleTextArea.value, 
         prosestyle: prefsProseStyleTextArea.value,
+        vibemodecontext: prefsVibeModeContextTextArea.value,
         similaritythreshold: prefsSimilarityThreshold.value,
         shufflesimilars: shuffleSimilarsValue, 
         similaritycount: prefsSimilarityCount.value,
@@ -806,6 +911,7 @@ function emanateNavigableNodeToEditor(content) {
         prefsResponseLimitTextArea.value = res.response_limit;
         prefsFinalPreambleTextArea.value = res.final_preamble;
         prefsProseStyleTextArea.value = res.prose_style;
+        prefsVibeModeContextTextArea.value = res.vibe_mode_context;
         prefsMaxHistoryItems.value = res.max_history;
         prefsMaxHistoryItemsValue.textContent = res.max_history;
         prefsMaxOutputTokens.value = res.max_output_tokens;
@@ -830,11 +936,11 @@ function emanateNavigableNodeToEditor(content) {
       console.log('Toggling panel');
       // console.log('Panel before:', panel.classList.contains('open')); 
       invoke("load_preferences").then((res) => {
-        console.log('Preferences Loaded:', res);
+        //console.log('Preferences Loaded:', res);
         addSimpleLogEntry({
           id: "",
           timestamp: Date.now(),
-          message: 'Preferences loaded<br/>'+JSON.stringify(res, null, 2),
+          message: 'Preferences loaded<br/>',//+JSON.stringify(res, null, 2),
           level: 'info'
         });
         setPreferencesUI(res);
@@ -1512,10 +1618,6 @@ function emanateNavigableNodeToEditor(content) {
     },
   })
   
-  const handleTextInput = debounce((editor) => {
-    console.log('Updated text:', editor.getText());
-  }, 80); // Wait 300ms before firing the event
-  
   const diagnostics = new Editor({
     element: document.querySelector('.diagnostics'),
     editable: false,
@@ -1888,10 +1990,12 @@ function emanateNavigableNodeToEditor(content) {
   }
   
   function setPreferencesUI(res) {
+    console.log('Setting Preferences UI:', res);
     prefsMainPromptTextArea.textContent = res.main_prompt;
     prefsResponseLimitTextArea.textContent = res.response_limit;
     prefsFinalPreambleTextArea.textContent = res.final_preamble;
     prefsProseStyleTextArea.textContent = res.prose_style;
+    prefsVibeModeContextTextArea.textContent = res.vibe_mode_context;
     prefsShuffleSimilars.checked = res.shuffle_similars;
     prefsSimilarityThreshold.value = res.similarity_threshold * 100;
     prefsSimilarityThreshold.textContent = res.similarity_threshold;
@@ -1907,7 +2011,7 @@ function emanateNavigableNodeToEditor(content) {
     setSelectedAIProvider(res.ai_provider);
     setSelectedAIModel(res.ai_model_name);
     prefsOllamaUrl.value = res.ollama_url;
-    prefsLMStudioUrl.value = res.lmstudio_url;
+    prefsLMStudioUrl.value = res.lm_studio_url;
     invoke("load_openai_api_key_from_keyring", {}).then((res) => {
       openaiApiKeyEl.value = res;
     });
