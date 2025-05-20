@@ -123,7 +123,7 @@ function addStandByIndicator() {
   const standby = document.createElement('div');
   standby.id = 'standby-indicator';
   standby.className = 'standby-indicator';
-  standby.textContent = 'Conjuring...Standby...';
+  standby.textContent = 'CONJURING...';
   
   // Find the scroll area and append the indicator
   const scrollArea = document.querySelector('.scroll-area');
@@ -1375,6 +1375,70 @@ function emanateNavigableNodeToEditor(content) {
         }
       }
     });
+
+    // Add this code to your main.js file
+    let currentCorner = 0; // 0: bottom-right, 1: bottom-left, 2: top-left, 3: top-right
+    const cornerClasses = [
+      'corner-bottom-right',
+      'corner-bottom-left', 
+      'corner-top-left',
+      'corner-top-right'
+    ];
+
+    // Get the floating timer element 
+    const floatingTimer = document.querySelector('.floating-timer');
+
+    if (floatingTimer) {
+      // Ensure it starts with a corner class
+      floatingTimer.classList.add('corner-bottom-right');
+      
+      floatingTimer.addEventListener('mouseenter', () => {
+        // Remove any animation class that might be active
+        floatingTimer.classList.remove('timer-traveling');
+        
+        // Determine current position
+        for (let i = 0; i < cornerClasses.length; i++) {
+          if (floatingTimer.classList.contains(cornerClasses[i])) {
+            currentCorner = i;
+            break;
+          }
+        }
+        
+        // Calculate next corner (clockwise)
+        const nextCorner = (currentCorner + 1) % 4;
+        
+        // Add the appropriate animation class based on current corner
+        switch(currentCorner) {
+          case 0: // bottom-right to bottom-left
+            floatingTimer.classList.add('travel-bottom-right-to-bottom-left');
+            break;
+          case 1: // bottom-left to top-left
+            floatingTimer.classList.add('travel-bottom-left-to-top-left');
+            break;
+          case 2: // top-left to top-right
+            floatingTimer.classList.add('travel-top-left-to-top-right');
+            break;
+          case 3: // top-right to bottom-right
+            floatingTimer.classList.add('travel-top-right-to-bottom-right');
+            break;
+        }
+        
+        // After the animation completes, update the corner class
+        setTimeout(() => {
+          // Remove all corner classes and animations
+          floatingTimer.classList.remove(...cornerClasses);
+          floatingTimer.classList.remove(
+            'travel-bottom-right-to-bottom-left',
+            'travel-bottom-left-to-top-left',
+            'travel-top-left-to-top-right',
+            'travel-top-right-to-bottom-right'
+          );
+          
+          // Add the new corner class
+          floatingTimer.classList.add(cornerClasses[nextCorner]);
+        }, 600); // Match this to the animation duration
+      });
+    }
     
   });
   // not the worst idea

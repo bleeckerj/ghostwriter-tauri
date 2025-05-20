@@ -732,7 +732,7 @@ select#prefs-model-name option {
 .canon-entry-button:hover.disabled {
   @apply before:content-[''] before:absolute before:left-0 before:top-0;
   @apply before:w-full before:h-full before:border-[0.5px] before:border-transparent;
-  @apply hover:before:border-l-0 hover:before:border-t-0 hover:before:border-black cursor-pointer hover:bg-red-500;
+  @apply hover:before:border-l-0 hover:before:border-t-0 hover:border-black cursor-pointer hover:bg-red-500;
   transition: transform 180ms ease-in-out, box-shadow 100ms ease-in-out, background-color 50ms ease-in-out, border-color 100ms ease-in-out; /* Add this line */
 }
 
@@ -1031,8 +1031,7 @@ transition: opacity 0.2s ease-in-out;
 
 /* Timer styles */
 .floating-timer {
-  @apply hover:opacity-0;
-  @apply absolute bottom-[4px] right-2 z-50; /* Changed from fixed to absolute and adjusted position */
+  @apply absolute z-50;
   @apply font-['ESKlarheitKurrentMono'];
   @apply text-[1.5em];
   @apply px-4 py-2;
@@ -1042,8 +1041,36 @@ transition: opacity 0.2s ease-in-out;
   @apply shadow-lg;
   @apply backdrop-blur-sm;
   @apply select-none;
-  /*@apply pointer-events-none;*/
-  transition: all 0.3s ease;
+  transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+/* Initial position (bottom-right) */
+.floating-timer, .corner-bottom-right {
+  bottom: 4px;
+  right: 2px;
+}
+
+/* Bottom-left corner */
+.corner-bottom-left {
+  bottom: 4px;
+  left: 2px;
+  right: auto;
+}
+
+/* Top-left corner */
+.corner-top-left {
+  top: 4px;
+  left: 2px;
+  bottom: auto;
+  right: auto;
+}
+
+/* Top-right corner */
+.corner-top-right {
+  top: 4px;
+  right: 2px;
+  bottom: auto;
+  left: auto;
 }
 
 /* Make sure the main-editor container has position relative to serve as positioning context */
@@ -1070,19 +1097,19 @@ transition: opacity 0.2s ease-in-out;
   left: 50%;
   transform: translate(-50%, -50%);
   font-family: 'ChicagoKare', monospace;
-  font-size: 1.3em;
-  color: rgba(21, 98, 224, 0.5);
-  background-color: white;
+  font-size: 0.8em;
+  color: rgba(255,255,255);
+  @apply bg-blue-500;
   padding: 0.5rem;
-  border-radius: 2em;
+  border-radius: 4px;
   border-color: grey;
-  border-width: 0.5px;
+  border-width: 1px;
   box-shadow: 5px 5px 2px rgba(0, 0, 0, 0.5);
   pointer-events: none;
   z-index: 10;
   text-align: center;
   opacity: 0;
-  animation: fade-in-out 2s infinite ease-in-out;
+  animation: blink-on-and-off 1s infinite;
 }
 
 @keyframes fade-in-out {
@@ -1091,3 +1118,46 @@ transition: opacity 0.2s ease-in-out;
   100% { opacity: 0.3; }
 }
 
+@keyframes blink-on-and-off {
+  0%, 49% { opacity: 0; }
+  50%, 99% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Add to styles.css */
+@keyframes travel-bottom-right-to-bottom-left {
+  0% { bottom: 4px; right: 2px; left: auto; top: auto; }
+  100% { bottom: 4px; left: 2px; right: auto; top: auto; }
+}
+
+@keyframes travel-bottom-left-to-top-left {
+  0% { bottom: 4px; left: 2px; right: auto; top: auto; }
+  100% { top: 4px; left: 2px; bottom: auto; right: auto; }
+}
+
+@keyframes travel-top-left-to-top-right {
+  0% { top: 4px; left: 2px; bottom: auto; right: auto; }
+  100% { top: 4px; right: 2px; bottom: auto; left: auto; }
+}
+
+@keyframes travel-top-right-to-bottom-right {
+  0% { top: 4px; right: 2px; bottom: auto; left: auto; }
+  100% { bottom: 4px; right: 2px; left: auto; top: auto; }
+}
+
+/* Timer traveling animation */
+.travel-bottom-right-to-bottom-left {
+  animation: travel-bottom-right-to-bottom-left 0.6s ease-in-out forwards;
+}
+
+.travel-bottom-left-to-top-left {
+  animation: travel-bottom-left-to-top-left 0.6s ease-in-out forwards;
+}
+
+.travel-top-left-to-top-right {
+  animation: travel-top-left-to-top-right 0.6s ease-in-out forwards;
+}
+
+.travel-top-right-to-bottom-right {
+  animation: travel-top-right-to-bottom-right 0.6s ease-in-out forwards;
+}
