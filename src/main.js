@@ -98,7 +98,7 @@ function updateVibeStatus(status) {
       vibeStatusIndicator.textContent = '🤖';
       vibeStatusIndicator.classList.remove('hidden');
       vibeStatusIndicator.classList.remove('thinking-mode');
-      //removeStandByIndicator(); // Remove the standby text when done
+      removeStandByIndicator(); // Remove the standby text when done
       break;
     case 'thinking':
       vibeStatusIndicator.textContent = '🤔';
