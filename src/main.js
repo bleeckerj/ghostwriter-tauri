@@ -49,6 +49,7 @@ let prefsMainPromptTextArea;
 let prefsResponseLimitTextArea;
 let prefsFinalPreambleTextArea;
 let prefsProseStyleTextArea;
+let prefsVibeModeContextTextArea;
 let prefsSimilarityThreshold;
 let prefsSimilarityThresholdValue;
 let prefsTemperature;
@@ -90,36 +91,58 @@ function updateVibeStatus(status) {
     case 'writing':
       vibeStatusIndicator.textContent = '🧠';
       vibeStatusIndicator.classList.remove('hidden');
+      vibeStatusIndicator.classList.remove('thinking-mode');
+      removeStandByIndicator(); // Remove the standby text when done
       break;
     case 'emanating':
       vibeStatusIndicator.textContent = '🤖';
       vibeStatusIndicator.classList.remove('hidden');
+      vibeStatusIndicator.classList.remove('thinking-mode');
+      //removeStandByIndicator(); // Remove the standby text when done
       break;
     case 'thinking':
       vibeStatusIndicator.textContent = '🤔';
       vibeStatusIndicator.classList.remove('hidden');
+      vibeStatusIndicator.classList.add('thinking-mode'); // Add the animation class
+      addStandByIndicator(); // Call the new function we'll create
       break;
     case 'off':
       vibeStatusIndicator.classList.add('hidden');
+      removeStandByIndicator(); // Remove the standby text when done
       break;
   }
 }
 
-// // Create and inject the vibe status indicator when DOM is loaded
-// function createVibeStatusIndicator() {
-//   // Create the status indicator element
-//   vibeStatusIndicator = document.createElement('div');
-//   vibeStatusIndicator.id = 'vibe-status-indicator';
-//   vibeStatusIndicator.classList.toggle('hidden', true);
-//   //vibeStatusIndicator.className = 'fixed bottom-2 left-2 text-2xl opacity-70 hidden z-10';
-//   vibeStatusIndicator.textContent = '🧠';
+// Add these functions after the updateVibeStatus function
+
+function addStandByIndicator() {
+  // Remove any existing indicator first
+  removeStandByIndicator();
   
-//   // Find the main editor container and append the indicator to it
-//   const editorContainer = document.querySelector('.element');
-//   if (editorContainer) {
-//     editorContainer.appendChild(vibeStatusIndicator);
-//   }
-// }
+  // Create new standby indicator
+  const standby = document.createElement('div');
+  standby.id = 'standby-indicator';
+  standby.className = 'standby-indicator';
+  standby.textContent = 'Conjuring...Standby...';
+  
+  // Find the scroll area and append the indicator
+  const scrollArea = document.querySelector('.scroll-area');
+  if (scrollArea) {
+    scrollArea.appendChild(standby);
+    
+    // Ensure it's visible by fading it in
+    setTimeout(() => {
+      standby.style.display = 'block';
+    }, 10);
+  }
+}
+
+function removeStandByIndicator() {
+  const standby = document.getElementById('standby-indicator');
+  if (standby) {
+    standby.remove();
+  }
+}
 
 async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
   try {
@@ -132,6 +155,10 @@ async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
       
       await WebviewWindow.getCurrent().setTitle("Vibewriter"); // Change title when vibe mode is enabled
       document.querySelector('.element').classList.add(backgroundClass);
+      
+      // Add vibe mode class to the scroll area for styling
+      document.querySelector('.scroll-area').classList.add('vibe-mode-active');
+      
       vibeMode = true; // Set vibeMode to true
       timer.show();
       updateVibeStatus('writing'); // Show the writing status indicator
@@ -195,6 +222,10 @@ async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
       // Vibe mode is being turned OFF
       await WebviewWindow.getCurrent().setTitle("Ghostwriter"); // Change title back when vibe mode is disabled
       document.querySelector('.element').classList.remove(backgroundClass);
+      
+      // Remove vibe mode class from the scroll area
+      document.querySelector('.scroll-area').classList.remove('vibe-mode-active');
+      
       vibeMode = false; // Set vibeMode to false
       timer.stop();
       timer.hide();
@@ -552,17 +583,7 @@ function emanateNavigableNodeToEditor(content) {
         level: 'info'
       });
       setPreferencesUI(res);
-      // prefsMainPromptTextArea.value = res.main_prompt;
-      // prefsResponseLimitTextArea.value = res.response_limit;
-      // prefsFinalPreambleTextArea.value = res.final_preamble;
-      // prefsProseStyleTextArea.value = res.prose_style;
-      // prefsMaxHistoryItems.value = res.max_history;
-      // prefsGameTimeSeconds.value = res.gametimerms / 1000;
-      // setSelectedAIProvider(res.ai_provider); // Set the selected AI provider
-      // prefsMaxOutputTokens.value = res.max_output_tokens;
-      // setSelectedAIModel(res.aimodelname); // Set the selected AI model
-      // prefsOllamaUrl.value = res.ollamaurl;
-      // prefsLMStudioUrl.value = res.lmstudiourl;
+
     });
     
     
@@ -689,6 +710,12 @@ function emanateNavigableNodeToEditor(content) {
       prefsProseStyleTextArea.select();
     });
     
+    prefsVibeModeContextTextArea = document.querySelector("#prefs-vibe-mode-context");
+    prefsVibeModeContextTextArea.addEventListener("dblclick", () => {
+      prefsVibeModeContextTextArea.select();
+    });
+    
+
     prefsTemperature = document.querySelector("#prefs-temperature");
     prefsTemperatureValue = document.querySelector("#prefs-temperature-value");
     prefsTemperature.addEventListener("input", () => {
@@ -791,15 +818,7 @@ function emanateNavigableNodeToEditor(content) {
           level: 'info'
         });
         setPreferencesUI(res);
-        // prefsMainPromptTextArea.value = res.main_prompt;
-        // prefsResponseLimitTextArea.value = res.response_limit;
-        // prefsFinalPreambleTextArea.value = res.final_preamble;
-        // prefsProseStyleTextArea.value = res.prose_style;
-        // prefsMaxHistoryItems.value = res.max_history;
-        // prefsGameTimeSeconds.value = res.gametimerms / 1000;
-        // setSelectedAIProvider(res.ai_provider); // Set the selected AI provider
-        // prefsMaxOutputTokens.value = res.max_output_tokens;
-        // setSelectedAIModel(res.aimodelname); // Set the selected AI model
+
       });
       
       invoke("prefs_file_path").then((res) => { 
@@ -855,6 +874,7 @@ function emanateNavigableNodeToEditor(content) {
         mainprompt: prefsMainPromptTextArea.value,
         finalpreamble: prefsFinalPreambleTextArea.value, 
         prosestyle: prefsProseStyleTextArea.value,
+        vibemodecontext: prefsVibeModeContextTextArea.value,
         similaritythreshold: prefsSimilarityThreshold.value,
         shufflesimilars: shuffleSimilarsValue, 
         similaritycount: prefsSimilarityCount.value,
@@ -891,6 +911,7 @@ function emanateNavigableNodeToEditor(content) {
         prefsResponseLimitTextArea.value = res.response_limit;
         prefsFinalPreambleTextArea.value = res.final_preamble;
         prefsProseStyleTextArea.value = res.prose_style;
+        prefsVibeModeContextTextArea.value = res.vibe_mode_context;
         prefsMaxHistoryItems.value = res.max_history;
         prefsMaxHistoryItemsValue.textContent = res.max_history;
         prefsMaxOutputTokens.value = res.max_output_tokens;
@@ -1969,10 +1990,12 @@ function emanateNavigableNodeToEditor(content) {
   }
   
   function setPreferencesUI(res) {
+    console.log('Setting Preferences UI:', res);
     prefsMainPromptTextArea.textContent = res.main_prompt;
     prefsResponseLimitTextArea.textContent = res.response_limit;
     prefsFinalPreambleTextArea.textContent = res.final_preamble;
     prefsProseStyleTextArea.textContent = res.prose_style;
+    prefsVibeModeContextTextArea.textContent = res.vibe_mode_context;
     prefsShuffleSimilars.checked = res.shuffle_similars;
     prefsSimilarityThreshold.value = res.similarity_threshold * 100;
     prefsSimilarityThreshold.textContent = res.similarity_threshold;

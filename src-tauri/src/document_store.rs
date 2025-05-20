@@ -1127,6 +1127,78 @@ impl DocumentStore {
             
             Ok(())
         }
+
+        /// Counts the number of chunks for a document
+        pub async fn count_document_chunks(&self, doc_id: i64) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
+            let conn = self.conn.lock().await;
+            
+            // Query to count chunks for the specified document
+            let count: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM embeddings WHERE doc_id = ?1",
+                params![doc_id],
+                |row| row.get(0)
+            )?;
+            
+            Ok(count as usize)
+        }
+
+        /// Gets a specific chunk by its index position
+        pub async fn get_document_chunk_at_index(&self, doc_id: i64, index: usize) -> Result<DocumentChunk, Box<dyn std::error::Error + Send + Sync>> {
+            let conn = self.conn.lock().await;
+            
+            // SQLite LIMIT/OFFSET to get a specific row
+            let chunk = conn.query_row(
+                "SELECT id, doc_id, chunk, embedding_model_name 
+                 FROM embeddings 
+                 WHERE doc_id = ?1
+                 ORDER BY id
+                 LIMIT 1 OFFSET ?2",
+                params![doc_id, index as i64],
+                |row| {
+                    Ok(DocumentChunk {
+                        id: row.get(0)?,
+                        doc_id: row.get(1)?,
+                        content: row.get(2)?,
+                        embedding_model_name: row.get(3)?,
+                    })
+                }
+            )?;
+            
+            Ok(chunk)
+        }
+
+        /// Gets a specific chunk by its index position
+        pub async fn get_document_chunk_at_index_fast(&self, doc_id: i64, index: usize) -> Result<DocumentChunk, Box<dyn std::error::Error>> {
+            let conn = self.conn.lock().await;
+            
+            // First get the ID at the specified index
+            let id: i64 = conn.query_row(
+                "SELECT id FROM embeddings 
+                 WHERE doc_id = ?1
+                 ORDER BY id
+                 LIMIT 1 OFFSET ?2",
+                params![doc_id, index as i64],
+                |row| row.get(0)
+            )?;
+            
+            // Then get the full row by ID (faster than OFFSET for large tables)
+            let chunk = conn.query_row(
+                "SELECT id, doc_id, chunk, embedding_model_name 
+                 FROM embeddings 
+                 WHERE id = ?1",
+                params![id],
+                |row| {
+                    Ok(DocumentChunk {
+                        id: row.get(0)?,
+                        doc_id: row.get(1)?,
+                        content: row.get(2)?,
+                        embedding_model_name: row.get(3)?,
+                    })
+                }
+            )?;
+            
+            Ok(chunk)
+        }
     }
     
     // Helper function for cosine similarity

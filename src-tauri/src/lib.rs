@@ -17,7 +17,8 @@ use tokio::time::{sleep, Duration};
 use tauri::{generate_handler, Runtime, Builder, Emitter, AppHandle, Manager, Window, State, WebviewWindowBuilder, WebviewWindow, WebviewUrl};
 use chrono::{Local, Utc};  // Add Utc here
 use std::sync::Arc;
-use rand::seq::SliceRandom; 
+use rand::seq::SliceRandom;
+use rand::Rng;
 use tauri_plugin_log::{Target, TargetKind};
 extern crate log;
 use syslog::{Facility, Formatter3164, BasicLogger};
@@ -601,6 +602,7 @@ async fn load_openai_api_key_from_keyring(
         mainprompt: String,
         finalpreamble: String,
         prosestyle: String,
+        vibemodecontext: String,
         similaritythreshold: String,
         shufflesimilars: bool,
         similaritycount: String,
@@ -622,6 +624,7 @@ async fn load_openai_api_key_from_keyring(
         preferences.main_prompt = mainprompt;
         preferences.final_preamble = finalpreamble;
         preferences.prose_style = prosestyle;
+        preferences.vibe_mode_context = vibemodecontext;
         preferences.similarity_threshold = similaritythreshold.parse::<f32>().unwrap() / 100.0;
         preferences.shuffle_similars = shufflesimilars == true;
         preferences.similarity_count = similaritycount.parse::<usize>().unwrap_or(Preferences::SIMILARITY_COUNT_DEFAULT);
@@ -1077,20 +1080,58 @@ async fn load_openai_api_key_from_keyring(
             "info".to_string()
         );
         
-        // For each document, grab a random chunk - using a separate function to keep ThreadRng local
-        let random_chunks = get_random_chunks(&doc_store, &active_documents).await
-        .map_err(|e| format!("Failed to get random chunks: {}", e))?;
+        log::debug!("Starting random chunk selection...");
+        let start_time = std::time::Instant::now();
         
+        // Use a safer approach for timeout by handling specific errors
+        let random_chunks: Vec<String> = Vec::new();
+        
+        /** SKIP THIS FOR NOW. VERY SLOW! */
+        /**
+        let random_chunks = match tokio::time::timeout(
+            std::time::Duration::from_secs(2), 
+            get_random_chunks(&doc_store, &active_documents)
+        ).await {
+            Ok(Ok(chunks)) => chunks,
+            Ok(Err(e)) => {
+                let error_msg = format!("Failed to get random chunks: {}", e);
+                log::error!("{}", error_msg);
+                new_logger.simple_log_message(
+                    error_msg,
+                    "vibe_mode".to_string(), 
+                    "error".to_string()
+                );
+                Vec::new()
+            },
+            Err(_) => {
+                log::warn!("⚠️ Random chunk selection timed out after 2 seconds!");
+                new_logger.simple_log_message(
+                    "Chunk selection timed out - using default context".to_string(),
+                    "vibe_mode".to_string(),
+                    "warn".to_string()
+                );
+                Vec::new()
+            }
+        };
+         */
+
+        log::debug!("Random chunk selection took {:?}", start_time.elapsed());
+
+        let context;
+
         if random_chunks.is_empty() {
-            return Err("No content chunks found in documents".to_string());
+            //return Err("No content chunks found in documents".to_string());
+            log::info!("No content chunks found in documents for starter text.");
+            context = preferences.vibe_mode_context.clone();
+            new_logger.simple_log_message(format!("Vibe mode context is: {}", context), "vibe_mode".to_string(), "info".to_string());
+        } else {   
+            // Join all random chunks into a context string
+            context = random_chunks.join("\n\n");
         }
-        
-        // Join all random chunks into a context string
-        let context = random_chunks.join("\n\n");
+
         
         // Create the system message using the provided parameter and context
-        let system_content = format!("{}\n\nUse the following snippets as inspiration:\n{}", 
-        system_message, context);
+        let system_content = format!("{}\n\nUse the following text fragments as inspiration:\n{}", system_message, context);
         
         // Create the prompt for generating an opening phrase
         let prompt = "Generate a compelling opening phrase or sentence for a creative writing exercise.";
@@ -1147,31 +1188,59 @@ async fn load_openai_api_key_from_keyring(
             Err("No completion returned".to_string())
         }
     }
-    
-    // Helper function to get random chunks while keeping ThreadRng locally scoped
+    // Helper function to get random chunks using a thread-safe approach
     async fn get_random_chunks(
         doc_store: &DocumentStore, 
         active_documents: &[&document_store::DocumentInfo]
-    ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<Vec<String>, String> {
+        let start = std::time::Instant::now();
         let mut random_chunks = Vec::new();
         
-        for doc in active_documents {
-            // Get a list of chunks for this document
-            if let Ok(chunks) = doc_store.get_document_chunks(doc.id).await {
-                if !chunks.is_empty() {
-                    // Create a thread-local RNG here, within this function scope
-                    let mut rng = rand::thread_rng();
-                    
-                    // Select a random chunk
-                    if let Some(chunk) = chunks.choose(&mut rng) {
-                        random_chunks.push(format!("From '{}': {}", doc.name, chunk.content));
+        // Create indices for documents and shuffle them
+        let mut indices: Vec<usize> = (0..active_documents.len()).collect();
+        {
+            let mut rng = rand::thread_rng();
+            indices.shuffle(&mut rng);
+        }
+        
+        // Take at most 5 documents
+        let selection_size = indices.len().min(5);
+        let selected_indices = &indices[0..selection_size];
+        
+        for &idx in selected_indices {
+            let doc = active_documents[idx];
+            
+            // First, just get the COUNT of chunks for this document
+            match doc_store.count_document_chunks(doc.id).await {
+                Ok(count) => {
+                    if count > 0 {
+                        // Generate a random index within the valid range
+                        let chunk_idx = {
+                            let mut rng = rand::thread_rng();
+                            rng.gen_range(0..count)
+                        };
+                        
+                        // Fetch only the single chunk we need
+                        match doc_store.get_document_chunk_at_index(doc.id, chunk_idx).await {
+                            Ok(chunk) => {
+                                random_chunks.push(format!("From '{}': {}", doc.name, chunk.content));
+                            },
+                            Err(e) => {
+                                log::warn!("Failed to get chunk for document {}: {}", doc.name, e);
+                            }
+                        }
                     }
+                },
+                Err(e) => {
+                    log::warn!("Failed to count chunks for document {}: {}", doc.name, e);
                 }
             }
         }
         
+        log::debug!("Fetched random chunks in {:?}", start.elapsed());
         Ok(random_chunks)
     }
+    
     
     fn get_api_key(app_handle: &AppHandle) -> Result<Option<String>, String> {
         match KeychainHandler::retrieve_api_key() {

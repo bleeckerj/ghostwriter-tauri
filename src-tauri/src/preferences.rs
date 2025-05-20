@@ -24,7 +24,8 @@ pub struct Preferences {
     pub similarity_count: usize,
     pub max_history: usize,
     pub game_timer_ms: usize,
-    
+    pub vibe_mode_context: String,
+
     // New fields for AI provider selection
     pub ai_provider: String,           // "openai" or "lmstudio" or "ollama"
     pub lm_studio_url: String,         // LM Studio server URL
@@ -54,6 +55,8 @@ impl Preferences {
     
     pub const DEFAULT_PROSE_STYLE: &'static str = "A style that is consistent with the input text.";
     pub const GAME_TIMER_MS_DEFAULT: usize = 30000;
+    pub const VIBE_MODE_CONTEXT: &'static str = "Generate a compelling opening phrase or sentence for a creative writing exercise. Provide a paragraph of text, about 30 words, in the style of a Solarpunk science fiction adventure novel set in a fictional land where there are AI companions who are like benevolent muses for people who are now able to fully actualize their true selves as creators, craftspeople, traders, explorers, adventurers, community builders, farmers, builders of homes, and technologists. Solarpunk is a genre of science fiction that envisions a future where technology and nature coexist harmoniously, often featuring themes of sustainability, community, and social justice. The story should be set in a world where people have access to advanced AI companions that help them achieve their goals and dreams. The writing style should be engaging, imaginative, and optimistic, reflecting the hopeful and positive nature of the Solarpunk genre.";
+    
     pub const OLLAMA_URL: &'static str = "http://localhost:11434";
     pub const LM_STUDIO_URL: &'static str = "http://localhost:1234/v1";
     /// Load preferences and ensure no empty fields
@@ -143,6 +146,7 @@ impl Preferences {
         self.ollama_url = "http://localhost:11434".to_string();
         self.ai_model_name = "gpt-4o-mini".to_string();
         self.game_timer_ms = Self::GAME_TIMER_MS_DEFAULT;
+        self.vibe_mode_context = Self::VIBE_MODE_CONTEXT.to_string();
     }
     
     /// Apply default values only if fields are empty
@@ -185,6 +189,9 @@ impl Preferences {
         }
         if self.game_timer_ms == 0 {
             self.game_timer_ms = Self::GAME_TIMER_MS_DEFAULT;
+        }
+        if self.vibe_mode_context.trim().is_empty() {
+            self.vibe_mode_context = Self::VIBE_MODE_CONTEXT.to_string();
         }
         //self.shuffle_similars = Self::SHUFFLE_SIMILARS_DEFAULT;
     }

@@ -18,10 +18,10 @@ body {
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
-
+  
   color: #0f0f0f;
   background-color: #f6f6f6;
-
+  
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -81,7 +81,7 @@ button {
   color: #0f0f0f;
   background-color: #ffffff;
   @apply dark:text-white dark:bg-black;
-
+  
   transition: border-color 0.25s;
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
 }
@@ -112,11 +112,11 @@ button {
     color: #f6f6f6;
     background-color: #2f2f2f;
   }
-
+  
   a:hover {
     color: #24c8db;
   }
-
+  
   input,
   button {
     color: #ffffff;
@@ -170,6 +170,9 @@ button {
 }
 
 .scroll-area {
+  font-size: 1rem; /* Normal font size */
+  line-height: 1.6; /* Normal line height */
+  transition: font-size 0.3s ease, line-height 0.3s ease;
   position: relative;
   flex: 2; /* controls height of the scroll area in relation to other stuff */
   min-height: 0; /* Add this - very important for flex containers! */
@@ -184,6 +187,20 @@ button {
     outline: none;
   }
 }
+
+/* Vibe mode font styling */
+.scroll-area.vibe-mode-active {
+  font-size: 1.5rem; /* Larger font in vibe mode */
+  line-height: 1.75; /* Increased line height for better readability */
+  transition: font-size 0.3s ease, line-height 0.3s ease;
+}
+
+/* Make sure the ProseMirror instance also inherits these styles */
+.scroll-area.vibe-mode-active .ProseMirror {
+  font-size: inherit;
+  line-height: inherit;
+}
+
 
 .diagnostics {
   flex: 1 1 auto;
@@ -203,7 +220,7 @@ button {
   overflow-y: hidden;
   @apply bg-transparent;
   overscroll-behavior: none; /* Completely prevents bouncing */
-
+  
   :focus {
     outline: none;
   }
@@ -254,7 +271,7 @@ select#prefs-model-name option {
   @apply before:content-[''] before:absolute before:left-0 before:top-0;
   /* @apply before:w-full before:h-full before:border-[0.5px] before:border-black; */
   @apply hover:before:border-[1px] hover:before:border-black cursor-pointer hover:bg-green-500;
- 
+  
   transition: transform 180ms ease-in-out, box-shadow 100ms ease-in-out, background-color 100ms ease-in-out, border-color 100ms ease-in-out; /* Add this line */
 }
 
@@ -299,7 +316,7 @@ select#prefs-model-name option {
   @apply before:content-[''] before:absolute before:left-0 before:top-0;
   /* @apply before:w-full before:h-full before:border-[0.5px] before:border-black; */
   @apply hover:before:border-[1px] hover:before:border-black cursor-pointer hover:bg-green-500;
- 
+  
   transition: transform 180ms ease-in-out, box-shadow 100ms ease-in-out, background-color 100ms ease-in-out, border-color 100ms ease-in-out; /* Add this line */
 }
 
@@ -365,6 +382,16 @@ select#prefs-model-name option {
   animation: highlight 1s ease-out forwards;
 }
 
+@keyframes thinking-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.thinking-mode {
+  animation: thinking-pulse 1.5s infinite ease-in-out;
+  display: inline-block;
+}
 
 .simple-log-entry {
   @apply rounded-md;
@@ -459,10 +486,10 @@ select#prefs-model-name option {
   @apply pt-1;
   @apply self-start;
   @apply border-[0.5px] border-gray-400 p-4;
-
+  
   /*@apply font-[WarblerText];*/
   @apply font-[ESKlarheitKurrentMono];
-
+  
   @apply font-light;
   @apply text-[0.9em];
   @apply break-all;
@@ -509,7 +536,7 @@ select#prefs-model-name option {
 .rich-log-level-warn {
   background-color: #f8f9fa;
   @apply !text-black;
-
+  
 }
 
 .rich-log-level-error {
@@ -616,7 +643,7 @@ select#prefs-model-name option {
 .canon-entry-level-warn {
   background-color: #f8f9fa;
   @apply !text-black;
-
+  
 }
 
 .canon-entry-level-error {
@@ -624,7 +651,7 @@ select#prefs-model-name option {
 }
 
 /* .canon-entry-button.del {
-  @apply bg-amber-400 text-black;
+@apply bg-amber-400 text-black;
 } */
 
 .canon-entry-button.enabled.del:hover {
@@ -651,7 +678,7 @@ select#prefs-model-name option {
   @apply before:content-[''] before:absolute before:left-0 before:top-0;
   /* @apply before:w-full before:h-full before:border-[0.5px] before:border-black; */
   @apply hover:before:border-[1px] hover:before:border-black cursor-pointer hover:bg-green-500;
- 
+  
   transition: transform 180ms ease-in-out, box-shadow 100ms ease-in-out, background-color 100ms ease-in-out, border-color 100ms ease-in-out; /* Add this line */
 }
 
@@ -698,7 +725,7 @@ select#prefs-model-name option {
   @apply before:content-[''] before:absolute before:left-0 before:top-0;
   /* @apply before:w-full before:h-full before:border-[0.5px] before:border-black; */
   @apply hover:before:border-[1px] hover:before:border-black cursor-pointer hover:bg-green-500;
- 
+  
   transition: transform 180ms ease-in-out, box-shadow 100ms ease-in-out, background-color 100ms ease-in-out, border-color 100ms ease-in-out; /* Add this line */
 }
 
@@ -761,7 +788,7 @@ select#prefs-model-name option {
   @apply text-center;
   @apply border-[1px] border-gray-400;
   @apply justify-self-start;  /* Add this */
-
+  
 }
 
 .progress-time {
@@ -814,39 +841,39 @@ select#prefs-model-name option {
 }
 
 /* .inline-action-item {
-  @apply bg-white;
-  @apply -translate-y-[4px];  
-  @apply align-middle;        
-  color: black;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 8px;
-  cursor: pointer;
-  user-select: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  opacity: 0;
-  transition: opacity 0.2s ease-in-out;
+@apply bg-white;
+@apply -translate-y-[4px];  
+@apply align-middle;        
+color: black;
+padding: 2px 6px;
+border-radius: 4px;
+font-size: 8px;
+cursor: pointer;
+user-select: none;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+z-index: 100;
+opacity: 0;
+transition: opacity 0.2s ease-in-out;
 
-  @apply border border-black;
-  @apply shadow-[4px_0px_0px_0px];
-  @apply hover:shadow-none;  
-  @apply hover:translate-x-[4px];
-  @apply before:content-[''] before:absolute before:left-0 before:top-0;
-  @apply before:w-full before:h-full before:border-[0.5px] before:border-transparent;
-  @apply hover:before:border-l-0 hover:before:border-t-0 hover:before:border-black cursor-pointer;
+@apply border border-black;
+@apply shadow-[4px_0px_0px_0px];
+@apply hover:shadow-none;  
+@apply hover:translate-x-[4px];
+@apply before:content-[''] before:absolute before:left-0 before:top-0;
+@apply before:w-full before:h-full before:border-[0.5px] before:border-transparent;
+@apply hover:before:border-l-0 hover:before:border-t-0 hover:before:border-black cursor-pointer;
 } */
 
 .inline-action-item {
   /* --- Baseline from Snippet #1 --- */
   position: relative; /* Needed if using absolutely positioned pseudo-elements */
- /*background-color: rgb(255, 255, 255);*/
-@apply text-right;
-@apply font-['InputMono'] font-bold;
- @apply h-[1em] w-[1em];
- /* color: white; */
+  /*background-color: rgb(255, 255, 255);*/
+  @apply text-right;
+  @apply font-['InputMono'] font-bold;
+  @apply h-[1em] w-[1em];
+  /* color: white; */
   @apply -translate-y-[-4px];
   /* padding: 0px 6px; */
   /* border-radius: 4px; */
@@ -859,13 +886,13 @@ select#prefs-model-name option {
   justify-content: center; */
   margin: 0 2px;
   transition: scale 0.2s ease-in-out;
-@apply shadow-sm;
+  @apply shadow-sm;
   /* --- Additions from Snippet #2 (selective) --- */
   /* @apply border border-black;              */
   /* @apply shadow-[4px_0px_0px_0px];         */
   /* @apply hover:shadow-none;                */
   @apply hover:shadow-none hover:scale-[1.05];         
-
+  
   /* Pseudo-element trick for a border effect on hover */
   @apply before:content-[''] before:absolute before:left-0 before:top-0;
   @apply before:w-full before:h-full before:border-[0.5px] before:border-transparent;
@@ -1005,7 +1032,7 @@ select#prefs-model-name option {
 /* Timer styles */
 .floating-timer {
   @apply hover:opacity-0;
-  @apply absolute top-3 left-2 z-50; /* Changed from fixed to absolute and adjusted position */
+  @apply absolute bottom-[4px] right-2 z-50; /* Changed from fixed to absolute and adjusted position */
   @apply font-['ESKlarheitKurrentMono'];
   @apply text-[1.5em];
   @apply px-4 py-2;
@@ -1035,5 +1062,32 @@ select#prefs-model-name option {
   0% { transform: scale(1); }
   50% { transform: scale(1.1); }
   100% { transform: scale(1); }
+}
+
+.standby-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'InputMonoCondensed', monospace;
+  font-size: 1.8em;
+  color: rgba(55, 65, 81, 0.5);
+  background-color: white;
+  padding: 0.5rem;
+  border-radius: 2em;
+  border-color: grey;
+  border-width: 0.5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 10;
+  text-align: center;
+  opacity: 0;
+  animation: fade-in-out 2s infinite ease-in-out;
+}
+
+@keyframes fade-in-out {
+  0% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+  100% { opacity: 0.3; }
 }
 
