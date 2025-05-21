@@ -158,9 +158,11 @@ async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
       
       // Add vibe mode class to the scroll area for styling
       document.querySelector('.scroll-area').classList.add('vibe-mode-active');
-      
+      let seconds = prefsGameTimeSeconds.value; // default to 10 seconds if not specified
+
       vibeMode = true; // Set vibeMode to true
       timer.show();
+      timer.setTime(seconds);
       updateVibeStatus('writing'); // Show the writing status indicator
       addSimpleLogEntry({ "id": "", "timestamp": Date.now(), "message": "Vibe Mode On", "level": "info" });
       
@@ -278,10 +280,11 @@ async function restartVibeMode() {
 
             // Set flag to wait for user input again
             waitingForUserInput = true;
+            let seconds = prefsGameTimeSeconds.value; // default to 10 seconds if not specified
 
             // Show the timer but don't start it
             timer.show();
-            timer.setTime(prefsGameTimeSeconds.value);
+            timer.setTime(seconds);
             greetMsgEl.textContent = 'Start typing to continue...';
           });
         })

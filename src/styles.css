@@ -1033,7 +1033,7 @@ transition: opacity 0.2s ease-in-out;
 .floating-timer {
   @apply absolute z-50;
   @apply font-['ESKlarheitKurrentMono'];
-  @apply text-[1.5em];
+  @apply text-[1em];
   @apply px-4 py-2;
   @apply rounded-md;
   @apply bg-black/10;
@@ -1041,7 +1041,8 @@ transition: opacity 0.2s ease-in-out;
   @apply shadow-lg;
   @apply backdrop-blur-sm;
   @apply select-none;
-  transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  transform: scale(1);
+  /*transition: all 0.2s ease-in-out;*/
 }
 
 /* Initial position (bottom-right) */
