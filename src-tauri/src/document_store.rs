@@ -474,7 +474,7 @@ impl DocumentStore {
     ) -> Result<(IngestedDocument), Box<dyn std::error::Error>> {
         
         let store = self.clone(); // Clone Arc to get a reference
-
+        
         let embedding_model_name = provider.get_preferred_embedding_model();
         
         // Create a Resource::Url from the URL string
@@ -502,7 +502,7 @@ impl DocumentStore {
             "level": "debug"
         }))?;
         
-
+        
         let document = Document {
             id: 0,
             name: ingested.title.clone(),
@@ -512,7 +512,7 @@ impl DocumentStore {
             notes: "".to_string(),
         };
         let doc_name = document.name.clone();
-
+        
         let doc_id_result = {
             let conn = store.conn.lock().await;
             store.add_document_internal(&conn, document.clone())
@@ -546,7 +546,7 @@ impl DocumentStore {
         
         
         
-
+        
         
         drop(doc_id_result); // Release the lock
         app_handle.emit("simple-log-message", json!({
@@ -1023,7 +1023,7 @@ impl DocumentStore {
             }
             Ok(())
         }
-
+        
         pub async fn get_document_chunks(&self, doc_id: i64) -> Result<Vec<DocumentChunk>, Box<dyn std::error::Error>> {
             // Get the connection to the database
             let conn = self.conn.lock().await;
@@ -1106,7 +1106,7 @@ impl DocumentStore {
             
             Ok(random_chunks)
         }
-
+        
         pub async fn update_document_details(
             &self,
             doc_id: i64,
@@ -1123,11 +1123,11 @@ impl DocumentStore {
             )?;
             
             log::info!("Updated document details for document {}: name = {}, notes length = {}, authors = {}", 
-                doc_id, name, notes.len(), authors_json);
+            doc_id, name, notes.len(), authors_json);
             
             Ok(())
         }
-
+        
         /// Counts the number of chunks for a document
         pub async fn count_document_chunks(&self, doc_id: i64) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
             let conn = self.conn.lock().await;
@@ -1141,7 +1141,7 @@ impl DocumentStore {
             
             Ok(count as usize)
         }
-
+        
         /// Gets a specific chunk by its index position
         pub async fn get_document_chunk_at_index(&self, doc_id: i64, index: usize) -> Result<DocumentChunk, Box<dyn std::error::Error + Send + Sync>> {
             let conn = self.conn.lock().await;
@@ -1166,7 +1166,7 @@ impl DocumentStore {
             
             Ok(chunk)
         }
-
+        
         /// Gets a specific chunk by its index position
         pub async fn get_document_chunk_at_index_fast(&self, doc_id: i64, index: usize) -> Result<DocumentChunk, Box<dyn std::error::Error>> {
             let conn = self.conn.lock().await;
@@ -1250,5 +1250,6 @@ impl DocumentStore {
         
         chunks
     }
-
-
+    
+    
+    

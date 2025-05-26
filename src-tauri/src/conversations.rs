@@ -34,6 +34,11 @@ impl Conversation {
         &self.history
     }
 
+    /// Clears all conversation history
+    pub fn clear_history(&mut self) {
+        self.history.clear();
+    }
+
     fn truncate_if_needed(&mut self) {
         let mut total_chars = 0;
         let mut truncate_index = self.history.len();

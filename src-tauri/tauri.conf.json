@@ -45,6 +45,9 @@
     }
   },
   "bundle": {
+    "macOS": {
+      "signingIdentity": "Developer ID Application: Julian Bleecker (9DCTLJ9BY7)"
+      },
     "resources": [
       "resources/libpdfium.dylib"
     ],

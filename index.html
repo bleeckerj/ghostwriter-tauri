@@ -43,7 +43,7 @@
       <div id="action-buttons" class="diagnostics-btn-area bg-gray-200 border-[0.5px] text-[0.8em] w-full rounded-sm pl-4">
         <span id="incant-btn" class="diagnostics-area-button enabled">INCNT</span>
         <span id="clear-diagnostics-btn" class="diagnostics-area-button enabled">CLEAR</span>
-        <span id="reset-rag-btn" class="diagnostics-area-button button-inactive">RESET</span>
+        <span id="reset-rag-btn" class="diagnostics-area-button enabled">RESET</span>
         <span id="list-canon-btn" class="diagnostics-area-button enabled">CANON</span>
         <span id="ingest-btn" class="diagnostics-area-button enabled">INGST</span>
         <span id="panel-toggle-btn" class="diagnostics-area-button enabled">PREFS</span>
@@ -51,7 +51,7 @@
         <span id="nudge-inline-action-item" class="diagnostics-area-button enabled">NUDGE</span>
         <span id="vibem-inline-action-item" class="diagnostics-area-button enabled">VIBEM</span>
         <span id="misc-test-btn" class="hidden diagnostics-area-button enabled">MISC</span>
-        <span id="open-log-btn" class="hidden diagnostics-area-button enabled">LOGJS</span>
+        <span id="open-log-btn" class="diagnostics-area-button enabled">LOGJS</span>
         <span id="openai-api-key-btn" class="hidden diagnostics-area-button enabled">OPNAI</span>
         <span id="ingest-url-btn" class="diagnostics-area-button enabled">NGSTU</span>
         
@@ -189,10 +189,10 @@
           </div>
           <div class="grid grid-cols-12 gap-2">
             <div class="col-span-9">
-              <input id="prefs-max-history-items" type="range" min="0" max="50" value="300" class="range mb-3" step="1" />
+              <input id="prefs-max-history-items" type="range" min="0" max="300" value="50" class="range mb-3" step="1" />
             </div>
             <div class="col-span-3">
-              <span id="prefs-max-history-items-value" class="ghost-text">300</span>
+              <span id="prefs-max-history-items-value" class="ghost-text">50</span>
             </div>
           </div>
         </label>

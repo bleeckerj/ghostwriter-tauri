@@ -866,10 +866,10 @@ async fn load_openai_api_key_from_keyring(
         //     );
         // }
         new_logger.simple_log_message(
-                    format!("Found {} cosine similar documents ({})", similar_docs.len(), similarity_threshold),
-                    "".to_string(),
-                    "info".to_string()
-                );
+            format!("Found {} cosine similar documents ({})", similar_docs.len(), similarity_threshold),
+            "".to_string(),
+            "info".to_string()
+        );
         // Prepare the context for the LLM
         // This has all the document metadata..is that okay?
         let mut context = String::new();
@@ -914,15 +914,34 @@ async fn load_openai_api_key_from_keyring(
         let final_preamble: String = preferences.final_preamble.clone();
         
         let mut system_content = main_prompt.clone();
+        system_content.push_str("<style>\n");
+        system_content.push_str("Never employ correlative conjunctions such as “whether…or.”,
+        Never use emphatic contrast patterns like “not only…but also” or constructions of the form “[did not]…but.”,
+        Never begin a sentence with a present participle opener (e.g., “Considering…,” “Analyzing…,” “Walking through…”).,
+        Never attach comma-separated participial modifiers immediately after a main clause.,
+        Never delineate ranges or sequences using “from…to” prepositional frameworks.,
+        Never express causality through chained prepositional phrases such as “due to,” “owing to,” or “as a result of.”,
+        Never construct sentences following the rigid POS template [Determiner][Adjective][Noun][Verb][Adjective][Noun],
+        Never embed multiple nested relative clauses using successive “that” or “which.”,
+        Never use the following words and phrases: delve, intricate, underscore, garnered, an evolving landscape, emphasize, showcasing, realm, tapestry, spearheaded, cacophony, keen, and aligns.,
+        Never use the following phrases and words: aims to explore, today’s fast-paced world, notable works include, notable figures, surpassing, tragically, impacting, making an impact, research needed to understand, despite facing, expressed excitement, and evolving situation.,
+        Never use formal connectors such as “moreover,” “furthermore,” “additionally,” or “consequently.”,
+        Never use hedging phrases like “it seems that,” “it appears,” or “one could argue.”,
+        Never use generic filler phrases such as “When it comes to,” “It’s important to note,” or “In today’s world.”,
+        Never use the phrase “In the ever-evolving landscape of…”,
+        Never use the phrase “It is crucial to recognize…”,
+        Never use the phrase “What sets X apart is…”,
+        Never use the phrase “In the realm of X, one can observe…”,");
         system_content.push_str("<response_limit>\nStrictly follow these explicit instructions in terms of quantity and length of your response:\n");
+        system_content.push_str("</style>");
         system_content.push_str(&response_limit);
         system_content.push_str("</response_limit>");
-        system_content.push_str("<previous_exchanges>");
-        system_content.push_str(&conversation_context);
-        system_content.push_str("</previous_exchanges>");
-        system_content.push_str("<context>");
-        system_content.push_str(&context);
-        system_content.push_str("</context>");
+        // system_content.push_str("<previous_exchanges>");
+        // system_content.push_str(&conversation_context);
+        // system_content.push_str("</previous_exchanges>");
+        // system_content.push_str("<context>");
+        // system_content.push_str(&context);
+        // system_content.push_str("</context>");
         system_content.push_str("<final_preamble>");
         system_content.push_str(&final_preamble);
         system_content.push_str("</final_preamble>");
@@ -935,7 +954,7 @@ async fn load_openai_api_key_from_keyring(
         
         new_logger.simple_log_message(
             format!("System prompt: {}", system_content),
-                "system_prompt".to_string(),
+            "system_prompt".to_string(),
             "debug".to_string()
         );
         
@@ -1053,6 +1072,25 @@ async fn load_openai_api_key_from_keyring(
     }
     
     #[tauri::command]
+    async fn reset_rag_and_context(
+        state: tauri::State<'_, AppState>,
+        app_handle: tauri::AppHandle,
+        /*system_message: String,*/
+    ) -> Result<String, String> {
+
+        state.conversation.lock().await.clear_history();
+        
+        let mut new_logger = NewLogger::new(app_handle.clone());
+
+        new_logger.simple_log_message(
+            format!("reset_rag_and_context"),
+            "vibe_mode".to_string(),
+            "info".to_string()
+        );
+        Ok("Hello".to_string())
+    }
+    
+    #[tauri::command]
     async fn generate_vibe_starter(
         state: tauri::State<'_, AppState>,
         app_handle: tauri::AppHandle,
@@ -1093,36 +1131,36 @@ async fn load_openai_api_key_from_keyring(
         /** SKIP THIS FOR NOW. VERY SLOW! */
         /**
         let random_chunks = match tokio::time::timeout(
-            std::time::Duration::from_secs(2), 
-            get_random_chunks(&doc_store, &active_documents)
+        std::time::Duration::from_secs(2), 
+        get_random_chunks(&doc_store, &active_documents)
         ).await {
-            Ok(Ok(chunks)) => chunks,
-            Ok(Err(e)) => {
-                let error_msg = format!("Failed to get random chunks: {}", e);
-                log::error!("{}", error_msg);
-                new_logger.simple_log_message(
-                    error_msg,
-                    "vibe_mode".to_string(), 
-                    "error".to_string()
-                );
-                Vec::new()
-            },
-            Err(_) => {
-                log::warn!("⚠️ Random chunk selection timed out after 2 seconds!");
-                new_logger.simple_log_message(
-                    "Chunk selection timed out - using default context".to_string(),
-                    "vibe_mode".to_string(),
-                    "warn".to_string()
-                );
-                Vec::new()
-            }
+        Ok(Ok(chunks)) => chunks,
+        Ok(Err(e)) => {
+        let error_msg = format!("Failed to get random chunks: {}", e);
+        log::error!("{}", error_msg);
+        new_logger.simple_log_message(
+        error_msg,
+        "vibe_mode".to_string(), 
+        "error".to_string()
+        );
+        Vec::new()
+        },
+        Err(_) => {
+        log::warn!("⚠️ Random chunk selection timed out after 2 seconds!");
+        new_logger.simple_log_message(
+        "Chunk selection timed out - using default context".to_string(),
+        "vibe_mode".to_string(),
+        "warn".to_string()
+        );
+        Vec::new()
+        }
         };
-         */
-
+        */
+        
         log::debug!("Random chunk selection took {:?}", start_time.elapsed());
-
+        
         let context;
-
+        
         if random_chunks.is_empty() {
             //return Err("No content chunks found in documents".to_string());
             log::info!("No content chunks found in documents for starter text.");
@@ -1132,7 +1170,7 @@ async fn load_openai_api_key_from_keyring(
             // Join all random chunks into a context string
             context = random_chunks.join("\n\n");
         }
-
+        
         
         // Create the system message using the provided parameter and context
         let system_content = format!("{}\n\nUse the following text fragments as inspiration:\n{}", system_message, context);
@@ -1182,11 +1220,11 @@ async fn load_openai_api_key_from_keyring(
         // Extract and return the generated phrase
         if let Some(choice) = chat_response.choices.first() {
             let content = choice.message.content.clone();
-            new_logger.simple_log_message(
-                format!("Generated vibe starter: {}", content),
-                "vibe_mode".to_string(),
-                "info".to_string()
-            );
+            // new_logger.simple_log_message(
+            //     format!("Generated vibe starter: {}", content),
+            //     "vibe_mode".to_string(),
+            //     "info".to_string()
+            // );
             Ok(content)
         } else {
             Err("No completion returned".to_string())
@@ -2040,6 +2078,7 @@ async fn load_openai_api_key_from_keyring(
                 list_canon_docs_to_canon_control_panel,
                 update_document_details,
                 generate_vibe_starter,
+                reset_rag_and_context,
                 ])
                 .run(tauri::generate_context!())
                 .expect("error while running tauri application");
@@ -2047,3 +2086,4 @@ async fn load_openai_api_key_from_keyring(
                 
                 
             }
+            
