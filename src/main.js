@@ -66,6 +66,9 @@ let prefsShuffleSimilars;
 let prefsGameTimeSeconds;
 let prefsGameTimeSecondsValue;
 
+let vibeGenreRadios;
+let selectedVibeGenre;
+
 let prefsAIProvider;
 let prefsAIModel;
 let prefsOllamaUrl;
@@ -89,27 +92,27 @@ function updateVibeStatus(status) {
   
   switch (status) {
     case 'writing':
-      vibeStatusIndicator.textContent = '🧠';
-      vibeStatusIndicator.classList.remove('hidden');
-      vibeStatusIndicator.classList.remove('thinking-mode');
-      removeStandByIndicator(); // Remove the standby text when done
-      break;
+    vibeStatusIndicator.textContent = '🧠';
+    vibeStatusIndicator.classList.remove('hidden');
+    vibeStatusIndicator.classList.remove('thinking-mode');
+    removeStandByIndicator(); // Remove the standby text when done
+    break;
     case 'emanating':
-      vibeStatusIndicator.textContent = '🤖';
-      vibeStatusIndicator.classList.remove('hidden');
-      vibeStatusIndicator.classList.remove('thinking-mode');
-      removeStandByIndicator(); // Remove the standby text when done
-      break;
+    vibeStatusIndicator.textContent = '🤖';
+    vibeStatusIndicator.classList.remove('hidden');
+    vibeStatusIndicator.classList.remove('thinking-mode');
+    removeStandByIndicator(); // Remove the standby text when done
+    break;
     case 'thinking':
-      vibeStatusIndicator.textContent = '🤔';
-      vibeStatusIndicator.classList.remove('hidden');
-      vibeStatusIndicator.classList.add('thinking-mode'); // Add the animation class
-      addStandByIndicator(); // Call the new function we'll create
-      break;
+    vibeStatusIndicator.textContent = '🤔';
+    vibeStatusIndicator.classList.remove('hidden');
+    vibeStatusIndicator.classList.add('thinking-mode'); // Add the animation class
+    addStandByIndicator(); // Call the new function we'll create
+    break;
     case 'off':
-      vibeStatusIndicator.classList.add('hidden');
-      removeStandByIndicator(); // Remove the standby text when done
-      break;
+    vibeStatusIndicator.classList.add('hidden');
+    removeStandByIndicator(); // Remove the standby text when done
+    break;
   }
 }
 
@@ -148,7 +151,7 @@ async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
   try {
     if (enabled) {
       let vibemButton = document.querySelector("#vibem-inline-action-item");
-
+      
       // Get current text from editor
       const currentText = editor.getText().trim();
       const hasExistingContent = currentText.length > 0;
@@ -159,7 +162,7 @@ async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
       // Add vibe mode class to the scroll area for styling
       document.querySelector('.scroll-area').classList.add('vibe-mode-active');
       let seconds = prefsGameTimeSeconds.value; // default to 10 seconds if not specified
-
+      
       vibeMode = true; // Set vibeMode to true
       timer.show();
       timer.setTime(seconds);
@@ -214,7 +217,7 @@ async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
       // Set the flag to wait for user input
       waitingForUserInput = true;
       updateVibeStatus('writing'); // Show writing status initially
-
+      
       // Show timer without starting it
       greetMsgEl.textContent = 'Start typing to begin the timer...';
       
@@ -248,7 +251,7 @@ async function restartVibeMode() {
     if (waitingForUserInput || emanationInProgress) {
       return;
     }
-
+    
     let seconds = prefsGameTimeSeconds.value; // default to 10 seconds if not specified
     
     timer.show();
@@ -277,11 +280,11 @@ async function restartVibeMode() {
           emanateStringToEditor(content[0], 50, () => {
             editor.setEditable(true);
             emanationInProgress = false;
-
+            
             // Set flag to wait for user input again
             waitingForUserInput = true;
             let seconds = prefsGameTimeSeconds.value; // default to 10 seconds if not specified
-
+            
             // Show the timer but don't start it
             timer.show();
             timer.setTime(seconds);
@@ -567,7 +570,23 @@ function emanateNavigableNodeToEditor(content) {
   window.addEventListener("DOMContentLoaded", async () => {
     // Create the vibe status indicator element
     //createVibeStatusIndicator();
+    // Get all vibe genre radio buttons
+    vibeGenreRadios = document.querySelectorAll('input[name="vibe-genre"]');
     
+    // Add event listeners to each vibe genre radio button
+    vibeGenreRadios.forEach(radio => {
+      radio.addEventListener('change', (event) => {
+        const selectedGenre = event.target.value;
+        selectedVibeGenre = selectedGenre;
+        
+        // Update the vibe mode context textarea based on the selected genre
+        const genreIndex = getVibeGenreIndexByName(selectedGenre);
+        if (genreIndex !== undefined) {
+          // Call function to update the vibe mode context based on the selected genre
+          updateVibeContextFromGenre(selectedGenre);
+        }
+      });
+    });
     // Initialize the vibe status indicator reference
     vibeStatusIndicator = document.getElementById('vibe-status-indicator');
     
@@ -578,7 +597,7 @@ function emanateNavigableNodeToEditor(content) {
     
     invoke("load_preferences").then((res) => {
       //console.log('Preferences Loaded:', res);
-      const resJson = JSON.stringify(res, null, 2);
+      //const resJson = JSON.stringify(res, null, 2);
       addSimpleLogEntry({
         id: "",
         timestamp: Date.now(),
@@ -586,7 +605,7 @@ function emanateNavigableNodeToEditor(content) {
         level: 'info'
       });
       setPreferencesUI(res);
-
+      
     });
     
     
@@ -718,7 +737,7 @@ function emanateNavigableNodeToEditor(content) {
       prefsVibeModeContextTextArea.select();
     });
     
-
+    
     prefsTemperature = document.querySelector("#prefs-temperature");
     prefsTemperatureValue = document.querySelector("#prefs-temperature-value");
     prefsTemperature.addEventListener("input", () => {
@@ -780,7 +799,7 @@ function emanateNavigableNodeToEditor(content) {
       invoke('toggle_canon_control_panel').catch(e => {
         console.error('Failed to show canon control panel:', e);
       });
-
+      
       if (canonViewOpen) {
         // Push button in when canon view is open
         //listCanonBtnEl.classList.remove('button-out');
@@ -791,8 +810,8 @@ function emanateNavigableNodeToEditor(content) {
         //listCanonBtnEl.classList.add('button-out');
       }
     });
-
-
+    
+    
     //listCanonBtnEl.addEventListener("click", showCanonList);
     //listCanonBtnEl.addEventListener("click", toggleCanonControlPanelWindow);
     similaritySearchBtnEl = document.querySelector("#similarity-search-btn");
@@ -821,7 +840,7 @@ function emanateNavigableNodeToEditor(content) {
           level: 'info'
         });
         setPreferencesUI(res);
-
+        
       });
       
       invoke("prefs_file_path").then((res) => { 
@@ -871,13 +890,15 @@ function emanateNavigableNodeToEditor(content) {
           });
         });
       }
-      
+      let foo = getSelectedVibeGenre();
+      console.log("Selected vibe genre:", foo);
       invoke("update_preferences", {
         responselimit: prefsResponseLimitTextArea.value,
         mainprompt: prefsMainPromptTextArea.value,
         finalpreamble: prefsFinalPreambleTextArea.value, 
         prosestyle: prefsProseStyleTextArea.value,
         vibemodecontext: prefsVibeModeContextTextArea.value,
+        vibemodestartergenrename: foo,
         similaritythreshold: prefsSimilarityThreshold.value,
         shufflesimilars: shuffleSimilarsValue, 
         similaritycount: prefsSimilarityCount.value,
@@ -1321,7 +1342,7 @@ function emanateNavigableNodeToEditor(content) {
         }
       });
     });
-
+    
     // Add a key command for regenerating vibe starters
     window.addEventListener("keydown", async (e) => {
       // Check if we're in vibe mode and Ctrl+Shift+R is pressed (Command+Shift+R on Mac)
@@ -1378,7 +1399,7 @@ function emanateNavigableNodeToEditor(content) {
         }
       }
     });
-
+    
     // Add this code to your main.js file
     let currentCorner = 0; // 0: bottom-right, 1: bottom-left, 2: top-left, 3: top-right
     const cornerClasses = [
@@ -1387,10 +1408,10 @@ function emanateNavigableNodeToEditor(content) {
       'corner-top-left',
       'corner-top-right'
     ];
-
+    
     // Get the floating timer element 
     const floatingTimer = document.querySelector('.floating-timer');
-
+    
     if (floatingTimer) {
       // Ensure it starts with a corner class
       floatingTimer.classList.add('corner-bottom-right');
@@ -1413,17 +1434,17 @@ function emanateNavigableNodeToEditor(content) {
         // Add the appropriate animation class based on current corner
         switch(currentCorner) {
           case 0: // bottom-right to bottom-left
-            floatingTimer.classList.add('travel-bottom-right-to-bottom-left');
-            break;
+          floatingTimer.classList.add('travel-bottom-right-to-bottom-left');
+          break;
           case 1: // bottom-left to top-left
-            floatingTimer.classList.add('travel-bottom-left-to-top-left');
-            break;
+          floatingTimer.classList.add('travel-bottom-left-to-top-left');
+          break;
           case 2: // top-left to top-right
-            floatingTimer.classList.add('travel-top-left-to-top-right');
-            break;
+          floatingTimer.classList.add('travel-top-left-to-top-right');
+          break;
           case 3: // top-right to bottom-right
-            floatingTimer.classList.add('travel-top-right-to-bottom-right');
-            break;
+          floatingTimer.classList.add('travel-top-right-to-bottom-right');
+          break;
         }
         
         // After the animation completes, update the corner class
@@ -1820,7 +1841,7 @@ function emanateNavigableNodeToEditor(content) {
     // Move the cursor after the regular space
     tr.setSelection(
       state.selection.constructor.create(
-        tr.doc, 
+        tr.doc,
         position + textWithSpace.length + 1
       )
     );
@@ -1953,7 +1974,7 @@ function emanateNavigableNodeToEditor(content) {
     pos = diagnostics.state.selection.from + 2
     diagnostics.commands.setTextSelection(pos)
     setTimeout(() => {
-    diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, 0);
   }
   
@@ -1981,7 +2002,7 @@ function emanateNavigableNodeToEditor(content) {
     pos = diagnostics.state.selection.from + 2
     diagnostics.commands.setTextSelection(pos)
     setTimeout(() => {
-    diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, 0);
   }
   
@@ -2001,7 +2022,7 @@ function emanateNavigableNodeToEditor(content) {
     pos = diagnostics.state.selection.from + 2
     diagnostics.commands.setTextSelection(pos)
     setTimeout(() => {
-    diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, 0);
   }
   
@@ -2052,7 +2073,7 @@ function emanateNavigableNodeToEditor(content) {
     pos = diagnostics.state.selection.from + 2
     diagnostics.commands.setTextSelection(pos)
     setTimeout(() => {
-    diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      diagnostics.view.dom.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, 0);
   }
   
@@ -2079,6 +2100,10 @@ function emanateNavigableNodeToEditor(content) {
     setSelectedAIModel(res.ai_model_name);
     prefsOllamaUrl.value = res.ollama_url;
     prefsLMStudioUrl.value = res.lm_studio_url;
+    
+    // Set the vibe genre radio button based on preferences
+    setSelectedVibeGenre(res.vibe_mode_starter_genre_name);
+    
     invoke("load_openai_api_key_from_keyring", {}).then((res) => {
       openaiApiKeyEl.value = res;
     });
@@ -2193,6 +2218,61 @@ function emanateNavigableNodeToEditor(content) {
   
   // Make updateAllCanonEntries available globally
   window.updateAllCanonEntries = updateAllCanonEntries;
-
+  
   // Make the scrollEditorToSelection function available globally
   //window.scrollEditorToSelection = scrollEditorToSelection;
+  // Function to get the selected vibe genre
+function getSelectedVibeGenre() {
+  const selectedRadio = document.querySelector('input[name="vibe-genre"]:checked');
+  return selectedRadio ? selectedRadio.value : null;
+}
+
+// Function to set the selected vibe genre
+function setSelectedVibeGenre(genreName) {
+  const genreRadio = document.querySelector(`input[name="vibe-genre"][value="${genreName}"]`);
+  if (genreRadio) {
+    genreRadio.checked = true;
+  }
+}
+
+// Function to update the vibe context textarea based on the selected genre
+function updateVibeContextFromGenre(genreName) {
+  // This would typically involve a call to the backend to get the genre context
+  // For now, we'll just update the textarea with the genre name
+  // In a real implementation, you'd get the full context from the backend
+  invoke("get_vibe_genre_context", { genreName }).then((context) => {
+    prefsVibeModeContextTextArea.value = context;
+  }).catch(error => {
+    console.error("Error getting vibe genre context:", error);
+  });
+}
+
+// Add this code to your DOMContentLoaded event listener
+document.addEventListener("DOMContentLoaded", () => {
+  // Get all vibe genre radio buttons and the context textarea
+  const vibeGenreRadios = document.querySelectorAll('input[name="vibe-genre"]');
+  const vibeContextTextarea = document.getElementById('prefs-vibe-mode-context');
+
+  // Add event listeners to each vibe genre radio button
+  vibeGenreRadios.forEach(radio => {
+    radio.addEventListener('change', async (event) => {
+      if (event.target.checked) {
+        const selectedGenre = event.target.value;
+        
+        try {
+          // Call the backend to get the context for this genre
+          const context = await invoke('get_vibe_genre_context', { 
+            genreName: selectedGenre 
+          });
+          
+          // Update the textarea with the context from the backend
+          vibeContextTextarea.value = context;
+          
+          console.log(`Updated vibe context for genre: ${selectedGenre}`);
+        } catch (error) {
+          console.error(`Failed to get context for genre ${selectedGenre}:`, error);
+        }
+      }
+    });
+  });
+});

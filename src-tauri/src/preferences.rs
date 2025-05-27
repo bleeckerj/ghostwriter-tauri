@@ -13,10 +13,10 @@ use serde_json::json;
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct Genre {
-    starter_context: &'static str,
-    name: &'static str,
-    description: &'static str,
-    index: u8
+    pub starter_context: &'static str,
+    pub name: &'static str,
+    pub description: &'static str,
+    pub index: u8
 }
 
 const HARDBOILED: Genre = Genre {
@@ -26,29 +26,89 @@ const HARDBOILED: Genre = Genre {
     index: 0
 };
 
-const SOLARPUNK: Genre = Genre {
-    starter_context: "Generate a compelling opening phrase or sentence for a creative writing exercise. Provide a paragraph of text, about 60 words, in the style of a Solarpunk science fiction adventure novel set in a fictional near future world in which the principles and values of Solarpunk are a key undergirding character of the world. Solarpunk is a genre of science fiction that envisions a future where technology and nature coexist harmoniously, often featuring themes of sustainability, community, and social justice. There are AI companions who are like benevolent muses for people who are now able to fully actualize their true selves as creators, craftspeople, traders, explorers, adventurers, community builders, farmers, builders of homes, and technologists. The story should be set in a world where people have access to advanced AI companions that help them achieve their goals and dreams. The writing style should be engaging, imaginative, and optimistic, reflecting the hopeful and positive nature of the Solarpunk genre.",
-    name: "SOLARPUNK",
+const FANTASY: Genre = Genre {
+    starter_context: "Create an engaging opening paragraph for a fantasy adventure story set in a mystical realm with ancient magic, mythical creatures, and hidden treasures. The narrative should introduce the protagonist, a young adventurer who possesses a rare magical ability. Give the protagonist a suitably genre-specific name. Give the rare magical ability a suitably genre-like name. The text should be approximately 150-200 words long, including the introduction of a mysterious map that sets Eira on a perilous quest. Incorporate elements of wonder, danger, and self-discovery. Please use descriptive language and vivid imagery to bring the world to life. Include a sense of urgency and excitement, hinting at the challenges and adventures that await the protagonist on their journey. The story should evoke a sense of wonder and adventure, drawing the reader into a world of magic and mystery.",
+    name: "FANTASY",
     description: "",
     index: 1
 };
 
 const POETRY: Genre = Genre {
-    starter_context: "Generate a compelling opening phrase or sentence for a creative writing exercise. Provide a paragraph of text, about 60 words, in the style of a hard boiled detective novel. For example, something in the style of Raymond Chandler. The protagonist is a street smart, wise-cracking, private investigator. There is a femme fatale character, typically a beautiful woman, who becomes the protagonist's undoing. The genre includes gritty settings, drinking, cigarette smoking, police, various forms of malfeasence, criminals, hard drinking colleagues, jealous women. The settings have the characteristics of the 1950s in urban settings, although 'futuristic' hard boiled contexts are also viable.",
+    starter_context: "Write the starting verse of a poem in the style of a randomly chosen genre (e.g., haiku, sonnet, free verse). The poem should explore a theme or emotion, with a narrative arc that builds from an introduction to a climax.",
     name: "POETRY",
     description: "",
     index: 2
 };
 
 const LYRICS: Genre = Genre {
-    starter_context: "Generate a compelling opening phrase or sentence for a creative writing exercise. Provide a paragraph of text, about 60 words, in the style of a hard boiled detective novel. For example, something in the style of Raymond Chandler. The protagonist is a street smart, wise-cracking, private investigator. There is a femme fatale character, typically a beautiful woman, who becomes the protagonist's undoing. The genre includes gritty settings, drinking, cigarette smoking, police, various forms of malfeasence, criminals, hard drinking colleagues, jealous women. The settings have the characteristics of the 1950s in urban settings, although 'futuristic' hard boiled contexts are also viable.",
+    starter_context: "
+Write the start of a song in the style of a randomly chosen genre (e.g., pop, rock, country, psychedelic rock). The song should be about a theme or emotion, with a narrative arc that builds from an introduction to a climax. Incorporate the following elements into your lyrics:
+
+- A catchy chorus with a clear and repetitive melody
+- Verse 1: Introduce the protagonist and their situation
+- Chorus: Summarize the main theme of the song in a short, memorable phrase
+- Verse 2: Develop the story and characters through descriptive language
+- Bridge: Provide an unexpected twist or contrast to the song's progression
+- Outro: Resolve the narrative while maintaining emotional resonance
+
+**Specific Requirements:**
+
+1. Include at least two metaphors or similes within your lyrics.
+2. Utilize a consistent rhyme scheme throughout the song, but avoid overly complex patterns.
+3. Incorporate a conversational tone in the dialogue between characters (if applicable).
+4. Use an active voice and descriptive adjectives to create vivid imagery.
+5. Ensure the song's pacing is well-balanced, with a clear build-up and release.
+
+**Key Word Constraints:**
+
+1. Limit your use of the words 'love,' 'heart,' and 'pain' as individual elements within your lyrics.
+2. Avoid using more than three instances of the word 'you' in a single line or verse.
+3. Refrain from utilizing any clichéd phrases or lines that have become overly popular.
+
+**Style Guidelines:**
+
+1. Aim for an average sentence length of 15-20 words per line.
+2. Use a mix of short and long sentences to create dynamic rhythm and flow.
+3. Emphasize the emotional core of the song, but avoid heavy-handedness in conveying themes or messages",
     name: "LYRICS",
     description: "",
     index: 3
 };
 
 const CYBERPUNK: Genre = Genre {
-    starter_context: "Generate a compelling opening phrase or sentence for a creative writing exercise. Provide a paragraph of text, about 60 words, in the style of a hard boiled detective novel. For example, something in the style of Raymond Chandler. The protagonist is a street smart, wise-cracking, private investigator. There is a femme fatale character, typically a beautiful woman, who becomes the protagonist's undoing. The genre includes gritty settings, drinking, cigarette smoking, police, various forms of malfeasence, criminals, hard drinking colleagues, jealous women. The settings have the characteristics of the 1950s in urban settings, although 'futuristic' hard boiled contexts are also viable.",
+    starter_context:"
+Start a story set in a dystopian near-future where corporations and governments wield significant power. The narrative should revolve around [protagonist/plot], with a focus on themes of:
+
+- Surveillance and control
+- Identity and self-discovery
+- Rebellion against oppressive regimes
+
+**Specific Requirements:**
+
+1. Set the story in a recognizable cyberpunk city, such as Neo-Tokyo or Zion.
+2. Include cutting-edge technology, like advanced artificial intelligence, biometric implants, or cybernetic enhancements.
+3. Explore the tension between those who control the system (e.g., megacorporations) and those who seek to challenge it (e.g., revolutionaries, hackers).
+4. Use vivid descriptions of neon-lit cityscapes, dingy nightclubs, and cramped virtual reality chambers.
+
+**Cyberpunk Clichés to Avoid:**
+
+1. Steer clear of overly simplistic 'good vs. evil' conflicts.
+2. Don't rely on tired cyberpunk tropes (e.g., corrupt corporations, underground revolutionaries).
+3. Be mindful of how you portray the protagonist's transformation or growth; avoid clichéd 'chosen one' narratives.
+
+**Neuro-Psychological Insights:**
+
+1. Incorporate psychological insights into your characters' backstories and motivations.
+2. Explore the implications of prolonged virtual reality exposure on mental health and social connections.
+3. Consider the effects of advanced biotechnology on human identity, relationships, and society as a whole.
+
+**Key Word Constraints:**
+
+1. Limit your use of the words 'rebellion,' 'uprise,' or 'protest' within 500 characters across the entire story.
+2. Avoid using more than two instances of the phrase 'the system' in a single scene.
+3. Refrain from utilizing any overly convenient plot devices, like instant access to advanced hacking tools.
+
+Write your cyberpunk science fiction narrative now!",
     name: "CYBERPUNK",
     description: "",
     index: 4
@@ -116,7 +176,7 @@ impl Preferences {
     pub const VIBE_GENRE: Genre = HARDBOILED;
     pub const OLLAMA_URL: &'static str = "http://localhost:11434";
     pub const LM_STUDIO_URL: &'static str = "http://localhost:1234/v1";
-    pub const VIBE_GENRES: [Genre; 5] = [HARDBOILED, SOLARPUNK, LYRICS, POETRY, CYBERPUNK];
+    pub const VIBE_GENRES: [Genre; 5] = [HARDBOILED, FANTASY, LYRICS, POETRY, CYBERPUNK];
     
     /// Load preferences and ensure no empty fields
     pub fn load_with_defaults(app_state: &AppState, app_handle: AppHandle) -> Self {

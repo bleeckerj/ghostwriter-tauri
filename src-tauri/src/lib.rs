@@ -603,6 +603,7 @@ async fn load_openai_api_key_from_keyring(
         finalpreamble: String,
         prosestyle: String,
         vibemodecontext: String,
+        vibemodestartergenrename: String,
         similaritythreshold: String,
         shufflesimilars: bool,
         similaritycount: String,
@@ -625,6 +626,17 @@ async fn load_openai_api_key_from_keyring(
         preferences.final_preamble = finalpreamble;
         preferences.prose_style = prosestyle;
         preferences.vibe_mode_context = vibemodecontext;
+        // Clone the string before assigning it to preferences to avoid moving it
+        preferences.vibe_mode_starter_genre_name = vibemodestartergenrename.clone();
+        
+        // Find and set the vibe_mode_genre_index based on the name
+        for genre in &Preferences::VIBE_GENRES {
+            if genre.name == vibemodestartergenrename {
+                preferences.vibe_mode_genre_index = genre.index;
+                break;
+            }
+        }
+        
         preferences.similarity_threshold = similaritythreshold.parse::<f32>().unwrap() / 100.0;
         preferences.shuffle_similars = shufflesimilars == true;
         preferences.similarity_count = similaritycount.parse::<usize>().unwrap_or(Preferences::SIMILARITY_COUNT_DEFAULT);
@@ -1896,6 +1908,24 @@ async fn load_openai_api_key_from_keyring(
             }
             
             
+            #[tauri::command]
+            async fn get_vibe_genre_context(
+                state: tauri::State<'_, AppState>,
+                genre_name: String,
+            ) -> Result<String, String> {
+              let preferences = state.preferences.lock().await;
+              
+              // Find the genre by name and return its starter_context
+              for genre in &Preferences::VIBE_GENRES {
+                if genre.name == genre_name {
+                  return Ok(genre.starter_context.to_string());
+                }
+              }
+              
+              // If not found, return the default
+              Err("Genre not found".to_string())
+            }
+            
             pub fn run() {
                 
                 //let a_embedding_generator = EmbeddingGenerator::new(Client::new());
@@ -2049,7 +2079,7 @@ async fn load_openai_api_key_from_keyring(
                     Ok(()
                 )
             })
-            .invoke_handler(tauri::generate_handler![
+                .invoke_handler(tauri::generate_handler![
                 greet,
                 completion_from_context,
                 search_similarity,
@@ -2081,6 +2111,7 @@ async fn load_openai_api_key_from_keyring(
                 update_document_details,
                 generate_vibe_starter,
                 reset_rag_and_context,
+                get_vibe_genre_context,
                 ])
                 .run(tauri::generate_context!())
                 .expect("error while running tauri application");
@@ -2088,4 +2119,3 @@ async fn load_openai_api_key_from_keyring(
                 
                 
             }
-            
