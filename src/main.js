@@ -30,7 +30,6 @@ let greetInputEl;
 let greetMsgEl;
 //let greetBtnEl;
 let incantBtnEl;
-let resetBtnEl;
 let listCanonBtnEl;
 let clearDiagnosticsBtnEl;
 let openPreferencesBtnEl;
@@ -366,11 +365,6 @@ async function searchSimilarity() {
   return results;
 }
 
-async function resetRagAndContext() {
-  console.log("Resetting RAG and context");
-  invoke("reset_rag_and_context");
-}
-
 async function completionFromContext() {
   let dots = 0;
   let wasDisabled = false;
@@ -597,15 +591,14 @@ function emanateNavigableNodeToEditor(content) {
     
     
     // Reload models when the refresh button is clicked
-    refreshModelsBtn.addEventListener('click', loadModels().then((models) => {
-      console.log(models);
-    }));
-    // invoke("set_logger_app_data_path", {}).then((res) => {
-    //   //console.log('Logger App Data Path:', res);
-    //   invoke("simple_log_message", { message: 'Logger App Data Path: '+res, id: "tracker", level: "info" }).then((res) => {
-    //   });
+    refreshModelsBtn.addEventListener('click', passSelectedModelToBackend);
+    
+    invoke("set_logger_app_data_path", {}).then((res) => {
+      //console.log('Logger App Data Path:', res);
+      invoke("simple_log_message", { message: 'Logger App Data Path: '+res, id: "tracker", level: "info" }).then((res) => {
+      });
       
-    // });
+    });
     
     // Listen for node clicks
     editor.on('node:clicked', ({ id, node }) => {
@@ -774,8 +767,6 @@ function emanateNavigableNodeToEditor(content) {
     // greetBtnEl.addEventListener("click", greet);
     incantBtnEl = document.querySelector("#incant-btn");
     incantBtnEl.addEventListener("click", completionFromContext);
-    resetBtnEl = document.querySelector("#reset-rag-btn");
-    resetBtnEl.addEventListener("click", resetRagAndContext);
     //
     // CANON button handling
     //
@@ -894,7 +885,7 @@ function emanateNavigableNodeToEditor(content) {
         maxtokens: prefsMaxOutputTokens.value,
         temperature: prefsTemperature.value,
         gametimerms: prefsGameTimeSeconds.value,
-        aiprovider: getSelectedAIProviderSafely(),
+        aiprovider: getSelectedAIProvider(),
         aimodelname: getSelectedAIModel(),
         ollamaurl: prefsOllamaUrl.value,
         lmstudiourl: prefsLMStudioUrl.value
@@ -1274,8 +1265,7 @@ function emanateNavigableNodeToEditor(content) {
       try {
         
         // Determine the selected AI provider
-        const selectedProvider = getSelectedAIProviderSafely();
-        console.log('Selected AI Provider:', selectedProvider);
+        const selectedProvider = document.querySelector('input[name="ai-provider"]:checked').value;
         invoke("get_model_names", { providerName: selectedProvider }).then((models) => {
           console.log('Models:', models);
           // Clear the existing options
@@ -1315,9 +1305,8 @@ function emanateNavigableNodeToEditor(content) {
         
         // Perform actions based on the selected radio button
         if (selectedValue === 'lmstudio') {
-          loadModels().then(() => {
+          loadModels();
           document.getElementById('lmstudio-url-container').classList.remove('hidden');
-          });
         } else if (selectedValue === 'ollama') {
           loadModels().then(() => {
             // Show the URL container for the selected provider
@@ -1873,76 +1862,50 @@ function emanateNavigableNodeToEditor(content) {
     }
     
   }
-
-  function getSelectedAIProviderSafely() {
-  const selectedProviderElement = document.querySelector('input[name="ai-provider"]:checked');
-  
-  if (selectedProviderElement) {
-        addSimpleLogEntry({
-        id: "",
-        timestamp: Date.now(),
-        message: 'Selected AI Provider: ' + selectedProviderElement.value,
-        level: 'debug'
-      });
-    return selectedProviderElement.value;
-
-  } else {
-    // Default fallback when no provider is selected
-    console.warn('No AI provider selected, defaulting to "ollama"');
-    
-    // Try to check the appropriate radio button
-    const openAIRadio = document.querySelector('input[name="ai-provider"][value="openai"]');
-    if (openAIRadio) {
-      openAIRadio.checked = true;
-    }
-    
-    return "openai"; // Default provider
-  }
-}
   
   // Function to get the selected AI provider
-  // function getSelectedAIProvider() {
-  //   const selectedProvider = document.querySelector('input[name="ai-provider"]:checked');
+  function getSelectedAIProvider() {
+    const selectedProvider = document.querySelector('input[name="ai-provider"]:checked');
     
-  //   if (selectedProvider) {
-  //     // A radio button is already selected, use its value
-  //     addSimpleLogEntry({
-  //       id: "",
-  //       timestamp: Date.now(),
-  //       message: 'Selected AI Provider: ' + selectedProvider.value,
-  //       level: 'debug'
-  //     });
-  //     return selectedProvider.value;
-  //   } else {
-  //     // No radio button is selected, select the first one as default
-  //     const allProviders = document.querySelectorAll('input[name="ai-provider"]');
+    if (selectedProvider) {
+      // A radio button is already selected, use its value
+      addSimpleLogEntry({
+        id: "",
+        timestamp: Date.now(),
+        message: 'Selected AI Provider: ' + selectedProvider.value,
+        level: 'debug'
+      });
+      return selectedProvider.value;
+    } else {
+      // No radio button is selected, select the first one as default
+      const allProviders = document.querySelectorAll('input[name="ai-provider"]');
       
-  //     if (allProviders.length > 0) {
-  //       // Check the first radio button
-  //       allProviders[0].checked = true;
+      if (allProviders.length > 0) {
+        // Check the first radio button
+        allProviders[0].checked = true;
         
-  //       addSimpleLogEntry({
-  //         id: "",
-  //         timestamp: Date.now(),
-  //         message: 'No AI provider was selected, defaulting to: ' + allProviders[0].value,
-  //         level: 'warn'
-  //       });
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date.now(),
+          message: 'No AI provider was selected, defaulting to: ' + allProviders[0].value,
+          level: 'warn'
+        });
         
-  //       return allProviders[0].value;
-  //     } else {
-  //       // No radio buttons found at all (extreme edge case)
-  //       addSimpleLogEntry({
-  //         id: "",
-  //         timestamp: Date.now(),
-  //         message: 'No AI provider radio buttons found in the DOM',
-  //         level: 'error'
-  //       });
+        return allProviders[0].value;
+      } else {
+        // No radio buttons found at all (extreme edge case)
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date.now(),
+          message: 'No AI provider radio buttons found in the DOM',
+          level: 'error'
+        });
         
-  //       // Return a sensible default
-  //       return 'ollama'; // Or whichever default makes sense for your app
-  //     }
-  //   }
-  // }
+        // Return a sensible default
+        return 'ollama'; // Or whichever default makes sense for your app
+      }
+    }
+  }
   
   function setSelectedAIModel(model) {
     const modelsDropdown = document.getElementById('prefs-model-name');

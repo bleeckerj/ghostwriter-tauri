@@ -914,6 +914,7 @@ async fn load_openai_api_key_from_keyring(
         let final_preamble: String = preferences.final_preamble.clone();
         
         let mut system_content = main_prompt.clone();
+        system_content.push_str("\n\n");
         system_content.push_str("<style>\n");
         system_content.push_str("Never employ correlative conjunctions such as “whether…or.”,
         Never use emphatic contrast patterns like “not only…but also” or constructions of the form “[did not]…but.”,
@@ -953,7 +954,8 @@ async fn load_openai_api_key_from_keyring(
         // system_content.push_str("</user_input>");
         
         new_logger.simple_log_message(
-            format!("System prompt: {}", system_content),
+            system_content.clone(),
+            //format!("System prompt: {} Length: {}", system_content, system_content.len()),
             "system_prompt".to_string(),
             "debug".to_string()
         );
