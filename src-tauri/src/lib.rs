@@ -1099,7 +1099,7 @@ async fn load_openai_api_key_from_keyring(
         new_logger.simple_log_message(
             format!("reset_rag_and_context"),
             "vibe_mode".to_string(),
-            "info".to_string()
+            "debug".to_string()
         );
         Ok("Hello".to_string())
     }
@@ -1136,10 +1136,10 @@ async fn load_openai_api_key_from_keyring(
             "info".to_string()
         );
         
-        log::debug!("Starting random chunk selection...");
-        let start_time = std::time::Instant::now();
+        // log::debug!("Starting random chunk selection...");
+        // let start_time = std::time::Instant::now();
         
-        // Use a safer approach for timeout by handling specific errors
+        // // Use a safer approach for timeout by handling specific errors
         let random_chunks: Vec<String> = Vec::new();
         
         /** SKIP THIS FOR NOW. VERY SLOW! */
@@ -1171,7 +1171,7 @@ async fn load_openai_api_key_from_keyring(
         };
         */
         
-        log::debug!("Random chunk selection took {:?}", start_time.elapsed());
+        //log::debug!("Random chunk selection took {:?}", start_time.elapsed());
         
         let context;
         
@@ -1187,7 +1187,7 @@ async fn load_openai_api_key_from_keyring(
         
         
         // Create the system message using the provided parameter and context
-        let system_content = format!("{}\n\nUse the following text fragments as inspiration:\n{}", system_message, context);
+        let system_content = format!("\n\nThis is your instruction for generating starter content:\n{}\n\nThis is some context text:\n{}\n", system_message, context);
         
         // Create the prompt for generating an opening phrase
         let prompt = "Generate a compelling opening phrase or sentence for a creative writing exercise.";
@@ -1203,11 +1203,11 @@ async fn load_openai_api_key_from_keyring(
             content: system_content,
             name: None,
         },
-        ChatMessage {
-            role: MessageRole::User,
-            content: prompt.to_string(),
-            name: None,
-        },
+        // ChatMessage {
+        //     role: MessageRole::User,
+        //     content: prompt.to_string(),
+        //     name: None,
+        // },
         ];
         
         // Get the preferred model
@@ -1221,7 +1221,7 @@ async fn load_openai_api_key_from_keyring(
             messages,
             model: provider_chat_model.name.clone(),
             temperature: Some(temperature),
-            max_tokens: Some(100), // Short response for an opening phrase
+            max_tokens: Some(200), // Short response for an opening phrase
             stream: false,
         };
         

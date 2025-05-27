@@ -36,6 +36,7 @@ let openPreferencesBtnEl;
 let ingestBtnEl;
 let openLogBtnEl;
 let similaritySearchBtnEl;
+let resetRagBtnEl;
 let panel;
 let panelToggleBtn;
 
@@ -607,7 +608,8 @@ function emanateNavigableNodeToEditor(content) {
       setPreferencesUI(res);
       
     });
-    
+    // Load models when the page loads
+    loadModels();
     
     // Reload models when the refresh button is clicked
     refreshModelsBtn.addEventListener('click', passSelectedModelToBackend);
@@ -811,7 +813,10 @@ function emanateNavigableNodeToEditor(content) {
       }
     });
     
-    
+    resetRagBtnEl = document.querySelector("#reset-rag-btn");
+    resetRagBtnEl.addEventListener("click", () => {
+      invoke("reset_rag_and_context");
+    });
     //listCanonBtnEl.addEventListener("click", showCanonList);
     //listCanonBtnEl.addEventListener("click", toggleCanonControlPanelWindow);
     similaritySearchBtnEl = document.querySelector("#similarity-search-btn");
@@ -1307,8 +1312,7 @@ function emanateNavigableNodeToEditor(content) {
         // Hide the loading spinner
       }
     }
-    // Load models when the page loads
-    loadModels();
+
     
     // Initialize the resize handle
     initializeResizeHandle();
@@ -2247,7 +2251,6 @@ function updateVibeContextFromGenre(genreName) {
   });
 }
 
-// Add this code to your DOMContentLoaded event listener
 document.addEventListener("DOMContentLoaded", () => {
   // Get all vibe genre radio buttons and the context textarea
   const vibeGenreRadios = document.querySelectorAll('input[name="vibe-genre"]');

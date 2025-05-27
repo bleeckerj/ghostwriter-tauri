@@ -34,50 +34,45 @@ const FANTASY: Genre = Genre {
 };
 
 const POETRY: Genre = Genre {
-    starter_context: "Write the starting verse of a poem in the style of a randomly chosen genre (e.g., haiku, sonnet, free verse). The poem should explore a theme or emotion, with a narrative arc that builds from an introduction to a climax.",
+    starter_context: "Write the starting verse of a poem in the style of a Shakespearean Sonnet. The poem should explore the theme of love, loss, and war.",
     name: "POETRY",
     description: "",
     index: 2
 };
 
-const LYRICS: Genre = Genre {
-    starter_context: "
-Write the start of a song in the style of a randomly chosen genre (e.g., pop, rock, country, psychedelic rock). The song should be about a theme or emotion, with a narrative arc that builds from an introduction to a climax. Incorporate the following elements into your lyrics:
+const ROMANTIC_COMEDY: Genre = Genre {
+    starter_context: "Write the opening first several lines of a scene of a romantic comedy. Do not conclude the scene. You are writing the first page, which does not end the scene. What you write starts the scene leaving an opportunity for the user to continue the writing of the scene.
+    Write no more than one page, or three lines of dialogue.
+    Do not conclude the scene with FADE OUT or FADE TO BLACK.
+    You are not completing the scene. You are writing only one page of dialogue.
+    The story should take place in a small, independent bookstore or a related setting (e.g. library, cafe, etc.). The main character is a quirky, creative person in their 20s-30s who has given up on love after past relationships. They're probably a bit of a control freak, have high standards for their ideal partner, and are secretly longing for someone to share their love of books/dogs/ranting about the meaning of life.
 
-- A catchy chorus with a clear and repetitive melody
-- Verse 1: Introduce the protagonist and their situation
-- Chorus: Summarize the main theme of the song in a short, memorable phrase
-- Verse 2: Develop the story and characters through descriptive language
-- Bridge: Provide an unexpected twist or contrast to the song's progression
-- Outro: Resolve the narrative while maintaining emotional resonance
+The tone should be witty and humorous, with a touch of sarcasm and irony. The main character's inner monologue should be filled with banter, observational humor, and witty one-liners. The dialogue between characters should also be snappy and natural-sounding.
 
-**Specific Requirements:**
+The story should set up the central conflict or problem, which might revolve around finding a new business venture for the bookstore, navigating office politics, or trying to balance work and personal life. The main character's personal growth and development should be the overall arc of the story, as they learn to let go of their control freak tendencies and open themselves up to new experiences and relationships.
 
-1. Include at least two metaphors or similes within your lyrics.
-2. Utilize a consistent rhyme scheme throughout the song, but avoid overly complex patterns.
-3. Incorporate a conversational tone in the dialogue between characters (if applicable).
-4. Use an active voice and descriptive adjectives to create vivid imagery.
-5. Ensure the song's pacing is well-balanced, with a clear build-up and release.
+Please keep the characters' names simple, but try to infuse them with enough nuance and depth to make the story engaging. The supporting characters should be equally well-developed, with their own quirks and flaws to make them relatable and human.
 
-**Key Word Constraints:**
+Lastly, the story should have a clear 'meet-cute' moment, where our protagonist meets their love interest in an unexpected and charming way. This should be a pivotal moment in the story, marking the beginning of their romantic journey.
 
-1. Limit your use of the words 'love,' 'heart,' and 'pain' as individual elements within your lyrics.
-2. Avoid using more than three instances of the word 'you' in a single line or verse.
-3. Refrain from utilizing any clichéd phrases or lines that have become overly popular.
+The opening scene should capture the general sensibilities of a romantic comedy, including:
 
-**Style Guidelines:**
+* A quirky, creative main character
+* Witty dialogue and banter
+* Personal growth and development as the story progresses
+* A touch of sarcasm and irony
+* A central conflict or problem to drive the story forward
+* A clear 'meet-cute' moment marking the beginning of the romantic journey 
 
-1. Aim for an average sentence length of 15-20 words per line.
-2. Use a mix of short and long sentences to create dynamic rhythm and flow.
-3. Emphasize the emotional core of the song, but avoid heavy-handedness in conveying themes or messages",
-    name: "LYRICS",
+Write it adhering to the syntax, grammar, and structure of a movie script.",
+    name: "ROMANTICCOMEDY",
     description: "",
     index: 3
 };
 
 const CYBERPUNK: Genre = Genre {
     starter_context:"
-Start a story set in a dystopian near-future where corporations and governments wield significant power. The narrative should revolve around [protagonist/plot], with a focus on themes of:
+Write an opening paragraph of about 60 words of a story set in a dystopian near-future where corporations and governments wield significant power. The narrative should revolve around [protagonist/plot], with a focus on themes of:
 
 - Surveillance and control
 - Identity and self-discovery
@@ -176,7 +171,7 @@ impl Preferences {
     pub const VIBE_GENRE: Genre = HARDBOILED;
     pub const OLLAMA_URL: &'static str = "http://localhost:11434";
     pub const LM_STUDIO_URL: &'static str = "http://localhost:1234/v1";
-    pub const VIBE_GENRES: [Genre; 5] = [HARDBOILED, FANTASY, LYRICS, POETRY, CYBERPUNK];
+    pub const VIBE_GENRES: [Genre; 5] = [HARDBOILED, FANTASY, ROMANTIC_COMEDY, POETRY, CYBERPUNK];
     
     /// Load preferences and ensure no empty fields
     pub fn load_with_defaults(app_state: &AppState, app_handle: AppHandle) -> Self {
