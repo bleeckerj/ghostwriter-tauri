@@ -80,15 +80,15 @@ Write an opening paragraph of about 60 words of a story set in a dystopian near-
 
 **Specific Requirements:**
 
-1. Set the story in a recognizable cyberpunk city, such as Neo-Tokyo or Zion.
-2. Include cutting-edge technology, like advanced artificial intelligence, biometric implants, or cybernetic enhancements.
+1. Set the story in a recognizable cyberpunk city, that may be evocative of an overpopulated megalopolis like Tokyo, New York City Shanghai, Hanoi, Jibhuti. The city should have an Orientalist fetish, as if the world's population is largely a mix of African and Chinese.
+2. Include cutting-edge technology, like advanced artificial intelligence, biometric implants, cyberdecks, large language models, small language models, hacking tools, Flipper Zero hacks, technomagic, emanations, conjurings which are all technological rather than fantasy — or cybernetic enhancements.
 3. Explore the tension between those who control the system (e.g., megacorporations) and those who seek to challenge it (e.g., revolutionaries, hackers).
 4. Use vivid descriptions of neon-lit cityscapes, dingy nightclubs, and cramped virtual reality chambers.
 
 **Cyberpunk Clichés to Avoid:**
 
 1. Steer clear of overly simplistic 'good vs. evil' conflicts.
-2. Don't rely on tired cyberpunk tropes (e.g., corrupt corporations, underground revolutionaries).
+2. Do not rely on tired cyberpunk tropes (e.g., corrupt corporations, underground revolutionaries).
 3. Be mindful of how you portray the protagonist's transformation or growth; avoid clichéd 'chosen one' narratives.
 
 **Neuro-Psychological Insights:**

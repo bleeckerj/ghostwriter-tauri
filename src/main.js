@@ -606,10 +606,10 @@ function emanateNavigableNodeToEditor(content) {
         level: 'info'
       });
       setPreferencesUI(res);
-      
+         // Load models when the page loads
+    loadModels(); 
     });
-    // Load models when the page loads
-    loadModels();
+
     
     // Reload models when the refresh button is clicked
     refreshModelsBtn.addEventListener('click', passSelectedModelToBackend);
