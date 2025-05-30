@@ -3,7 +3,7 @@
 #![allow(unused)]
 use ai::ModelProvider;
 use epub::doc;
-use futures::FutureExt;
+use futures::{FutureExt, StreamExt};
 use pdf_extract::Path;
 use std::f32::consts::E;
 use std::io::Stdout;
@@ -236,6 +236,72 @@ impl fmt::Display for CompletionTiming {
             self.llm_request_time_ms,
             self.total_ms
         )
+    }
+}
+
+#[tauri::command]
+async fn streaming_completion_from_context(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    input: String,
+    system_message: String,
+) -> Result<(), String> {
+    let preferences = state.preferences.lock().await;
+    let mut new_logger = NewLogger::new(app_handle.clone());
+    
+    // Get the provider
+    let mut provider = get_preferred_llm_provider(&app_handle, &preferences)
+    .map_err(|e| format!("Couldn't get preferred LLM provider: {}", e))?;
+    
+    // Setup similar to completion_from_context but adapted for streaming
+    // ...embedding generation and context setup code...
+    
+    // Create the chat request
+    let model_name = provider.get_preferred_inference_model(&preferences.ai_model_name)
+        .await
+        .map_err(|e| format!("Failed to get preferred inference model: {}", e))?.name;
+        
+    let chat_request = ChatCompletionRequest {
+        messages: vec![
+        ChatMessage {
+            role: MessageRole::System,
+            content: system_message.clone(),
+            name: None,
+        },
+        ChatMessage {
+            role: MessageRole::User,
+            content: input.clone(),
+            name: None,
+        },
+        ],
+        model: model_name,
+        temperature: Some(preferences.temperature),
+        max_tokens: Some(preferences.max_output_tokens as u32),
+        stream: true, // Enable streaming
+    };
+    
+    // Create a streaming response
+    let stream_result = provider.create_streaming_chat_completion(&chat_request).await;
+    match stream_result {
+        Ok(mut stream) => {
+            while let Some(result) = stream.next().await {
+                match result {
+                    Ok(chunk) => {
+                        // Extract content from the chunk
+                        if let Some(choice) = chunk.choices.first() {
+                            if let Some(content) = &choice.delta.content {
+                                // Emit each chunk to the frontend
+                                app_handle.emit("completion-chunk", content)
+                                .map_err(|e| format!("Failed to emit completion chunk: {}", e))?;
+                            }
+                        }
+                    },
+                    Err(e) => return Err(format!("Error in streaming: {}", e))
+                }
+            }
+            Ok(())
+        },
+        Err(e) => Err(format!("Failed to create streaming completion: {}", e))
     }
 }
 
@@ -1091,11 +1157,11 @@ async fn load_openai_api_key_from_keyring(
         app_handle: tauri::AppHandle,
         /*system_message: String,*/
     ) -> Result<String, String> {
-
+        
         state.conversation.lock().await.clear_history();
         
         let mut new_logger = NewLogger::new(app_handle.clone());
-
+        
         new_logger.simple_log_message(
             format!("reset_rag_and_context"),
             "vibe_mode".to_string(),
@@ -1913,17 +1979,17 @@ async fn load_openai_api_key_from_keyring(
                 state: tauri::State<'_, AppState>,
                 genre_name: String,
             ) -> Result<String, String> {
-              let preferences = state.preferences.lock().await;
-              
-              // Find the genre by name and return its starter_context
-              for genre in &Preferences::VIBE_GENRES {
-                if genre.name == genre_name {
-                  return Ok(genre.starter_context.to_string());
+                let preferences = state.preferences.lock().await;
+                
+                // Find the genre by name and return its starter_context
+                for genre in &Preferences::VIBE_GENRES {
+                    if genre.name == genre_name {
+                        return Ok(genre.starter_context.to_string());
+                    }
                 }
-              }
-              
-              // If not found, return the default
-              Err("Genre not found".to_string())
+                
+                // If not found, return the default
+                Err("Genre not found".to_string())
             }
             
             pub fn run() {
@@ -2079,7 +2145,7 @@ async fn load_openai_api_key_from_keyring(
                     Ok(()
                 )
             })
-                .invoke_handler(tauri::generate_handler![
+            .invoke_handler(tauri::generate_handler![
                 greet,
                 completion_from_context,
                 search_similarity,
@@ -2112,6 +2178,7 @@ async fn load_openai_api_key_from_keyring(
                 generate_vibe_starter,
                 reset_rag_and_context,
                 get_vibe_genre_context,
+                streaming_completion_from_context,
                 ])
                 .run(tauri::generate_context!())
                 .expect("error while running tauri application");
@@ -2119,3 +2186,4 @@ async fn load_openai_api_key_from_keyring(
                 
                 
             }
+            

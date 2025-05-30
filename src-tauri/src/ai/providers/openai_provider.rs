@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 use async_openai::{Client, config::OpenAIConfig};
 use serde::{Serialize, Deserialize, ser::SerializeStruct, de::{self, Deserializer, Visitor, MapAccess}};
 use std::fmt;
@@ -7,7 +8,7 @@ use crate::ai::{
     models::*,
 };
 use async_trait::async_trait;
-use futures::Stream;
+use futures::{Stream, StreamExt};
 use std::pin::Pin;
 use std::sync::Arc;
 use async_openai::types::CreateChatCompletionRequest;
@@ -234,7 +235,49 @@ impl ChatCompletionProvider for OpenAIProvider {
         &self,
         request: &ChatCompletionRequest,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<ChatCompletionChunk, AIProviderError>> + Send>>, AIProviderError> {
-        Err(AIProviderError::NotImplemented("Streaming not implemented for OpenAI".to_string()))
+        // Convert to OpenAI specific format
+        let openai_messages = convert_messages_to_openai(&request.messages)?;
+        
+        let openai_request = CreateChatCompletionRequest {
+            model: request.model.clone(),
+            messages: openai_messages,
+            temperature: request.temperature,
+            max_tokens: request.max_tokens,
+            stream: Some(true),
+            ..Default::default()
+        };
+
+        // Make the API call with streaming
+        let stream = self.client.chat().create_stream(openai_request).await
+            .map_err(|e| AIProviderError::APIError(e.to_string()))?;
+        
+        // Map the OpenAI stream to our generic format
+        let mapped_stream = StreamExt::map(stream, move |result| match result {
+            Ok(response) => {
+                // Convert OpenAI response chunk to our generic format
+                let choices = response.choices.iter()
+                    .map(|choice| {
+                        ChatCompletionChunkChoice {
+                            index: choice.index as usize,
+                            delta: ChatMessageDelta {
+                                role: None, // Roles typically come in the first chunk only
+                                content: choice.delta.content.clone(),
+                            },
+                            finish_reason: choice.finish_reason.clone().map(|r| format!("{:?}", r)),
+                        }
+                    })
+                    .collect();
+
+                Ok(ChatCompletionChunk {
+                    id: response.id.clone(),
+                    created: response.created as u64,
+                    choices,
+                })
+            },
+            Err(e) => Err(AIProviderError::APIError(e.to_string())),
+        });
+
+        Ok(Box::pin(mapped_stream))
     }
 }
 
