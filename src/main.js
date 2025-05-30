@@ -185,8 +185,25 @@ async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
           if (vibeStarter) {
             // Clear existing content and insert the generated starting phrase
             editor.commands.clearContent();
-            editor.commands.insertContent(vibeStarter);
-            
+            //editor.commands.insertContent(vibeStarter);
+            emanateStringToEditor(vibeStarter, 40, () => {
+              editor.setEditable(true);
+              emanationInProgress = false;
+              // Set flag to wait for user input again
+              waitingForUserInput = true;
+              let seconds = prefsGameTimeSeconds.value; // default to 10 seconds if not specified
+              
+              // Set the flag to wait for user input
+              waitingForUserInput = true;
+              updateVibeStatus('writing'); // Show writing status initially
+              
+              // Start the timer after generating the starter
+              //restartVibeMode();
+              // Show the timer but don't start it
+              timer.show();
+              timer.setTime(seconds);
+              greetMsgEl.textContent = 'Start typing to continue...';
+            });
             addSimpleLogEntry({ 
               "id": "", 
               "timestamp": Date.now(), 
@@ -215,15 +232,6 @@ async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
         });
       }
       
-      // Set the flag to wait for user input
-      waitingForUserInput = true;
-      updateVibeStatus('writing'); // Show writing status initially
-      
-      // Show timer without starting it
-      greetMsgEl.textContent = 'Start typing to begin the timer...';
-      
-      // Start the timer after generating the starter
-      restartVibeMode();
     } else {
       // Vibe mode is being turned OFF
       await WebviewWindow.getCurrent().setTitle("Ghostwriter"); // Change title back when vibe mode is disabled
@@ -606,10 +614,10 @@ function emanateNavigableNodeToEditor(content) {
         level: 'info'
       });
       setPreferencesUI(res);
-         // Load models when the page loads
-    loadModels(); 
+      // Load models when the page loads
+      loadModels(); 
     });
-
+    
     
     // Reload models when the refresh button is clicked
     refreshModelsBtn.addEventListener('click', passSelectedModelToBackend);
@@ -1312,7 +1320,7 @@ function emanateNavigableNodeToEditor(content) {
         // Hide the loading spinner
       }
     }
-
+    
     
     // Initialize the resize handle
     initializeResizeHandle();
@@ -1376,7 +1384,9 @@ function emanateNavigableNodeToEditor(content) {
           if (vibeStarter) {
             // Clear existing content and insert the generated starting phrase
             editor.commands.clearContent();
-            editor.commands.insertContent(vibeStarter);
+            //editor.commands.insertContent(vibeStarter);
+            emanateStringToEditor(vibeStarter, 50, () => {
+            });
             
             addSimpleLogEntry({ 
               "id": "", 
@@ -2226,56 +2236,56 @@ function emanateNavigableNodeToEditor(content) {
   // Make the scrollEditorToSelection function available globally
   //window.scrollEditorToSelection = scrollEditorToSelection;
   // Function to get the selected vibe genre
-function getSelectedVibeGenre() {
-  const selectedRadio = document.querySelector('input[name="vibe-genre"]:checked');
-  return selectedRadio ? selectedRadio.value : null;
-}
-
-// Function to set the selected vibe genre
-function setSelectedVibeGenre(genreName) {
-  const genreRadio = document.querySelector(`input[name="vibe-genre"][value="${genreName}"]`);
-  if (genreRadio) {
-    genreRadio.checked = true;
+  function getSelectedVibeGenre() {
+    const selectedRadio = document.querySelector('input[name="vibe-genre"]:checked');
+    return selectedRadio ? selectedRadio.value : null;
   }
-}
-
-// Function to update the vibe context textarea based on the selected genre
-function updateVibeContextFromGenre(genreName) {
-  // This would typically involve a call to the backend to get the genre context
-  // For now, we'll just update the textarea with the genre name
-  // In a real implementation, you'd get the full context from the backend
-  invoke("get_vibe_genre_context", { genreName }).then((context) => {
-    prefsVibeModeContextTextArea.value = context;
-  }).catch(error => {
-    console.error("Error getting vibe genre context:", error);
-  });
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  // Get all vibe genre radio buttons and the context textarea
-  const vibeGenreRadios = document.querySelectorAll('input[name="vibe-genre"]');
-  const vibeContextTextarea = document.getElementById('prefs-vibe-mode-context');
-
-  // Add event listeners to each vibe genre radio button
-  vibeGenreRadios.forEach(radio => {
-    radio.addEventListener('change', async (event) => {
-      if (event.target.checked) {
-        const selectedGenre = event.target.value;
-        
-        try {
-          // Call the backend to get the context for this genre
-          const context = await invoke('get_vibe_genre_context', { 
-            genreName: selectedGenre 
-          });
+  
+  // Function to set the selected vibe genre
+  function setSelectedVibeGenre(genreName) {
+    const genreRadio = document.querySelector(`input[name="vibe-genre"][value="${genreName}"]`);
+    if (genreRadio) {
+      genreRadio.checked = true;
+    }
+  }
+  
+  // Function to update the vibe context textarea based on the selected genre
+  function updateVibeContextFromGenre(genreName) {
+    // This would typically involve a call to the backend to get the genre context
+    // For now, we'll just update the textarea with the genre name
+    // In a real implementation, you'd get the full context from the backend
+    invoke("get_vibe_genre_context", { genreName }).then((context) => {
+      prefsVibeModeContextTextArea.value = context;
+    }).catch(error => {
+      console.error("Error getting vibe genre context:", error);
+    });
+  }
+  
+  document.addEventListener("DOMContentLoaded", () => {
+    // Get all vibe genre radio buttons and the context textarea
+    const vibeGenreRadios = document.querySelectorAll('input[name="vibe-genre"]');
+    const vibeContextTextarea = document.getElementById('prefs-vibe-mode-context');
+    
+    // Add event listeners to each vibe genre radio button
+    vibeGenreRadios.forEach(radio => {
+      radio.addEventListener('change', async (event) => {
+        if (event.target.checked) {
+          const selectedGenre = event.target.value;
           
-          // Update the textarea with the context from the backend
-          vibeContextTextarea.value = context;
-          
-          console.log(`Updated vibe context for genre: ${selectedGenre}`);
-        } catch (error) {
-          console.error(`Failed to get context for genre ${selectedGenre}:`, error);
+          try {
+            // Call the backend to get the context for this genre
+            const context = await invoke('get_vibe_genre_context', { 
+              genreName: selectedGenre 
+            });
+            
+            // Update the textarea with the context from the backend
+            vibeContextTextarea.value = context;
+            
+            console.log(`Updated vibe context for genre: ${selectedGenre}`);
+          } catch (error) {
+            console.error(`Failed to get context for genre ${selectedGenre}:`, error);
+          }
         }
-      }
+      });
     });
   });
-});
