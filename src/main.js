@@ -2328,11 +2328,12 @@ function emanateNavigableNodeToEditor(content) {
       ext.options.suggestion = suggestion
       editor.view.updateState(editor.state) // force re-render
       ghostActive = !!suggestion
+      if (ghostActive) editor.commands.focus(); // get focus back to editor
     }
   }
   
-
-  async function loadCompletions(n = 3) {
+  
+  async function loadCompletions(n = 2) {
     loadingMore = true;
     completions = [];
     currentCompletionIndex = 0;
@@ -2349,12 +2350,17 @@ function emanateNavigableNodeToEditor(content) {
   }
   
   function showCurrentCompletion() {
-    const preview = document.getElementById('completion-preview');
-    if (completions.length === 0) {
-      preview.textContent = '(No completions loaded)';
-      return;
-    }
-    preview.textContent = completions[currentCompletionIndex] || '(Empty)';
+    addSimpleLogEntry({
+      id: Date.now(),
+      timestamp: Date.now(),
+      message: 'Showing current completion at index: ' + (completions[currentCompletionIndex] || '(Empty)'),      level: 'debug'
+    });
+    // const preview = document.getElementById('completion-preview');
+    // if (completions.length === 0) {
+    //   preview.textContent = '(No completions loaded)';
+    //   return;
+    // }
+    // preview.textContent = completions[currentCompletionIndex] || '(Empty)';
   }
   
   // Show the current ghost completion
@@ -2407,17 +2413,35 @@ function emanateNavigableNodeToEditor(content) {
     })
     
     editor.on('update', ({ editor }) => {
+      //console.log('Editor focused:', editor.isFocused)
+      //console.log('Selection from:', editor.state.selection.from)
+      
       if (!ghostActive) return
+      
       const suggestion = completions[currentCompletionIndex] || ''
       const { from } = editor.state.selection
       const docText = editor.getText()
       // Get the text the user has typed at the cursor
-      const before = docText.slice(0, from)
-      const after = docText.slice(from)
+      // const before = docText.slice(0, from)
+      // const after = docText.slice(from)
       // Find the last word or chars the user typed
       // We'll use the last N chars where N = suggestion.length
-      const userTyped = before.slice(-suggestion.length)
-      if (suggestion.startsWith(userTyped) && userTyped.length > 0) {
+      //const userTyped = docText.slice(ghostStartPos, from)
+      const userTyped = docText.slice(ghostStartPos-1, from).trim()
+      
+      addSimpleLogEntry({
+        id: Date.now(),
+        timestamp: Date.now(),
+        message: "ghostStartPos:" + ghostStartPos+"<br/>docText:" + editor.getText() +"<br/>userTyped:[" + userTyped +"]<br/>typeAhead?:"+ (suggestion.startsWith(userTyped)),
+        level: 'debug'
+      })
+      
+      if (userTyped.length === 0) {
+        setGhostSuggestion(suggestion);
+        return;
+      }
+      
+      if (suggestion.startsWith(userTyped)) {
         setGhostSuggestion(suggestion.slice(userTyped.length))
         if (userTyped === suggestion) setGhostSuggestion('')
         } else if (userTyped.length > 0) {
@@ -2439,7 +2463,7 @@ function emanateNavigableNodeToEditor(content) {
           currentCompletionIndex = (currentCompletionIndex + 1) % completions.length;
           // If at end, load more
           if (currentCompletionIndex === 0) {
-            await loadCompletions(3);
+            await loadCompletions(1);
           }
         }
         showCurrentCompletion();
@@ -2477,12 +2501,22 @@ function emanateNavigableNodeToEditor(content) {
     }
   }
   
-function showGhostCompletion(editor, suggestion) {
-  // Set the suggestion on the extension
-  const ext = editor.extensionManager.extensions.find(ext => ext.name === 'ghostCompletionDecoration')
-  if (ext) {
-    ext.options.suggestion = suggestion
-    editor.view.updateState(editor.state) // force re-render
-    ghostActive = !!suggestion
+  let ghostStartPos = null;
+  
+  function showGhostCompletion(editor, suggestion) {
+    // Set the suggestion on the extension
+    const ext = editor.extensionManager.extensions.find(ext => ext.name === 'ghostCompletionDecoration')
+    if (ext) {
+      ext.options.suggestion = suggestion
+      editor.view.updateState(editor.state) // force re-render
+      
+      if (suggestion && !ghostActive) {
+        ghostStartPos = editor.state.selection.from;
+      }
+      if (!suggestion) {
+        ghostStartPos = null;
+      }
+      ghostActive = !!suggestion;
+      if (ghostActive) editor.commands.focus();
+    }
   }
-}
