@@ -1162,3 +1162,11 @@ transition: opacity 0.2s ease-in-out;
 .travel-top-right-to-bottom-right {
   animation: travel-top-right-to-bottom-right 0.6s ease-in-out forwards;
 }
+
+
+
+.ghost-completion {
+  color: #aaa;
+  opacity: 0.7;
+  pointer-events: none;
+}
