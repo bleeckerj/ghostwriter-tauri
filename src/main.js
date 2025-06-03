@@ -2289,3 +2289,81 @@ function emanateNavigableNodeToEditor(content) {
       });
     });
   });
+
+
+  let completions = [];
+  let currentCompletionIndex = 0;
+  let loadingMore = false;
+  
+  async function fetchStreamingCompletion(context, systemMessage) {
+    return new Promise((resolve, reject) => {
+      let completion = '';
+      let unlisten = null;
+  
+      // Listen for streaming chunks
+      window.__TAURI__.event.listen('completion-chunk', (event) => {
+        completion += event.payload;
+      }).then((unlistenFn) => {
+        unlisten = unlistenFn;
+      });
+  
+      // Call the backend
+      window.__TAURI__.core.invoke('streaming_completion_from_context', {
+        context,
+        systemMessage,
+      }).then(() => {
+        if (unlisten) unlisten();
+        resolve(completion);
+      }).catch((err) => {
+        if (unlisten) unlisten();
+        reject(err);
+      });
+    });
+  }
+  
+  async function loadCompletions(n = 3) {
+    loadingMore = true;
+    completions = [];
+    currentCompletionIndex = 0;
+    for (let i = 0; i < n; i++) {
+      // Use your editor's current text and a system message
+      const context = editor.getText();
+      const systemMessage = "You are a helpful assistant.";
+      const result = await fetchStreamingCompletion(context, systemMessage);
+      completions.push(result);
+    }
+    loadingMore = false;
+    showCurrentCompletion();
+  }
+  
+  function showCurrentCompletion() {
+    const preview = document.getElementById('completion-preview');
+    if (completions.length === 0) {
+      preview.textContent = '(No completions loaded)';
+      return;
+    }
+    preview.textContent = completions[currentCompletionIndex] || '(Empty)';
+  }
+  
+  // Button handler
+  document.getElementById('test-streaming-btn').addEventListener('click', async () => {
+    await loadCompletions(3);
+  });
+  
+  // Keyboard navigation
+  document.addEventListener('keydown', async (e) => {
+    if (!completions.length || loadingMore) return;
+    if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      if (e.key === 'ArrowUp') {
+        currentCompletionIndex = (currentCompletionIndex - 1 + completions.length) % completions.length;
+      } else if (e.key === 'ArrowDown') {
+        currentCompletionIndex = (currentCompletionIndex + 1) % completions.length;
+        // If at end, load more
+        if (currentCompletionIndex === 0) {
+          await loadCompletions(3);
+        }
+      }
+      showCurrentCompletion();
+      e.preventDefault();
+    }
+  });

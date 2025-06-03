@@ -243,7 +243,7 @@ impl fmt::Display for CompletionTiming {
 async fn streaming_completion_from_context(
     state: tauri::State<'_, AppState>,
     app_handle: tauri::AppHandle,
-    input: String,
+    context: String,
     system_message: String,
 ) -> Result<(), String> {
     let preferences = state.preferences.lock().await;
@@ -270,7 +270,7 @@ async fn streaming_completion_from_context(
         },
         ChatMessage {
             role: MessageRole::User,
-            content: input.clone(),
+            content: context.clone(),
             name: None,
         },
         ],
