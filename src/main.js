@@ -2365,7 +2365,7 @@ function emanateNavigableNodeToEditor(content) {
   
   // Show the current ghost completion
   function updateGhostCompletion() {
-    console.log('Completions is:', completions);
+    //console.log('Completions is:', completions);
     const suggestion = completions[currentCompletionIndex] || ''
     showGhostCompletion(editor, suggestion)
     ghostActive = !!suggestion
@@ -2379,13 +2379,24 @@ function emanateNavigableNodeToEditor(content) {
     if (!suggestion) return
     const { state, view } = editor
     const { from } = state.selection
-    let tr = state.tr
-    tr = tr.insertText(suggestion, from)
-    tr = tr.setSelection(state.selection.constructor.create(tr.doc, from + suggestion.length))
-    view.dispatch(tr)
-    setGhostSuggestion('')
-    editor.commands.focus()
-    ghostActive = false
+    const docText = editor.getText();
+    
+    // Only insert the part of the suggestion that hasn't been typed
+    // ghostStartPos is where the suggestion started
+    const alreadyTyped = docText.slice(ghostStartPos-1, from);
+    let toInsert = suggestion;
+    if (alreadyTyped && suggestion.startsWith(alreadyTyped)) {
+      toInsert = suggestion.slice(alreadyTyped.length);
+    }
+    
+    let tr = state.tr;
+    tr = tr.insertText(toInsert, from);
+    tr = tr.setSelection(state.selection.constructor.create(tr.doc, from + toInsert.length));
+    view.dispatch(tr);
+    
+    setGhostSuggestion('');
+    editor.commands.focus();
+    ghostActive = false;
   }
   
   window.addEventListener("DOMContentLoaded", async () => {
@@ -2413,8 +2424,6 @@ function emanateNavigableNodeToEditor(content) {
     })
     
     editor.on('update', ({ editor }) => {
-      //console.log('Editor focused:', editor.isFocused)
-      //console.log('Selection from:', editor.state.selection.from)
       
       if (!ghostActive) return
       
