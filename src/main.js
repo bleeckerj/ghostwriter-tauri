@@ -95,18 +95,21 @@ function updateVibeStatus(status) {
   
   switch (status) {
     case 'writing':
+    emanationInProgress = false; // Reset the flag when writing starts
     vibeStatusIndicator.textContent = '🧠';
     vibeStatusIndicator.classList.remove('hidden');
     vibeStatusIndicator.classList.remove('thinking-mode');
     removeStandByIndicator(); // Remove the standby text when done
     break;
     case 'emanating':
+    emanationInProgress = true; // Set the flag when emanating
     vibeStatusIndicator.textContent = '🤖';
     vibeStatusIndicator.classList.remove('hidden');
     vibeStatusIndicator.classList.remove('thinking-mode');
     removeStandByIndicator(); // Remove the standby text when done
     break;
     case 'thinking':
+    emanationInProgress = true; // Getting ready to emanate..
     vibeStatusIndicator.textContent = '🤔';
     vibeStatusIndicator.classList.remove('hidden');
     vibeStatusIndicator.classList.add('thinking-mode'); // Add the animation class
@@ -187,10 +190,11 @@ async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
           if (vibeStarter) {
             // Clear existing content and insert the generated starting phrase
             editor.commands.clearContent();
+
             //editor.commands.insertContent(vibeStarter);
             emanateStringToEditor(vibeStarter, 40, () => {
               editor.setEditable(true);
-              emanationInProgress = false;
+              //emanationInProgress = false;
               // Set flag to wait for user input again
               waitingForUserInput = true;
               let seconds = prefsGameTimeSeconds.value; // default to 10 seconds if not specified
@@ -274,7 +278,7 @@ async function restartVibeMode() {
       },
       () => {
         // Called when timer completes
-        emanationInProgress = true;
+        //emanationInProgress = true; // handled in the emanateToEditor function!
         updateVibeStatus('thinking');
         timer.stop();
         timer.hide();
@@ -290,7 +294,7 @@ async function restartVibeMode() {
           //emanateToEditor(content);
           emanateStringToEditor(content[0], 50, () => {
             editor.setEditable(true);
-            emanationInProgress = false;
+            //emanationInProgress = false;
             
             // Set flag to wait for user input again
             waitingForUserInput = true;
@@ -468,12 +472,13 @@ async function completionFromContext() {
   });
 }
 
-function emanateStringToEditor(content, timeout = 30, onComplete = null) {
+async function emanateStringToEditor(content, timeout = 30, onComplete = null) {
   let index = 0;
-  
   // Show the robot emoticon during emanation
   updateVibeStatus('emanating');
-  
+  // trying setting this in updateVibeMode rather than all over the place
+  //emanationInProgress = true; // Set flag to indicate emanation is in progress
+
   function sendNextCharacter() {
     if (index < content.length) {
       emanateCharacterToEditor(content[index]);
@@ -491,7 +496,7 @@ function emanateStringToEditor(content, timeout = 30, onComplete = null) {
       
       // Switch back to writing mode when emanation is complete
       updateVibeStatus('writing');
-      
+      emanationInProgress = false;
       if (onComplete) {
         onComplete(); // Call the completion handler if provided
       }
@@ -1388,17 +1393,18 @@ function emanateNavigableNodeToEditor(content) {
             editor.commands.clearContent();
             //editor.commands.insertContent(vibeStarter);
             emanateStringToEditor(vibeStarter, 50, () => {
+              addSimpleLogEntry({ 
+                "id": "", 
+                "timestamp": Date.now(), 
+                "message": `New vibe starter generated: ${vibeStarter}`, 
+                "level": "info" 
+              });
+              
+              // Restart the timer
+              restartVibeMode();
             });
             
-            addSimpleLogEntry({ 
-              "id": "", 
-              "timestamp": Date.now(), 
-              "message": `New vibe starter generated: ${vibeStarter}`, 
-              "level": "info" 
-            });
             
-            // Restart the timer
-            restartVibeMode();
             return;
           }
         } catch (error) {
