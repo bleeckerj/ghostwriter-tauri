@@ -25,9 +25,9 @@ export const GhostCompletionDecoration = Extension.create({
                 const span = document.createElement('span')
                 span.className = 'ghost-completion'
                 span.textContent = suggestion
-                span.style.opacity = '0.5'
-                span.style.pointerEvents = 'none'
-                span.style.color = '#aaa'
+                // span.style.opacity = '0.5'
+                // span.style.pointerEvents = 'none'
+                // span.style.color = '#aaa'
                 return span
               }),
             ])

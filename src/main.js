@@ -190,7 +190,7 @@ async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
           if (vibeStarter) {
             // Clear existing content and insert the generated starting phrase
             editor.commands.clearContent();
-
+            
             //editor.commands.insertContent(vibeStarter);
             emanateStringToEditor(vibeStarter, 40, () => {
               editor.setEditable(true);
@@ -478,7 +478,7 @@ async function emanateStringToEditor(content, timeout = 30, onComplete = null) {
   updateVibeStatus('emanating');
   // trying setting this in updateVibeMode rather than all over the place
   //emanationInProgress = true; // Set flag to indicate emanation is in progress
-
+  
   function sendNextCharacter() {
     if (index < content.length) {
       emanateCharacterToEditor(content[index]);
@@ -2371,7 +2371,7 @@ function emanateNavigableNodeToEditor(content) {
   
   // Show the current ghost completion
   function updateGhostCompletion() {
-    //console.log('Completions is:', completions);
+    console.log('Completions is:', completions);
     const suggestion = completions[currentCompletionIndex] || ''
     showGhostCompletion(editor, suggestion)
     ghostActive = !!suggestion
@@ -2477,11 +2477,16 @@ function emanateNavigableNodeToEditor(content) {
         } else if (e.key === 'ArrowDown') {
           currentCompletionIndex = (currentCompletionIndex + 1) % completions.length;
           // If at end, load more
-          if (currentCompletionIndex === 0) {
+          if (currentCompletionIndex === 0 || completions[currentCompletionIndex] === undefined) {
             await loadCompletions(1);
           }
         }
-        showCurrentCompletion();
+        addSimpleLogEntry({
+          id: Date.now(),
+          timestamp: Date.now(),
+          message: 'Showing current completion at index: ' + (completions[currentCompletionIndex] || '(Empty)'),      level: 'debug'
+        });
+        //showCurrentCompletion();
         e.preventDefault();
       }
     });
