@@ -57,7 +57,7 @@ a:hover {
 }
 
 p {
-  @apply text-[1.3em];
+  @apply text-[2.3em];
   @apply font-[WarblerText];
   @apply leading-[1.5em];
 }
@@ -150,6 +150,25 @@ button {
   line-height: 1.75rem;
 }
 
+/* Add this to your styles.css */
+.ProseMirror .ProseMirror-cursor {
+  display: inline-block;
+  width: 0.6em;         /* Adjust width as needed */
+  height: 1.2em;        /* Adjust height as needed */
+  background: #3137e9;  /* Your cursor color */
+  opacity: 0.7;
+  border-radius: 2px;
+  margin-left: -0.3em;  /* Center the box on the character */
+  vertical-align: bottom;
+  /* Optional: add a blinking animation */
+  animation: box-cursor-blink 1s steps(1) infinite;
+}
+
+@keyframes box-cursor-blink {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 0; }
+}
+
 .container {
   margin: 0;
   padding-top: 1vh;
@@ -190,7 +209,7 @@ button {
 
 /* Vibe mode font styling */
 .scroll-area.vibe-mode-active {
-  font-size: 1.5rem; /* Larger font in vibe mode */
+  font-size: 1rem; /* Larger font in vibe mode */
   line-height: 1.75; /* Increased line height for better readability */
   transition: font-size 0.3s ease, line-height 0.3s ease;
 }
@@ -1171,4 +1190,57 @@ transition: opacity 0.2s ease-in-out;
   font-style: italic;
   opacity: 0.8;
   pointer-events: none;
+}
+
+.block-cursor {
+  display: inline-block;
+  width: 0.6em;
+  height: 1.2em;
+  opacity: 0.5;
+  border-radius: 2px;
+  margin-right: 0.05em;
+  vertical-align: middle;
+  pointer-events: none;
+  transform: translateY(-6px);
+  animation: box-cursor-blink 1s steps(1) infinite;
+    box-shadow: 0 0 10px 2px #3137e925;
+
+background:
+  repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.15) 0px,
+    rgba(255,255,255,0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  ),
+  #3137e9;
+  /* This creates a 2px white line, 2px transparent, repeat */
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes box-cursor-blink {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 0; }
+}
+
+.block-over-cursor {
+  display: inline-block;
+  background: #3137e9;
+  color: #fff;
+  border-radius: 2px;
+  padding: 0 1px;
+  font-family: inherit;
+  font-size: inherit;
+  animation: box-cursor-blink 1s steps(1) infinite;
+  pointer-events: none;
+}
+
+@keyframes box-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.ProseMirror {
+  caret-color: transparent;
 }

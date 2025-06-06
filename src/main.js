@@ -22,12 +22,13 @@ import { getCurrentWebviewWindow, WebviewWindow } from '@tauri-apps/api/webviewW
 import { Timer } from './timer.js';
 import { debounce, set } from 'lodash';
 import { GhostCompletionDecoration } from './extensions/GhostCompletionDecoration'
-
+import { BlockCursorDecoration } from './extensions/BlockCursorDecoration.js'
+import { BlockOverCursorDecoration } from './extensions/BlockOverCursorDecoration.js'
 
 let w = getCurrentWebviewWindow();
 w.setBackgroundColor('#f3f4f6');
 const { invoke } = window.__TAURI__.core;
-
+const PRELOAD_THRESHOLD = 2;
 let greetInputEl;
 let greetMsgEl;
 //let greetBtnEl;
@@ -1579,6 +1580,7 @@ function emanateNavigableNodeToEditor(content) {
     extensions: [
       StarterKit,
       DynamicTextMark,
+      BlockCursorDecoration,
       GhostCompletionDecoration.configure({ suggestion: '' }),
       InlineActionItem.configure({
         disabled: true,                // Disables the feature
@@ -2328,6 +2330,7 @@ function emanateNavigableNodeToEditor(content) {
     });
   }
   
+  
   function setGhostSuggestion(suggestion) {
     const ext = editor.extensionManager.extensions.find(ext => ext.name === 'ghostCompletionDecoration')
     if (ext) {
@@ -2339,9 +2342,11 @@ function emanateNavigableNodeToEditor(content) {
   }
   
   
-  async function loadCompletions(n = 2) {
-    loadingMore = true;
-    completions = [];
+  async function loadCompletions(n = 2, loadMore = false) {
+    if (loadMore == false) {
+      completions = [];
+    }
+    
     currentCompletionIndex = 0;
     for (let i = 0; i < n; i++) {
       // Use your editor's current text and a system message
@@ -2350,23 +2355,13 @@ function emanateNavigableNodeToEditor(content) {
       const result = await fetchStreamingCompletion(context, systemMessage);
       completions.push(result);
     }
-    loadingMore = false;
-    showCurrentCompletion();
-    return completions;
-  }
-  
-  function showCurrentCompletion() {
+    //loadingMore = false;
     addSimpleLogEntry({
       id: Date.now(),
       timestamp: Date.now(),
       message: 'Showing current completion at index: ' + (completions[currentCompletionIndex] || '(Empty)'),      level: 'debug'
     });
-    // const preview = document.getElementById('completion-preview');
-    // if (completions.length === 0) {
-    //   preview.textContent = '(No completions loaded)';
-    //   return;
-    // }
-    // preview.textContent = completions[currentCompletionIndex] || '(Empty)';
+    return completions;
   }
   
   // Show the current ghost completion
@@ -2409,7 +2404,7 @@ function emanateNavigableNodeToEditor(content) {
     
     // Cycle completions
     document.addEventListener('keydown', async (e) => {
-      if (!ghostActive) return
+      //if (!ghostActive) return
       
       // Cycle with Shift+Up/Down
       if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
@@ -2417,6 +2412,12 @@ function emanateNavigableNodeToEditor(content) {
           currentCompletionIndex = (currentCompletionIndex - 1 + completions.length) % completions.length
         } else if (e.key === 'ArrowDown') {
           currentCompletionIndex = (currentCompletionIndex + 1) % completions.length
+          // If near the end, load more
+          if ( completions.length - currentCompletionIndex <= PRELOAD_THRESHOLD ) {
+            //if (currentCompletionIndex === 0 || completions[currentCompletionIndex] === undefined) {
+              await loadCompletions(2, true);
+            //}
+          }
         }
         updateGhostCompletion()
         e.preventDefault()
@@ -2469,27 +2470,27 @@ function emanateNavigableNodeToEditor(content) {
     });
     
     // Keyboard navigation
-    document.addEventListener('keydown', async (e) => {
-      if (!completions.length || loadingMore) return;
-      if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-        if (e.key === 'ArrowUp') {
-          currentCompletionIndex = (currentCompletionIndex - 1 + completions.length) % completions.length;
-        } else if (e.key === 'ArrowDown') {
-          currentCompletionIndex = (currentCompletionIndex + 1) % completions.length;
-          // If at end, load more
-          if (currentCompletionIndex === 0 || completions[currentCompletionIndex] === undefined) {
-            await loadCompletions(1);
-          }
-        }
-        addSimpleLogEntry({
-          id: Date.now(),
-          timestamp: Date.now(),
-          message: 'Showing current completion at index: ' + (completions[currentCompletionIndex] || '(Empty)'),      level: 'debug'
-        });
-        //showCurrentCompletion();
-        e.preventDefault();
-      }
-    });
+    // document.addEventListener('keydown', async (e) => {
+      //   if (!completions.length || loadingMore) return;
+    //   if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    //     if (e.key === 'ArrowUp') {
+    //       currentCompletionIndex = (currentCompletionIndex - 1 + completions.length) % completions.length;
+    //     } else if (e.key === 'ArrowDown') {
+    //       currentCompletionIndex = (currentCompletionIndex + 1) % completions.length;
+    //       // If at end, load more
+    //       if (currentCompletionIndex === 0 || completions[currentCompletionIndex] === undefined) {
+    //         await loadCompletions(1);
+    //       }
+    //     }
+    //     addSimpleLogEntry({
+    //       id: Date.now(),
+    //       timestamp: Date.now(),
+    //       message: 'Showing current completion at index: ' + (completions[currentCompletionIndex] || '(Empty)'),      level: 'debug'
+    //     });
+    //     //showCurrentCompletion();
+    //     e.preventDefault();
+    //   }
+    // });
   });
   
   
