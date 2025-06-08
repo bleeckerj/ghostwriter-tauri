@@ -13,6 +13,7 @@ export function enableTypingPauseDetection(shouldTrigger, delayMs = 1000, callba
   }
 
   lastHandler = function handleKeydown() {
+    
     //if (!typingPauseEnabled) return;
     //if (!shouldTrigger()) return; // predicate..we may want to temporarily disable the pause detction and subsequent callback
     if (typingPauseTimeout) clearTimeout(typingPauseTimeout);

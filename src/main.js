@@ -20,7 +20,7 @@ import { open, save, confirm } from '@tauri-apps/plugin-dialog';
 import { getCurrentWebviewWindow, WebviewWindow } from '@tauri-apps/api/webviewWindow';
 //import { list } from 'postcss';
 import { Timer } from './timer.js';
-import { debounce, set } from 'lodash';
+import { add, debounce, set } from 'lodash';
 import { GhostCompletionDecoration } from './extensions/GhostCompletionDecoration'
 import { BlockCursorDecoration } from './extensions/BlockCursorDecoration.js'
 import { BlockOverCursorDecoration } from './extensions/BlockOverCursorDecoration.js'
@@ -689,7 +689,7 @@ function emanateNavigableNodeToEditor(content) {
         streamingButton.classList.add("enabled");
         
         disableTypingPauseDetection();
-        //ghostActive = false; // Reset ghost active state
+        ghostActive = false; // Reset ghost active state
         addSimpleLogEntry({
           id: "",
           timestamp: Date.now(),
@@ -700,10 +700,25 @@ function emanateNavigableNodeToEditor(content) {
         // otherwise streaming mode ON
         streamingButton.classList.add("button-in");
         //console.log("ghostActive: ", ghostActive);
+        ghostActive = true; // Enable ghost mode
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date.now(),
+          message: 'Streaming mode enabled. ghostActive: ' + ghostActive,
+          level: 'debug'
+        });
         console.log("userHasTypedSinceLastCompletion: ", userHasTypedSinceLastCompletion);
         enableTypingPauseDetection(
-          () => true,
-          //() => userHasTypedSinceLastCompletion && editor.getText().trim,
+          //() => true,
+          () => {
+            addSimpleLogEntry({
+              id: "",
+              timestamp: Date.now(),
+              message: 'Predicate checking whether we should trigger completions...ghostActive='+ghostActive+"  and-> userHasTypedSinceLastCompletion="+userHasTypedSinceLastCompletion+" and->"+(!userHasTypedSinceLastCompletion && editor.getText().trim()),
+              level: 'debug'
+            });
+            return !userHasTypedSinceLastCompletion && editor.getText().trim()
+          },
           // () => userHasTypedSinceLastCompletion && editor.getText().trim() && !ghostActive,
           3500,
           () => {
@@ -2484,7 +2499,20 @@ function emanateNavigableNodeToEditor(content) {
   // Show the current ghost completion
   function updateGhostCompletion() {
     console.log('Completions is:', completions);
+    addSimpleLogEntry({
+      id: Date.now(),
+      timestamp: Date.now(),
+      message: 'Updating ghost completion with completions: ' + completions.join(', '),
+      level: 'debug'
+    });
+
     console.log('Current completion index:', currentCompletionIndex);
+    addSimpleLogEntry({
+      id: Date.now(),
+      timestamp: Date.now(),  
+      message: 'Showing ghost completion at index: ' + currentCompletionIndex + ' - ' + (completions[currentCompletionIndex] || '(Empty)'),
+      level: 'debug'
+    });
     const suggestion = completions[currentCompletionIndex] || ''
     showGhostCompletion(editor, suggestion)
     //ghostActive = !!suggestion
@@ -2515,7 +2543,7 @@ function emanateNavigableNodeToEditor(content) {
     
     setGhostSuggestion('');
     editor.commands.focus();
-    //ghostActive = false;
+    ghostActive = false;
     onAcceptCompletion();
   }
   
@@ -2589,8 +2617,8 @@ function emanateNavigableNodeToEditor(content) {
   
   
   function onUserTyped() {
-    //ghostActive = false;
-    userHasTypedSinceLastCompletion = true;
+    ghostActive = false;
+    //userHasTypedSinceLastCompletion = true;
     updateVibeStatus('writing', false);
   }
   
