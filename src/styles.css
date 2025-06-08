@@ -57,9 +57,9 @@ a:hover {
 }
 
 p {
-  @apply text-[2.3em];
+  @apply text-[1.8em];
   @apply font-[WarblerText];
-  @apply leading-[1.5em];
+  @apply leading-[1.25em];
 }
 
 .dynamic-text-mark {
@@ -132,8 +132,8 @@ button {
 
 
 .greet-msg {
-  @apply font-['Haffer'];
-  @apply text-[0.9em];
+  @apply font-['InputMonoCondensed'];
+  @apply text-[0.8em];
   flex-shrink: 0;
   position: relative;
   z-index:10;
@@ -1118,8 +1118,8 @@ transition: opacity 0.2s ease-in-out;
   transform: translate(-50%, -50%);
   font-family: 'ChicagoKare', monospace;
   font-size: 1.2em;
-  color: rgba(255,255,255);
-  @apply bg-blue-500;
+  color: rgb(0, 0, 0);
+  @apply bg-gray-100;
   padding: 0.5rem;
   border-radius: 2px;
   border-color: white;

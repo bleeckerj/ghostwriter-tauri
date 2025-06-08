@@ -7,7 +7,7 @@ use reqwest::{Client as HttpClient, header};
 use serde::{Serialize, Deserialize};
 use serde_json::{json, Value};
 use std::time::{SystemTime, UNIX_EPOCH};
-use futures::Stream;
+use futures::{stream, Stream, StreamExt};
 use std::pin::Pin;
 use std::sync::Arc;
 use lazy_static::lazy_static;
@@ -209,7 +209,33 @@ impl ChatCompletionProvider for LMStudioProvider {
         &self,
         request: &ChatCompletionRequest,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<ChatCompletionChunk, AIProviderError>> + Send>>, AIProviderError> {
-        Err(AIProviderError::NotImplemented("Streaming not implemented for LM Studio".to_string()))
+        // Call the non-streaming completion
+        let completion = self.create_chat_completion(request).await?;
+        completion.choices
+            .iter()
+            .for_each(|choice| {
+                // Log each choice for debugging
+                log::debug!("Choice: {:?}", choice);
+            });
+        // Convert the completion into a single chunk (adapt as needed for your types)
+        let chunk = ChatCompletionChunk {
+            id: completion.id.clone(),
+            choices: completion.choices.iter().map(|choice| ChatCompletionChunkChoice {
+                delta: ChatMessageDelta {
+                                role: None, // Roles typically come in the first chunk only
+                                content: Some(choice.message.content.clone()),
+                            },
+                finish_reason: choice.finish_reason.clone(),
+                index: choice.index,
+            }).collect(),
+            created: completion.created,
+            // ...other fields as needed...
+        };
+
+        // Create a stream that yields this single chunk
+        let stream = stream::once(async move { Ok(chunk) });
+
+        Ok(Box::pin(stream) as Pin<Box<dyn Stream<Item = Result<ChatCompletionChunk, AIProviderError>> + Send>>)
     }
 
     async fn create_chat_completion(

@@ -24,6 +24,9 @@ import { debounce, set } from 'lodash';
 import { GhostCompletionDecoration } from './extensions/GhostCompletionDecoration'
 import { BlockCursorDecoration } from './extensions/BlockCursorDecoration.js'
 import { BlockOverCursorDecoration } from './extensions/BlockOverCursorDecoration.js'
+import { enableTypingPauseDetection, disableTypingPauseDetection } from './typingPause.js';
+
+let userHasTypedSinceLastCompletion = false;
 
 let w = getCurrentWebviewWindow();
 w.setBackgroundColor('#f3f4f6');
@@ -87,7 +90,7 @@ let waitingForUserInput = false;
 let vibeStatusIndicator; // Reference to the vibe status indicator element
 
 // Function to update the vibe status indicator
-function updateVibeStatus(status) {
+function updateVibeStatus(status, withStandbyIndicator = true) {
   if (!vibeStatusIndicator) {
     // Try to find the indicator if not already set
     vibeStatusIndicator = document.getElementById('vibe-status-indicator');
@@ -114,7 +117,9 @@ function updateVibeStatus(status) {
     vibeStatusIndicator.textContent = '🤔';
     vibeStatusIndicator.classList.remove('hidden');
     vibeStatusIndicator.classList.add('thinking-mode'); // Add the animation class
-    addStandByIndicator(); // Call the new function we'll create
+    if (withStandbyIndicator) {
+      addStandByIndicator(); 
+    }
     break;
     case 'off':
     vibeStatusIndicator.classList.add('hidden');
@@ -658,6 +663,109 @@ function emanateNavigableNodeToEditor(content) {
     let actionItem = editor.extensionManager.extensions.find(extension => extension.name === 'inlineActionItem');
     let nudgeButton = document.querySelector("#nudge-inline-action-item");
     let vibemButton = document.querySelector("#vibem-inline-action-item");
+    let streamingButton = document.querySelector("#streaming-mode-btn");
+    
+    /**
+    * STREAMING MODE & TYPING PAUSE DETECTION
+    *
+    * This section enables or disables the "typing pause" detector based on the streaming mode button state.
+    * 
+    * - When the streaming mode button is activated (button-in), we enable typing pause detection:
+    *   - `enableTypingPauseDetection(predicate, editor, 500, callback)` sets up a 500ms pause detector.
+    *   - If the user stops typing for 500ms and the editor is not empty, the callback is triggered.
+    *   - The callback here triggers completions and logs a "Typing pause detected..." message.
+    *
+    * - When the streaming mode button is deactivated, we disable typing pause detection:
+    *   - `disableTypingPauseDetection()` removes the event listener and clears any pending timeout.
+    *
+    * This ensures completions are only triggered after a pause in typing, and only when streaming mode is active.
+    */
+    streamingButton.classList.add("enabled");
+    streamingButton.addEventListener("click", async () => {
+      // Check if button is currently enabled
+      // If so, turn streaming mode OFF
+      if (streamingButton.classList.contains("button-in")) {
+        streamingButton.classList.remove("button-in");
+        streamingButton.classList.add("enabled");
+        
+        disableTypingPauseDetection();
+        //ghostActive = false; // Reset ghost active state
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date.now(),
+          message: 'Streaming mode disabled',
+          level: 'debug'
+        });
+      } else {
+        // otherwise streaming mode ON
+        streamingButton.classList.add("button-in");
+        //console.log("ghostActive: ", ghostActive);
+        console.log("userHasTypedSinceLastCompletion: ", userHasTypedSinceLastCompletion);
+        enableTypingPauseDetection(
+          () => true,
+          //() => userHasTypedSinceLastCompletion && editor.getText().trim,
+          // () => userHasTypedSinceLastCompletion && editor.getText().trim() && !ghostActive,
+          3500,
+          () => {
+            //ghostActive = true;
+            triggerCompletions();
+            userHasTypedSinceLastCompletion = false; // Reset after completion
+            addSimpleLogEntry({
+              id: "",
+              timestamp: Date.now(),
+              message: 'Typing pause detected...',
+              level: 'debug'
+            });
+          }
+        );
+        
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date.now(),
+          message: 'Streaming mode enabled',
+          level: 'debug'
+        });
+      }
+    });
+    
+    editor.view.dom.addEventListener('keydown', (e) => {
+      //if (!ghostActive) return;
+      
+      // Only handle printable characters (not Tab, Arrow, etc.)
+      if (
+        !e.ctrlKey && !e.metaKey && !e.altKey &&
+        e.key.length === 1 && !e.isComposing
+      ) {
+        onUserTyped();
+        const suggestion = completions[currentCompletionIndex] || '';
+        const { from } = editor.state.selection;
+        const docText = editor.getText();
+        if (ghostStartPos === null) return;
+        
+        const userTyped = docText.slice(ghostStartPos, from) + e.key;
+        if (userTyped.length === 0) {
+          setGhostSuggestion(suggestion);
+          return;
+        }
+        
+        if (suggestion.startsWith(userTyped)) {
+          setGhostSuggestion(suggestion.slice(userTyped.length));
+          if (userTyped === suggestion) setGhostSuggestion('');
+        } else {
+          setGhostSuggestion('');
+        }
+      }
+    });
+    
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && ghostActive) {
+        setGhostSuggestion('');
+        completions = [];
+        //ghostActive = false;
+        e.preventDefault();
+      }
+    });
+    
     vibemButton.classList.add("enabled");
     vibemButton.addEventListener("click", () => {
       // Check if button is currently enabled
@@ -2300,7 +2408,7 @@ function emanateNavigableNodeToEditor(content) {
   
   let completions = [];
   let currentCompletionIndex = 0;
-  let loadingMore = false;
+  //let loadingMore = false;
   let ghostActive = false;
   
   
@@ -2336,13 +2444,22 @@ function emanateNavigableNodeToEditor(content) {
     if (ext) {
       ext.options.suggestion = suggestion
       editor.view.updateState(editor.state) // force re-render
-      ghostActive = !!suggestion
-      if (ghostActive) editor.commands.focus(); // get focus back to editor
+      //ghostActive = !!suggestion
+      //if (ghostActive) editor.commands.focus(); // get focus back to editor
+    }
+  }
+  
+  async function* loadCompletionsStream(n = 3) {
+    for (let i = 0; i < n; i++) {
+      const context = editor.getText();
+      const systemMessage = prefsMainPromptTextArea.value;
+      const result = await fetchStreamingCompletion(context, systemMessage);
+      yield result; // Yield each result as soon as it's ready
     }
   }
   
   
-  async function loadCompletions(n = 2, loadMore = false) {
+  async function loadCompletions(n = 3, loadMore = false) {
     if (loadMore == false) {
       completions = [];
     }
@@ -2367,9 +2484,10 @@ function emanateNavigableNodeToEditor(content) {
   // Show the current ghost completion
   function updateGhostCompletion() {
     console.log('Completions is:', completions);
+    console.log('Current completion index:', currentCompletionIndex);
     const suggestion = completions[currentCompletionIndex] || ''
     showGhostCompletion(editor, suggestion)
-    ghostActive = !!suggestion
+    //ghostActive = !!suggestion
   }
   
   
@@ -2397,13 +2515,14 @@ function emanateNavigableNodeToEditor(content) {
     
     setGhostSuggestion('');
     editor.commands.focus();
-    ghostActive = false;
+    //ghostActive = false;
+    onAcceptCompletion();
   }
   
   window.addEventListener("DOMContentLoaded", async () => {
     
     // Cycle completions
-    document.addEventListener('keydown', async (e) => {
+    editor.view.dom.addEventListener('keydown', async (e) => {
       //if (!ghostActive) return
       
       // Cycle with Shift+Up/Down
@@ -2415,7 +2534,8 @@ function emanateNavigableNodeToEditor(content) {
           // If near the end, load more
           if ( completions.length - currentCompletionIndex <= PRELOAD_THRESHOLD ) {
             //if (currentCompletionIndex === 0 || completions[currentCompletionIndex] === undefined) {
-              await loadCompletions(2, true);
+            updateGhostCompletion()
+            await loadCompletions(3, true);
             //}
           }
         }
@@ -2432,7 +2552,7 @@ function emanateNavigableNodeToEditor(content) {
     
     editor.on('update', ({ editor }) => {
       
-      if (!ghostActive) return
+      //if (!ghostActive) return
       
       const suggestion = completions[currentCompletionIndex] || ''
       const { from } = editor.state.selection
@@ -2465,79 +2585,86 @@ function emanateNavigableNodeToEditor(content) {
       }
     })
     
-    document.getElementById('test-streaming-btn').addEventListener('click', async () => {
-      triggerCompletions();
-    });
-    
-    // Keyboard navigation
-    // document.addEventListener('keydown', async (e) => {
-      //   if (!completions.length || loadingMore) return;
-    //   if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-    //     if (e.key === 'ArrowUp') {
-    //       currentCompletionIndex = (currentCompletionIndex - 1 + completions.length) % completions.length;
-    //     } else if (e.key === 'ArrowDown') {
-    //       currentCompletionIndex = (currentCompletionIndex + 1) % completions.length;
-    //       // If at end, load more
-    //       if (currentCompletionIndex === 0 || completions[currentCompletionIndex] === undefined) {
-    //         await loadCompletions(1);
-    //       }
-    //     }
-    //     addSimpleLogEntry({
-    //       id: Date.now(),
-    //       timestamp: Date.now(),
-    //       message: 'Showing current completion at index: ' + (completions[currentCompletionIndex] || '(Empty)'),      level: 'debug'
-    //     });
-    //     //showCurrentCompletion();
-    //     e.preventDefault();
-    //   }
-    // });
   });
   
   
+  function onUserTyped() {
+    //ghostActive = false;
+    userHasTypedSinceLastCompletion = true;
+    updateVibeStatus('writing', false);
+  }
   
+  function onAcceptCompletion() {
+    userHasTypedSinceLastCompletion = false;
+    updateVibeStatus('writing', false);
+    completions = [];
+    currentCompletionIndex = 0;
+  }
   
   
   async function triggerCompletions() {
-    // Fetch completions as before
-    completions = await loadCompletions(3)
-    currentCompletionIndex = 0
-    console.log('Loaded completions:', completions)
-    updateGhostCompletion()
+    updateVibeStatus('thinking', false);
+    for await (const result of loadCompletionsStream(3)) {
+      // Check if ghostActive is still true before processing this result
+      // if (!ghostActive) {
+      //   addSimpleLogEntry({
+      //     id: Date.now(),
+      //     timestamp: Date.now(),
+      //     message: 'Completion loop terminated early because ghostActive is false.',
+      //     level: 'debug'
+      //   });
+      //   break;
+      // }
+      completions.push(result);
+      addSimpleLogEntry({
+        id: Date.now(),
+        timestamp: Date.now(),
+        message: 'Received async completion: ' + result,
+        level: 'debug'
+      });
+      updateGhostCompletion();
+    }
+    updateVibeStatus('writing', false);
   }
   
-  function removeAllGhostCompletions(editor) {
-    const { state, view } = editor;
-    let tr = state.tr;
-    let found = false;
-    
-    state.doc.descendants((node, pos) => {
-      if (node.isText && node.marks.some(mark => mark.type.name === 'ghostCompletionMark')) {
-        tr = tr.delete(pos, pos + node.nodeSize);
-        found = true;
-      }
-    });
-    
-    if (found) {
-      view.dispatch(tr);
-    }
-  }
+  // function removeAllGhostCompletions(editor) {
+  //   const { state, view } = editor;
+  //   let tr = state.tr;
+  //   let found = false;
+  
+  //   state.doc.descendants((node, pos) => {
+    //     if (node.isText && node.marks.some(mark => mark.type.name === 'ghostCompletionMark')) {
+  //       tr = tr.delete(pos, pos + node.nodeSize);
+  //       found = true;
+  //     }
+  //   });
+  
+  //   if (found) {
+  //     view.dispatch(tr);
+  //   }
+  // }
   
   let ghostStartPos = null;
   
   function showGhostCompletion(editor, suggestion) {
     // Set the suggestion on the extension
+    updateVibeStatus('emanating');
     const ext = editor.extensionManager.extensions.find(ext => ext.name === 'ghostCompletionDecoration')
     if (ext) {
       ext.options.suggestion = suggestion
       editor.view.updateState(editor.state) // force re-render
       
-      if (suggestion && !ghostActive) {
+      if (suggestion /* && !ghostActive*/) {
         ghostStartPos = editor.state.selection.from;
+        updateVibeStatus('emanating'); // Show robot when suggestion appears
+        
       }
       if (!suggestion) {
         ghostStartPos = null;
+        updateVibeStatus('writing'); // Back to brain when suggestion is cleared
+        
       }
-      ghostActive = !!suggestion;
-      if (ghostActive) editor.commands.focus();
+      //ghostActive = !!suggestion;
+      /*if (ghostActive)*/ editor.commands.focus();
     }
   }
