@@ -2504,9 +2504,9 @@ function emanateNavigableNodeToEditor(content) {
   async function loadCompletions(n = 3, loadMore = false) {
     if (loadMore == false) {
       completions = [];
+      currentCompletionIndex = 0; // Only reset when starting fresh
     }
     
-    currentCompletionIndex = 0;
     const dummyAbortSignal = { aborted: false, addEventListener: () => {} };
     
     for (let i = 0; i < n; i++) {

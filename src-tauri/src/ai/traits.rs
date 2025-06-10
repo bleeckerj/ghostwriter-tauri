@@ -89,9 +89,10 @@ pub trait PreferredEmbeddingModel {
     fn get_preferred_embedding_model(&self) -> String;
 }
 
-// pub trait LastRequest {
-//     type RequestType;
-
-//     fn set_last_request(&mut self, request: Self::RequestType);
-//     fn get_last_request(&self) -> Option<&Self::RequestType>;
-// }
+#[async_trait]
+pub trait DiffusingProvider {
+    async fn create_diffusing_stream(
+        &self,
+        request: &ChatCompletionRequest,
+    ) -> Result<impl futures::Stream<Item = Result<ChatCompletionChunk, AIProviderError>> + Send, AIProviderError>;
+}

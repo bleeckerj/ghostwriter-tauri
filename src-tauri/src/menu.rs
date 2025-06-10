@@ -11,6 +11,7 @@ use tauri::{
         SubmenuBuilder,
         MenuEvent,
         Menu,
+        PredefinedMenuItem,
     }
 };
 
@@ -103,14 +104,36 @@ pub fn build_canon_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu
     .build()
 }
 
+pub fn build_edit_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
+    let undo = PredefinedMenuItem::undo(app, Some("Undo"))?;
+    let redo = PredefinedMenuItem::redo(app, Some("Redo"))?;
+    let cut = PredefinedMenuItem::cut(app, Some("Cut"))?;
+    let copy = PredefinedMenuItem::copy(app, Some("Copy"))?;
+    let paste = PredefinedMenuItem::paste(app, Some("Paste"))?;
+    let select_all = PredefinedMenuItem::select_all(app, Some("Select All"))?;
+
+    SubmenuBuilder::new(app, "Edit")
+        .item(&undo)
+        .item(&redo)
+        .separator()
+        .item(&cut)
+        .item(&copy)
+        .item(&paste)
+        .separator()
+        .item(&select_all)
+        .build()
+}
+
 pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let app_menu = build_app_menu(app)?;
     let file_menu = build_file_menu(app)?;
+    let edit_menu = build_edit_menu(app)?; // <-- Add this
     let canon_menu = build_canon_menu(app)?;
     
     MenuBuilder::new(app)
     .item(&app_menu)
     .item(&file_menu)
+    .item(&edit_menu)
     .item(&canon_menu)
     .build()
 }
