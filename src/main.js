@@ -695,7 +695,20 @@ function emanateNavigableNodeToEditor(content) {
         streamingButton.classList.remove("button-in");
         streamingButton.classList.add("enabled");
         
+        // Disable typing pause detection
         disableTypingPauseDetection();
+
+        // Abort any in-progress completion fetch and clear the UI?
+        if (isRetrievingCompletions && completionAbortController) {
+          completionAbortController.abort();
+          isRetrievingCompletions = false;
+          completionAbortController = null;
+        }
+        completions = [];
+        setGhostSuggestion('');
+        currentCompletionIndex = 0;
+        ghostStartPos = null;
+        
         addSimpleLogEntry({
           id: "",
           timestamp: Date.now(),
@@ -757,6 +770,9 @@ function emanateNavigableNodeToEditor(content) {
           completionAbortController.abort();
           isRetrievingCompletions = false;
           completionAbortController = null;
+          completions = [];
+          currentCompletionIndex = 0;
+          ghostStartPos = null;
         }
         
         // Only clear completions and ghost suggestion if no ghost suggestion is visible
@@ -2455,6 +2471,11 @@ function emanateNavigableNodeToEditor(content) {
       
       abortSignal.addEventListener('abort', () => {
         if (unlisten) unlisten();
+        // Clear completions and ghost suggestion on abort
+        completions = [];
+        setGhostSuggestion('');
+        currentCompletionIndex = 0;
+        ghostStartPos = null;
         reject(new Error('aborted'));
       });
     });
@@ -2574,6 +2595,10 @@ function emanateNavigableNodeToEditor(content) {
       }
     } catch (err) {
       // If aborted, just exit
+      completions = [];
+      setGhostSuggestion('');
+      currentCompletionIndex = 0;
+      ghostStartPos = null;
     } finally {
       isRetrievingCompletions = false;
       completionAbortController = null;
