@@ -70,20 +70,21 @@ Write it adhering to the syntax, grammar, and structure of a movie script.",
     index: 3
 };
 
-const CYBERPUNK: Genre = Genre {
+const NEO_CYBERPUNK: Genre = Genre {
     starter_context:"
-Write an opening paragraph of about 60 words of a story set in a dystopian near-future where corporations and governments wield significant power. The narrative should revolve around [protagonist/plot], with a focus on themes of:
+Write an opening paragraph of about 60 words of a story set in a slightly dystopian near-future where computation, artificial intelligence non-state actors, old-guard corporations and diminished governments are the main characters. The narrative should revolve around [protagonist/plot], with a focus on themes of:
 
 - Surveillance and control
 - Identity and self-discovery
 - Rebellion against oppressive regimes
+- Religious-based faith in the prognostications and emanations of digital consciousnesses, such as LLMs, oraculators, daemon processes, blockchain-based intellectuals, and other things you can make up that emphasize that an underlying conceit of the world is that technology is not just about computation, but it has now received as a metamodern basis for being, knowing, and belief.
 
 **Specific Requirements:**
 
-1. Set the story in a recognizable cyberpunk city, that may be evocative of an overpopulated megalopolis like Tokyo, New York City Shanghai, Hanoi, Jibhuti. The city should have an Orientalist fetish, as if the world's population is largely a mix of African and Chinese.
-2. Include cutting-edge technology, like advanced artificial intelligence, biometric implants, cyberdecks, large language models, small language models, hacking tools, Flipper Zero hacks, technomagic, emanations, conjurings which are all technological rather than fantasy — or cybernetic enhancements.
+1. Set the story in a recognizable neo-cyberpunk city, that may be evocative of an overpopulated megalopolis like one of either Kinshasa, Shanghai, Lagos, Hanoi, Djibhuti. The city should have an Orientalist fetish, as if the world's population is largely a mix of African and Chinese.
+2. Include cutting-edge technology that has taken on a ritualistic and almost religious character where the emanations of technologies are treated as systems of belief not just computation. Things like advanced artificial intelligence, prognosticators, oraculators, predictatrons, predictaphones, quantumn entanglers, quantum retrieval ingestors, emanation decks, biometric implants, cyberdecks, large language models, small language models, hacking tools, Flipper Zero hacks, technomagic, emanations, conjurings which are all technological rather than fantasy — or cybernetic enhancements.
 3. Explore the tension between those who control the system (e.g., megacorporations) and those who seek to challenge it (e.g., revolutionaries, hackers).
-4. Use vivid descriptions of neon-lit cityscapes, dingy nightclubs, and cramped virtual reality chambers.
+4. Use vivid descriptions of neon-lit cityscapes, dingy nightclubs, crappy AI systems and services operating in many facets of everyday life, 'branded' AI (using familiar brands like McDonald's, Pepperidge Farm, M&M Mars, WholeFoods, Lands End, Brain Dead, ThriftBooks, Applebees, Shake Shack, Penguin Publishing, Cox Cable, RayBan, Meta, HomeDepot, Tesso, RadioShack.
 
 **Cyberpunk Clichés to Avoid:**
 
@@ -103,8 +104,8 @@ Write an opening paragraph of about 60 words of a story set in a dystopian near-
 2. Avoid using more than two instances of the phrase 'the system' in a single scene.
 3. Refrain from utilizing any overly convenient plot devices, like instant access to advanced hacking tools.
 
-Write your cyberpunk science fiction narrative now!",
-    name: "CYBERPUNK",
+Write your neo-cyberpunk science fiction narrative now!",
+    name: "NEO-CYBERPUNK",
     description: "",
     index: 4
 };
@@ -171,7 +172,7 @@ impl Preferences {
     pub const VIBE_GENRE: Genre = HARDBOILED;
     pub const OLLAMA_URL: &'static str = "http://localhost:11434";
     pub const LM_STUDIO_URL: &'static str = "http://localhost:1234/v1";
-    pub const VIBE_GENRES: [Genre; 5] = [HARDBOILED, FANTASY, ROMANTIC_COMEDY, POETRY, CYBERPUNK];
+    pub const VIBE_GENRES: [Genre; 5] = [HARDBOILED, FANTASY, ROMANTIC_COMEDY, POETRY, NEO_CYBERPUNK];
     
     /// Load preferences and ensure no empty fields
     pub fn load_with_defaults(app_state: &AppState, app_handle: AppHandle) -> Self {

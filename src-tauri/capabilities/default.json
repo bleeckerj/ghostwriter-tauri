@@ -121,6 +121,7 @@
     "fs:allow-applocaldata-read",
     "fs:allow-applocaldata-write",
     "fs:allow-applog-read",
-    "fs:allow-applog-write"
-    ]
+    "fs:allow-applog-write",
+    "clipboard-manager:default"
+  ]
 }

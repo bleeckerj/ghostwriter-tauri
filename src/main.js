@@ -1703,7 +1703,7 @@ function emanateNavigableNodeToEditor(content) {
     extensions: [
       StarterKit,
       DynamicTextMark,
-      BlockCursorDecoration,
+      //BlockCursorDecoration,
       GhostCompletionDecoration.configure({ suggestion: '' }),
       InlineActionItem.configure({
         disabled: true,                // Disables the feature
@@ -2593,12 +2593,12 @@ function emanateNavigableNodeToEditor(content) {
       //const userTyped = docText.slice(ghostStartPos, from)
       const userTyped = docText.slice(ghostStartPos-1, from).trim()
       
-      addSimpleLogEntry({
-        id: Date.now(),
-        timestamp: Date.now(),
-        message: "ghostStartPos:" + ghostStartPos+"<br/>docText:" + editor.getText() +"<br/>userTyped:[" + userTyped +"]<br/>typeAhead?:"+ (suggestion.startsWith(userTyped)),
-        level: 'debug'
-      })
+      // addSimpleLogEntry({
+      //   id: Date.now(),
+      //   timestamp: Date.now(),
+      //   message: "ghostStartPos:" + ghostStartPos+"<br/>docText:" + editor.getText() +"<br/>userTyped:[" + userTyped +"]<br/>typeAhead?:"+ (suggestion.startsWith(userTyped)),
+      //   level: 'debug'
+      // })
       
       if (userTyped.length === 0) {
         setGhostSuggestion(suggestion);

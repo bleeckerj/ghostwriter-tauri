@@ -1992,13 +1992,7 @@ async fn load_openai_api_key_from_keyring(
                 Err("Genre not found".to_string())
             }
             
-            pub fn run() {
-                
-                //let a_embedding_generator = EmbeddingGenerator::new(Client::new());
-                // let b_embedding_generator = EmbeddingGenerator::new_with_api_key("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");
-                //let path = PathBuf::from("./resources/ghostwriter-selectric/vector_store/");
-                
-                // log::debug!("DocumentStore initialized");            
+            pub fn run() {        
                 
                 tauri::Builder::default()
                 .plugin(tauri_plugin_clipboard_manager::init())

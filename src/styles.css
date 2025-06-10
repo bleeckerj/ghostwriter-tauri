@@ -155,13 +155,13 @@ button {
   display: inline-block;
   width: 0.6em;         /* Adjust width as needed */
   height: 1.2em;        /* Adjust height as needed */
-  background: #3137e9;  /* Your cursor color */
+  background: #ff37e9;  /* Your cursor color */
   opacity: 0.7;
   border-radius: 2px;
   margin-left: -0.3em;  /* Center the box on the character */
   vertical-align: bottom;
   /* Optional: add a blinking animation */
-  animation: box-cursor-blink 1s steps(1) infinite;
+  animation: box-cursor-blink 2s steps(1) infinite;
 }
 
 @keyframes box-cursor-blink {
@@ -1242,5 +1242,5 @@ background:
 }
 
 .ProseMirror {
-  caret-color: transparent;
+  caret-color: black;
 }
