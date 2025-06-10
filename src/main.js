@@ -26,7 +26,6 @@ import { BlockCursorDecoration } from './extensions/BlockCursorDecoration.js'
 import { BlockOverCursorDecoration } from './extensions/BlockOverCursorDecoration.js'
 import { enableTypingPauseDetection, disableTypingPauseDetection } from './typingPause.js';
 
-let userHasTypedSinceLastCompletion = false;
 
 let w = getCurrentWebviewWindow();
 w.setBackgroundColor('#f3f4f6');
@@ -88,6 +87,14 @@ let timer = new Timer();
 let emanationInProgress = false;
 let waitingForUserInput = false;
 let vibeStatusIndicator; // Reference to the vibe status indicator element
+
+let completions = [];
+let currentCompletionIndex = 0;
+let ghostStartPos = null;
+
+let isRetrievingCompletions = false; // True while fetching completions
+let completionAbortController = null; // For cancellation
+let userHasTypedSinceLastCompletion = false; // True if user typed since last completion
 
 // Function to update the vibe status indicator
 function updateVibeStatus(status, withStandbyIndicator = true) {
@@ -689,7 +696,6 @@ function emanateNavigableNodeToEditor(content) {
         streamingButton.classList.add("enabled");
         
         disableTypingPauseDetection();
-        ghostActive = false; // Reset ghost active state
         addSimpleLogEntry({
           id: "",
           timestamp: Date.now(),
@@ -699,12 +705,10 @@ function emanateNavigableNodeToEditor(content) {
       } else {
         // otherwise streaming mode ON
         streamingButton.classList.add("button-in");
-        //console.log("ghostActive: ", ghostActive);
-        ghostActive = true; // Enable ghost mode
         addSimpleLogEntry({
           id: "",
           timestamp: Date.now(),
-          message: 'Streaming mode enabled. ghostActive: ' + ghostActive,
+          message: 'Streaming mode enabled.',
           level: 'debug'
         });
         console.log("userHasTypedSinceLastCompletion: ", userHasTypedSinceLastCompletion);
@@ -714,15 +718,13 @@ function emanateNavigableNodeToEditor(content) {
             addSimpleLogEntry({
               id: "",
               timestamp: Date.now(),
-              message: 'Predicate checking whether we should trigger completions...ghostActive='+ghostActive+"  and-> userHasTypedSinceLastCompletion="+userHasTypedSinceLastCompletion+" and->"+(!userHasTypedSinceLastCompletion && editor.getText().trim()),
+              message: 'Predicate check is '+ userHasTypedSinceLastCompletion + ' and editor text is: "' + editor.getText().trim() + '"',
               level: 'debug'
             });
-            return !userHasTypedSinceLastCompletion && editor.getText().trim()
+            return userHasTypedSinceLastCompletion && editor.getText().trim()
           },
-          // () => userHasTypedSinceLastCompletion && editor.getText().trim() && !ghostActive,
           3500,
           () => {
-            //ghostActive = true;
             triggerCompletions();
             userHasTypedSinceLastCompletion = false; // Reset after completion
             addSimpleLogEntry({
@@ -744,39 +746,45 @@ function emanateNavigableNodeToEditor(content) {
     });
     
     editor.view.dom.addEventListener('keydown', (e) => {
-      //if (!ghostActive) return;
-      
       // Only handle printable characters (not Tab, Arrow, etc.)
       if (
         !e.ctrlKey && !e.metaKey && !e.altKey &&
         e.key.length === 1 && !e.isComposing
       ) {
-        onUserTyped();
-        const suggestion = completions[currentCompletionIndex] || '';
-        const { from } = editor.state.selection;
-        const docText = editor.getText();
-        if (ghostStartPos === null) return;
+        // 1. Mark that the user has typed
+        userHasTypedSinceLastCompletion = true;
         
-        const userTyped = docText.slice(ghostStartPos, from) + e.key;
-        if (userTyped.length === 0) {
-          setGhostSuggestion(suggestion);
-          return;
+        // 2. Cancel any in-progress completion fetch
+        if (isRetrievingCompletions && completionAbortController) {
+          completionAbortController.abort();
+          isRetrievingCompletions = false;
+          completionAbortController = null;
         }
         
-        if (suggestion.startsWith(userTyped)) {
-          setGhostSuggestion(suggestion.slice(userTyped.length));
-          if (userTyped === suggestion) setGhostSuggestion('');
-        } else {
-          setGhostSuggestion('');
-        }
+        // 3. Clear completions and ghost suggestion
+        completions = [];
+        setGhostSuggestion('');
+        currentCompletionIndex = 0;
+        ghostStartPos = null;
+        
+        // 4. (Optional) If you want to restart the typing pause detection, do it here.
+        // If using enableTypingPauseDetection, make sure it's already running.
+        // If you want to reset the timer, you may need to call disableTypingPauseDetection() and then enableTypingPauseDetection() again.
+        // (But usually, your pause detection should already be running and will reset on keydown.)
+        // disableTypingPauseDetection()
+        // 5. Typeahead logic (if a suggestion is visible)
+        // If you want to support typeahead immediately as the user types, you can add:
+        // (But usually, your editor.on('update', ...) handler will handle this after the document updates.)
       }
     });
     
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && ghostActive) {
+      if (e.key === 'Escape') {
         setGhostSuggestion('');
         completions = [];
-        //ghostActive = false;
+        currentCompletionIndex = 0;
+        ghostStartPos = null;
+        userHasTypedSinceLastCompletion = true;
         e.preventDefault();
       }
     });
@@ -2418,28 +2426,26 @@ function emanateNavigableNodeToEditor(content) {
     });
   });
   
+
   
   
-  
-  let completions = [];
-  let currentCompletionIndex = 0;
-  //let loadingMore = false;
-  let ghostActive = false;
-  
-  
-  async function fetchStreamingCompletion(context, systemMessage) {
+  async function fetchStreamingCompletion(context, systemMessage, abortSignal) {
     return new Promise((resolve, reject) => {
       let completion = '';
       let unlisten = null;
       
       // Listen for streaming chunks
       window.__TAURI__.event.listen('completion-chunk', (event) => {
+        if (abortSignal.aborted) {
+          if (unlisten) unlisten();
+          reject(new Error('aborted'));
+          return;
+        }
         completion += event.payload;
       }).then((unlistenFn) => {
         unlisten = unlistenFn;
       });
       
-      // Call the backend
       window.__TAURI__.core.invoke('streaming_completion_from_context', {
         context,
         systemMessage,
@@ -2450,6 +2456,11 @@ function emanateNavigableNodeToEditor(content) {
         if (unlisten) unlisten();
         reject(err);
       });
+      
+      abortSignal.addEventListener('abort', () => {
+        if (unlisten) unlisten();
+        reject(new Error('aborted'));
+      });
     });
   }
   
@@ -2459,17 +2470,16 @@ function emanateNavigableNodeToEditor(content) {
     if (ext) {
       ext.options.suggestion = suggestion
       editor.view.updateState(editor.state) // force re-render
-      //ghostActive = !!suggestion
-      //if (ghostActive) editor.commands.focus(); // get focus back to editor
     }
   }
   
-  async function* loadCompletionsStream(n = 3) {
+  async function* loadCompletionsStream(n = 3, abortSignal) {
     for (let i = 0; i < n; i++) {
       const context = editor.getText();
       const systemMessage = prefsMainPromptTextArea.value;
-      const result = await fetchStreamingCompletion(context, systemMessage);
-      yield result; // Yield each result as soon as it's ready
+      const result = await fetchStreamingCompletion(context, systemMessage, abortSignal);
+      if (abortSignal.aborted) break;
+      yield result;
     }
   }
   
@@ -2480,11 +2490,13 @@ function emanateNavigableNodeToEditor(content) {
     }
     
     currentCompletionIndex = 0;
+    const dummyAbortSignal = { aborted: false, addEventListener: () => {} };
+
     for (let i = 0; i < n; i++) {
       // Use your editor's current text and a system message
       const context = editor.getText();
       const systemMessage = prefsMainPromptTextArea.value;
-      const result = await fetchStreamingCompletion(context, systemMessage);
+      const result = await fetchStreamingCompletion(context, systemMessage, dummyAbortSignal);
       completions.push(result);
     }
     //loadingMore = false;
@@ -2498,15 +2510,15 @@ function emanateNavigableNodeToEditor(content) {
   
   // Show the current ghost completion
   function updateGhostCompletion() {
-    console.log('Completions is:', completions);
+    //console.log('Completions is:', completions);
     addSimpleLogEntry({
       id: Date.now(),
       timestamp: Date.now(),
       message: 'Updating ghost completion with completions: ' + completions.join(', '),
       level: 'debug'
     });
-
-    console.log('Current completion index:', currentCompletionIndex);
+    
+    //console.log('Current completion index:', currentCompletionIndex);
     addSimpleLogEntry({
       id: Date.now(),
       timestamp: Date.now(),  
@@ -2515,7 +2527,6 @@ function emanateNavigableNodeToEditor(content) {
     });
     const suggestion = completions[currentCompletionIndex] || ''
     showGhostCompletion(editor, suggestion)
-    //ghostActive = !!suggestion
   }
   
   
@@ -2543,15 +2554,59 @@ function emanateNavigableNodeToEditor(content) {
     
     setGhostSuggestion('');
     editor.commands.focus();
-    ghostActive = false;
     onAcceptCompletion();
+  }
+  
+  async function triggerCompletions() {
+    updateVibeStatus('thinking', false);
+    if (isRetrievingCompletions) return;
+    isRetrievingCompletions = true;
+    userHasTypedSinceLastCompletion = false;
+    completionAbortController = new AbortController();
+    completions = [];
+    currentCompletionIndex = 0;
+    try {
+      for await (const result of loadCompletionsStream(3, completionAbortController.signal)) {
+        completions.push(result);
+        updateGhostCompletion();
+        addSimpleLogEntry({
+          id: Date.now(),
+          timestamp: Date.now(),
+          message: 'Received async completion:<br/>' + result,
+          level: 'debug'
+        });
+        
+      }
+    } catch (err) {
+      // If aborted, just exit
+    } finally {
+      isRetrievingCompletions = false;
+      completionAbortController = null;
+    }
+    updateVibeStatus('writing', false);
+  }
+  
+  
+  
+  function showGhostCompletion(editor, suggestion) {
+    updateVibeStatus('emanating');
+    const ext = editor.extensionManager.extensions.find(ext => ext.name === 'ghostCompletionDecoration');
+    if (ext) {
+      ext.options.suggestion = suggestion;
+      editor.view.updateState(editor.state);
+      if (suggestion) {
+        ghostStartPos = editor.state.selection.from;
+      } else {
+        ghostStartPos = null;
+        updateVibeStatus('writing');
+      }
+    }
   }
   
   window.addEventListener("DOMContentLoaded", async () => {
     
     // Cycle completions
     editor.view.dom.addEventListener('keydown', async (e) => {
-      //if (!ghostActive) return
       
       // Cycle with Shift+Up/Down
       if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
@@ -2578,27 +2633,15 @@ function emanateNavigableNodeToEditor(content) {
       }
     })
     
+    
     editor.on('update', ({ editor }) => {
-      
-      //if (!ghostActive) return
-      
       const suggestion = completions[currentCompletionIndex] || ''
       const { from } = editor.state.selection
-      const docText = editor.getText()
-      // Get the text the user has typed at the cursor
-      // const before = docText.slice(0, from)
-      // const after = docText.slice(from)
-      // Find the last word or chars the user typed
-      // We'll use the last N chars where N = suggestion.length
-      //const userTyped = docText.slice(ghostStartPos, from)
-      const userTyped = docText.slice(ghostStartPos-1, from).trim()
+      const docText = editor.getText();
       
-      // addSimpleLogEntry({
-      //   id: Date.now(),
-      //   timestamp: Date.now(),
-      //   message: "ghostStartPos:" + ghostStartPos+"<br/>docText:" + editor.getText() +"<br/>userTyped:[" + userTyped +"]<br/>typeAhead?:"+ (suggestion.startsWith(userTyped)),
-      //   level: 'debug'
-      // })
+      if (ghostStartPos === null) return;
+      
+      const userTyped = docText.slice(ghostStartPos-1, from);//.trim()
       
       if (userTyped.length === 0) {
         setGhostSuggestion(suggestion);
@@ -2607,92 +2650,25 @@ function emanateNavigableNodeToEditor(content) {
       
       if (suggestion.startsWith(userTyped)) {
         setGhostSuggestion(suggestion.slice(userTyped.length))
-        if (userTyped === suggestion) setGhostSuggestion('')
-        } else if (userTyped.length > 0) {
-        setGhostSuggestion('')
+        if (userTyped === suggestion) {
+          setGhostSuggestion('')
+          completions = [];
+          currentCompletionIndex = 0;
+          ghostStartPos = null;
+        } else {
+          // User mistyped: clear completions, ghost, and restart timer
+          setGhostSuggestion('');
+          completions = [];
+          currentCompletionIndex = 0;
+          ghostStartPos = null;
+          userHasTypedSinceLastCompletion = true;
+        }
       }
-    })
-    
+      
+    });
   });
   
-  
-  function onUserTyped() {
-    ghostActive = false;
-    //userHasTypedSinceLastCompletion = true;
-    updateVibeStatus('writing', false);
-  }
-  
-  function onAcceptCompletion() {
-    userHasTypedSinceLastCompletion = false;
-    updateVibeStatus('writing', false);
-    completions = [];
-    currentCompletionIndex = 0;
-  }
+
   
   
-  async function triggerCompletions() {
-    updateVibeStatus('thinking', false);
-    for await (const result of loadCompletionsStream(3)) {
-      // Check if ghostActive is still true before processing this result
-      // if (!ghostActive) {
-      //   addSimpleLogEntry({
-      //     id: Date.now(),
-      //     timestamp: Date.now(),
-      //     message: 'Completion loop terminated early because ghostActive is false.',
-      //     level: 'debug'
-      //   });
-      //   break;
-      // }
-      completions.push(result);
-      addSimpleLogEntry({
-        id: Date.now(),
-        timestamp: Date.now(),
-        message: 'Received async completion: ' + result,
-        level: 'debug'
-      });
-      updateGhostCompletion();
-    }
-    updateVibeStatus('writing', false);
-  }
   
-  // function removeAllGhostCompletions(editor) {
-  //   const { state, view } = editor;
-  //   let tr = state.tr;
-  //   let found = false;
-  
-  //   state.doc.descendants((node, pos) => {
-    //     if (node.isText && node.marks.some(mark => mark.type.name === 'ghostCompletionMark')) {
-  //       tr = tr.delete(pos, pos + node.nodeSize);
-  //       found = true;
-  //     }
-  //   });
-  
-  //   if (found) {
-  //     view.dispatch(tr);
-  //   }
-  // }
-  
-  let ghostStartPos = null;
-  
-  function showGhostCompletion(editor, suggestion) {
-    // Set the suggestion on the extension
-    updateVibeStatus('emanating');
-    const ext = editor.extensionManager.extensions.find(ext => ext.name === 'ghostCompletionDecoration')
-    if (ext) {
-      ext.options.suggestion = suggestion
-      editor.view.updateState(editor.state) // force re-render
-      
-      if (suggestion /* && !ghostActive*/) {
-        ghostStartPos = editor.state.selection.from;
-        updateVibeStatus('emanating'); // Show robot when suggestion appears
-        
-      }
-      if (!suggestion) {
-        ghostStartPos = null;
-        updateVibeStatus('writing'); // Back to brain when suggestion is cleared
-        
-      }
-      //ghostActive = !!suggestion;
-      /*if (ghostActive)*/ editor.commands.focus();
-    }
-  }
