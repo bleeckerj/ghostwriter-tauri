@@ -102,18 +102,18 @@ export const InlineActionItem = Node.create({
               if (prevState && !view.state.doc.eq(prevState.doc) && userTyping) {
                 waitingForTyping = false;
                 userTyping = false;
-                console.log("waitingForTyping reset to false on user typing", waitingForTyping);
+                //("waitingForTyping reset to false on user typing", waitingForTyping);
               }
               
               // Check if we should proceed with showing the button
               if (options.disabled || waitingForTyping) {
-                console.log("Not showing button because disabled:", options.disabled, "or waitingForTyping:", waitingForTyping);
+                //console.log("Not showing button because disabled:", options.disabled, "or waitingForTyping:", waitingForTyping);
                 return false;
               }
               
               const { selection } = view.state;
               if (!view.state.doc.textContent.trim().length) {
-                console.log("Not showing button because document is empty");
+                //console.log("Not showing button because document is empty");
                 return false;
               }
 
@@ -128,14 +128,14 @@ export const InlineActionItem = Node.create({
               
               // Only set timeout if button doesn't exist and extension is enabled
               if (!buttonExists && options.disabled === false) {
-                console.log("Setting timeout to show button in", options.timeout, "ms");
+                //console.log("Setting timeout to show button in", options.timeout, "ms");
                 timeout = setTimeout(() => {
                   // Check again if disabled when timeout fires
                   if (options.disabled === true || waitingForTyping) {
-                    console.log("Not showing button at timeout because disabled:", options.disabled, "or waitingForTyping:", waitingForTyping);
+                    //console.log("Not showing button at timeout because disabled:", options.disabled, "or waitingForTyping:", waitingForTyping);
                     return false;
                   }
-                  console.log("Timeout fired, inserting button");
+                  //console.log("Timeout fired, inserting button");
                   const node = view.state.schema.nodes.inlineActionItem.create();
                   const tr = view.state.tr.insert(selection.from, node);
                   view.dispatch(tr);

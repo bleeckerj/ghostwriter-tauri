@@ -20,7 +20,7 @@ import { open, save, confirm } from '@tauri-apps/plugin-dialog';
 import { getCurrentWebviewWindow, WebviewWindow } from '@tauri-apps/api/webviewWindow';
 //import { list } from 'postcss';
 import { Timer } from './timer.js';
-import { add, debounce, set } from 'lodash';
+import { add, debounce, set, update } from 'lodash';
 import { GhostCompletionDecoration } from './extensions/GhostCompletionDecoration'
 import { BlockCursorDecoration } from './extensions/BlockCursorDecoration.js'
 import { BlockOverCursorDecoration } from './extensions/BlockOverCursorDecoration.js'
@@ -746,35 +746,30 @@ function emanateNavigableNodeToEditor(content) {
     });
     
     editor.view.dom.addEventListener('keydown', (e) => {
-      // Only handle printable characters (not Tab, Arrow, etc.)
       if (
         !e.ctrlKey && !e.metaKey && !e.altKey &&
         e.key.length === 1 && !e.isComposing
       ) {
-        // 1. Mark that the user has typed
         userHasTypedSinceLastCompletion = true;
         
-        // 2. Cancel any in-progress completion fetch
+        // Cancel any in-progress completion fetch
         if (isRetrievingCompletions && completionAbortController) {
           completionAbortController.abort();
           isRetrievingCompletions = false;
           completionAbortController = null;
         }
         
-        // 3. Clear completions and ghost suggestion
-        completions = [];
-        setGhostSuggestion('');
-        currentCompletionIndex = 0;
-        ghostStartPos = null;
+        // Only clear completions and ghost suggestion if no ghost suggestion is visible
+        const ext = editor.extensionManager.extensions.find(ext => ext.name === 'ghostCompletionDecoration');
+        const ghostVisible = ext && ext.options.suggestion && ext.options.suggestion.length > 0;
         
-        // 4. (Optional) If you want to restart the typing pause detection, do it here.
-        // If using enableTypingPauseDetection, make sure it's already running.
-        // If you want to reset the timer, you may need to call disableTypingPauseDetection() and then enableTypingPauseDetection() again.
-        // (But usually, your pause detection should already be running and will reset on keydown.)
-        // disableTypingPauseDetection()
-        // 5. Typeahead logic (if a suggestion is visible)
-        // If you want to support typeahead immediately as the user types, you can add:
-        // (But usually, your editor.on('update', ...) handler will handle this after the document updates.)
+        if (!ghostVisible) {
+          completions = [];
+          setGhostSuggestion('');
+          currentCompletionIndex = 0;
+          ghostStartPos = null;
+        }
+        // If ghost is visible, let typeahead logic handle it in editor.on('update')
       }
     });
     
@@ -784,7 +779,8 @@ function emanateNavigableNodeToEditor(content) {
         completions = [];
         currentCompletionIndex = 0;
         ghostStartPos = null;
-        userHasTypedSinceLastCompletion = true;
+        userHasTypedSinceLastCompletion = false;
+        updateVibeStatus('writing');
         e.preventDefault();
       }
     });
@@ -2426,7 +2422,7 @@ function emanateNavigableNodeToEditor(content) {
     });
   });
   
-
+  
   
   
   async function fetchStreamingCompletion(context, systemMessage, abortSignal) {
@@ -2491,7 +2487,7 @@ function emanateNavigableNodeToEditor(content) {
     
     currentCompletionIndex = 0;
     const dummyAbortSignal = { aborted: false, addEventListener: () => {} };
-
+    
     for (let i = 0; i < n; i++) {
       // Use your editor's current text and a system message
       const context = editor.getText();
@@ -2538,10 +2534,10 @@ function emanateNavigableNodeToEditor(content) {
     const { state, view } = editor
     const { from } = state.selection
     const docText = editor.getText();
-    
+    updateVibeStatus('writing', false);
     // Only insert the part of the suggestion that hasn't been typed
     // ghostStartPos is where the suggestion started
-    const alreadyTyped = docText.slice(ghostStartPos-1, from);
+    const alreadyTyped = docText.slice(ghostStartPos, from);
     let toInsert = suggestion;
     if (alreadyTyped && suggestion.startsWith(alreadyTyped)) {
       toInsert = suggestion.slice(alreadyTyped.length);
@@ -2554,7 +2550,6 @@ function emanateNavigableNodeToEditor(content) {
     
     setGhostSuggestion('');
     editor.commands.focus();
-    onAcceptCompletion();
   }
   
   async function triggerCompletions() {
@@ -2594,9 +2589,11 @@ function emanateNavigableNodeToEditor(content) {
     if (ext) {
       ext.options.suggestion = suggestion;
       editor.view.updateState(editor.state);
-      if (suggestion) {
+      if (suggestion && ghostStartPos === null) {
         ghostStartPos = editor.state.selection.from;
-      } else {
+      }
+      if (!suggestion) {
+        // Only clear ghostStartPos when suggestion is cleared
         ghostStartPos = null;
         updateVibeStatus('writing');
       }
@@ -2628,6 +2625,7 @@ function emanateNavigableNodeToEditor(content) {
       
       // Accept with Tab
       if (e.key === 'Tab') {
+        userHasTypedSinceLastCompletion = false;
         acceptGhostCompletion()
         e.preventDefault()
       }
@@ -2635,13 +2633,22 @@ function emanateNavigableNodeToEditor(content) {
     
     
     editor.on('update', ({ editor }) => {
-      const suggestion = completions[currentCompletionIndex] || ''
-      const { from } = editor.state.selection
+      const suggestion = completions[currentCompletionIndex] || '';
+      const { from } = editor.state.selection;
       const docText = editor.getText();
       
       if (ghostStartPos === null) return;
       
-      const userTyped = docText.slice(ghostStartPos-1, from);//.trim()
+      const userTyped = docText.slice(ghostStartPos-1, from);
+      
+      // Debug log
+      console.log({
+        ghostStartPos,
+        from,
+        userTyped,
+        suggestion,
+        suggestionStartsWithUserTyped: suggestion.startsWith(userTyped)
+      });
       
       if (userTyped.length === 0) {
         setGhostSuggestion(suggestion);
@@ -2649,26 +2656,27 @@ function emanateNavigableNodeToEditor(content) {
       }
       
       if (suggestion.startsWith(userTyped)) {
-        setGhostSuggestion(suggestion.slice(userTyped.length))
+        // User is typing the suggestion correctly: shrink the ghost
+        setGhostSuggestion(suggestion.slice(userTyped.length));
         if (userTyped === suggestion) {
-          setGhostSuggestion('')
-          completions = [];
-          currentCompletionIndex = 0;
-          ghostStartPos = null;
-        } else {
-          // User mistyped: clear completions, ghost, and restart timer
+          // User finished typing the suggestion: clear the ghost
           setGhostSuggestion('');
           completions = [];
           currentCompletionIndex = 0;
           ghostStartPos = null;
-          userHasTypedSinceLastCompletion = true;
         }
+      } else {
+        // User mistyped: clear completions, ghost, and reset indices
+        setGhostSuggestion('');
+        completions = [];
+        currentCompletionIndex = 0;
+        ghostStartPos = null;
+        userHasTypedSinceLastCompletion = true;
       }
-      
     });
   });
   
-
+  
   
   
   
