@@ -766,26 +766,28 @@ function emanateNavigableNodeToEditor(content) {
     });
     
     editor.view.dom.addEventListener('keydown', (e) => {
-      if (
-        !e.ctrlKey && !e.metaKey && !e.altKey &&
-        e.key.length === 1 && !e.isComposing
-      ) {
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1 && !e.isComposing) {
         userHasTypedSinceLastCompletion = true;
         
-        // Cancel any in-progress completion fetch
+        // Get ghost visibility status first
+        const ext = editor.extensionManager.extensions.find(ext => ext.name === 'ghostCompletionDecoration');
+        const ghostVisible = ext && ext.options.suggestion && ext.options.suggestion.length > 0;
+        
+        // Cancel any in-progress completion fetch - but don't clear ghostStartPos if ghost is visible
         if (isRetrievingCompletions && completionAbortController) {
           completionAbortController.abort();
           isRetrievingCompletions = false;
           completionAbortController = null;
-          completions = [];
-          currentCompletionIndex = 0;
-          ghostStartPos = null;
+          
+          // Only reset these if no ghost is visible
+          if (!ghostVisible) {
+            completions = [];
+            currentCompletionIndex = 0;
+            ghostStartPos = null;
+          }
         }
         
         // Only clear completions and ghost suggestion if no ghost suggestion is visible
-        const ext = editor.extensionManager.extensions.find(ext => ext.name === 'ghostCompletionDecoration');
-        const ghostVisible = ext && ext.options.suggestion && ext.options.suggestion.length > 0;
-        
         if (!ghostVisible) {
           completions = [];
           setGhostSuggestion('');
@@ -2478,12 +2480,19 @@ function emanateNavigableNodeToEditor(content) {
       
       abortSignal.addEventListener('abort', () => {
         if (unlisten) unlisten();
-        // Clear completions and ghost suggestion on abort
+        // Only clear ghostStartPos if no ghost text is visible
+        const ext = editor.extensionManager.extensions.find(ext => ext.name === 'ghostCompletionDecoration');
+        const ghostVisible = ext && ext.options.suggestion && ext.options.suggestion.length > 0;
+        
         completions = [];
-        setGhostSuggestion('');
-        currentCompletionIndex = 0;
-        ghostStartPos = null;
+        if (!ghostVisible) {
+          setGhostSuggestion('');
+          currentCompletionIndex = 0;
+          ghostStartPos = null;
+        }
+        
         reject(new Error('aborted'));
+        
       });
     });
   }
@@ -2672,18 +2681,42 @@ function emanateNavigableNodeToEditor(content) {
       const { from } = editor.state.selection;
       const docText = editor.getText();
       
-      if (ghostStartPos === null) return;
+      if (ghostStartPos === null) {
+        addSimpleLogEntry({
+          id: Date.now(),
+          timestamp: Date.now(),
+          message: 'Ghost start position is null, skipping ghost suggestion update.',
+          level: 'debug'
+        });
+        return;
+      }
       
+      // Try both slicing methods to see what's actually happening
       const userTyped = docText.slice(ghostStartPos-1, from);
+      const userTypedWithout = docText.slice(ghostStartPos, from);
       
-      // Debug log
-      console.log({
-        ghostStartPos,
-        from,
-        userTyped,
-        suggestion,
-        suggestionStartsWithUserTyped: suggestion.startsWith(userTyped)
+      // Log to diagnostics so we can see what's happening
+      addSimpleLogEntry({
+        id: "typeahead-debug-" + Date.now(),
+        timestamp: Date.now(),
+        message: `Typeahead debug:
+    - ghostStartPos: ${ghostStartPos}
+    - from: ${from}
+    - userTyped (with -1): "${userTyped}"
+    - userTyped (without -1): "${userTypedWithout}"
+    - suggestion: "${suggestion}"
+    - startsWith (with -1): ${suggestion.startsWith(userTyped)}
+    - startsWith (without -1): ${suggestion.startsWith(userTypedWithout)}`,
+        level: 'debug'
       });
+      // // Debug log
+      //     console.log({
+      //       ghostStartPos,
+      //       from,
+      //       userTyped,
+      //       suggestion,
+      //       suggestionStartsWithUserTyped: suggestion.startsWith(userTyped)
+      //     });
       
       if (userTyped.length === 0) {
         setGhostSuggestion(suggestion);
