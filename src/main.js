@@ -25,6 +25,7 @@ import { GhostCompletionDecoration } from './extensions/GhostCompletionDecoratio
 import { BlockCursorDecoration } from './extensions/BlockCursorDecoration.js'
 import { BlockOverCursorDecoration } from './extensions/BlockOverCursorDecoration.js'
 import { enableTypingPauseDetection, disableTypingPauseDetection } from './typingPause.js';
+import { handleFontSizeChangeEvent, initializeFontSizeFromCSS } from './style_handler.js';
 
 
 let w = getCurrentWebviewWindow();
@@ -597,7 +598,13 @@ function emanateNavigableNodeToEditor(content) {
   
   
   window.addEventListener("DOMContentLoaded", async () => {
-    // Create the vibe status indicator element
+    
+    // Initialize font size on load
+    initializeFontSizeFromCSS();
+    
+    // Listen for font size change events from Tauri
+    listen('font-size-change', handleFontSizeChangeEvent);    // Create the vibe status indicator element
+    
     //createVibeStatusIndicator();
     // Get all vibe genre radio buttons
     vibeGenreRadios = document.querySelectorAll('input[name="vibe-genre"]');
@@ -697,7 +704,7 @@ function emanateNavigableNodeToEditor(content) {
         
         // Disable typing pause detection
         disableTypingPauseDetection();
-
+        
         // Abort any in-progress completion fetch and clear the UI?
         if (isRetrievingCompletions && completionAbortController) {
           completionAbortController.abort();
@@ -2631,7 +2638,7 @@ function emanateNavigableNodeToEditor(content) {
     editor.view.dom.addEventListener('keydown', async (e) => {
       
       // Cycle with Shift+Up/Down
-      if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')  && completions.length > 0) {
         if (e.key === 'ArrowUp') {
           currentCompletionIndex = (currentCompletionIndex - 1 + completions.length) % completions.length
         } else if (e.key === 'ArrowDown') {
@@ -2650,9 +2657,12 @@ function emanateNavigableNodeToEditor(content) {
       
       // Accept with Tab
       if (e.key === 'Tab') {
-        userHasTypedSinceLastCompletion = false;
-        acceptGhostCompletion()
-        e.preventDefault()
+        // Only accept if there's an active ghost suggestion
+        if (completions.length > 0 && ghostStartPos !== null) {
+          userHasTypedSinceLastCompletion = false;
+          acceptGhostCompletion()
+          e.preventDefault()
+        }
       }
     })
     

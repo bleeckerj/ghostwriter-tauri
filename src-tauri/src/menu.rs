@@ -12,7 +12,7 @@ use tauri::{
         MenuEvent,
         Menu,
         PredefinedMenuItem,
-    }
+    },
 };
 
 use std::{path, sync::Arc};
@@ -29,45 +29,64 @@ use tauri::Emitter;
 use serde_json::json;
 use tauri_plugin_dialog::FilePath;
 
- // Constants for menu IDs
- pub const MENU_FILE_SAVE: &str = "file-save";
- pub const MENU_FILE_NEW: &str = "file-new";
- pub const MENU_FILE_OPEN: &str = "file-open";
- pub const MENU_FILE_QUIT: &str = "file-quit";
- 
- // Canon menu IDs 
- pub const MENU_CANON_LIST: &str = "canon-list";
- pub const MENU_CANON_NEW: &str = "canon-new";
- pub const MENU_CANON_LOAD: &str = "canon-load";
- pub const MENU_CANON_INGEST: &str = "canon-ingest";
- 
- pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
+// Constants for menu IDs
+pub const MENU_FILE_SAVE: &str = "file-save";
+pub const MENU_FILE_NEW: &str = "file-new";
+pub const MENU_FILE_OPEN: &str = "file-open";
+pub const MENU_FILE_QUIT: &str = "file-quit";
+
+// Canon menu IDs 
+pub const MENU_CANON_LIST: &str = "canon-list";
+pub const MENU_CANON_NEW: &str = "canon-new";
+pub const MENU_CANON_LOAD: &str = "canon-load";
+pub const MENU_CANON_INGEST: &str = "canon-ingest";
+
+pub const MENU_STYLE_INCREASE_FONT: &str = "style-increase-font";
+pub const MENU_STYLE_DECREASE_FONT: &str = "style-decrease-font";
+
+pub fn build_style_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
+    let increase_font = MenuItemBuilder::new("Increase Font Size")
+    .id(MENU_STYLE_INCREASE_FONT)
+    .accelerator("CmdOrControl+Plus")
+    .build(app)?;
+    let decrease_font = MenuItemBuilder::new("Decrease Font Size")
+    .id(MENU_STYLE_DECREASE_FONT)
+    .accelerator("CmdOrControl+Minus")
+    .build(app)?;
+    
+    SubmenuBuilder::new(app, "Style")
+    .item(&increase_font)
+    .item(&decrease_font)
+    .build()
+}
+
+pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
     let quit_item = MenuItemBuilder::new("Quit")
     .id(MENU_FILE_QUIT)
     .accelerator("CmdOrControl+Q")
     .build(app)?;
     
     SubmenuBuilder::new(app, "App")
-        .item(&quit_item)
-        .build()
- }
- 
- pub fn build_file_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
-    let save_item = MenuItemBuilder::new("Save")
-        .id(MENU_FILE_SAVE)
-        .accelerator("CmdOrControl+S")
-        .build(app)?;
+    .item(&quit_item)
+    .build()
+}
 
+pub fn build_file_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
+    let save_item = MenuItemBuilder::new("Save")
+    .id(MENU_FILE_SAVE)
+    .accelerator("CmdOrControl+S")
+    .build(app)?;
+    
     let open_item = MenuItemBuilder::new("Open")
     .id(MENU_FILE_OPEN)
     .accelerator("CmdOrControl+O")
     .build(app)?;
-
+    
     let new_item = MenuItemBuilder::new("New")
     .id(MENU_FILE_NEW)
     .accelerator("CmdOrControl+N")
     .build(app)?;
-
+    
     SubmenuBuilder::new(app, "File")
     .item(&new_item)
     .item(&open_item)
@@ -111,17 +130,17 @@ pub fn build_edit_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<
     let copy = PredefinedMenuItem::copy(app, Some("Copy"))?;
     let paste = PredefinedMenuItem::paste(app, Some("Paste"))?;
     let select_all = PredefinedMenuItem::select_all(app, Some("Select All"))?;
-
+    
     SubmenuBuilder::new(app, "Edit")
-        .item(&undo)
-        .item(&redo)
-        .separator()
-        .item(&cut)
-        .item(&copy)
-        .item(&paste)
-        .separator()
-        .item(&select_all)
-        .build()
+    .item(&undo)
+    .item(&redo)
+    .separator()
+    .item(&cut)
+    .item(&copy)
+    .item(&paste)
+    .separator()
+    .item(&select_all)
+    .build()
 }
 
 pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
@@ -129,17 +148,20 @@ pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let file_menu = build_file_menu(app)?;
     let edit_menu = build_edit_menu(app)?; // <-- Add this
     let canon_menu = build_canon_menu(app)?;
+    let style_menu = build_style_menu(app)?;
     
     MenuBuilder::new(app)
     .item(&app_menu)
     .item(&file_menu)
     .item(&edit_menu)
     .item(&canon_menu)
+    .item(&style_menu)
+    
     .build()
 }
 
 pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
-
+    
     let app_state = app.state::<AppState>();
     let app_handle = app.clone();
     match event.id.0.as_str() {
@@ -147,10 +169,10 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
             app.emit("save-file-dialog", json!({
                 "title": "Save File",
                 "filters": [
-                    {
-                        "name": "emanations.txt",
-                        "extensions": ["txt", "md", "mdx"]
-                    }
+                {
+                    "name": "emanations.txt",
+                    "extensions": ["txt", "md", "mdx"]
+                }
                 ]}
             ));
             // let doc_store: Arc<Mutex<DocumentStore>> = Arc::clone(&app_state.doc_store);
@@ -167,7 +189,13 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
             //     }
             // });
         }
-
+        MENU_STYLE_INCREASE_FONT => {
+            app.emit("font-size-change", "increase");
+        }
+        MENU_STYLE_DECREASE_FONT => {
+            app.emit("font-size-change", "decrease");
+        }
+        
         MENU_FILE_QUIT => {
             app.exit(0);
         }
@@ -225,14 +253,14 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
                 if let Some(path) = file_path {
                     let path_as_string = path.clone().to_string();
                     println!("File path is {}", &path);
-            
+                    
                     // Properly convert to PathBuf
                     let path_buf = convert_file_path_to_path_buf(path.clone());
-            
+                    
                     // Clone the doc_store and app_handle to ensure 'static lifetime
                     let doc_store = Arc::clone(&doc_store);
                     let app_handle = app_handle.clone();
-            
+                    
                     tauri::async_runtime::spawn(async move {
                         set_database_path_async(doc_store, path_as_string, app_handle).await;
                     });
@@ -263,7 +291,7 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
                     //     store.set_database_path(path_buf.unwrap()).await;
                     // });
                     tauri::async_runtime::spawn(set_database_path_async(doc_store, path_as_string, app_handle.clone()));
-
+                    
                 } else {
                     println!("No file selected.");
                 }
@@ -276,7 +304,7 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>,   event: MenuEvent) {
         }
         _ => {}
     }
- }
+}
 
 async fn set_database_path_async<R: Runtime>(
     doc_store: Arc<Mutex<DocumentStore>>,
