@@ -246,11 +246,13 @@ async fn streaming_completion_from_context(
     context: String,
     system_message: String,
     force_refresh: Option<bool>,
+    with_rag: Option<bool>,
 ) -> Result<(), String> {
     // Start overall timing
     
     let start_time = std::time::Instant::now();
-    
+    let with_rag = with_rag.unwrap_or(true);
+
     let preferences = state.preferences.lock().await;
     let mut new_logger = NewLogger::new(app_handle.clone());
 println!("Starting streaming completion from context with force_refresh: {}", force_refresh.unwrap_or(false));
@@ -266,7 +268,7 @@ println!("Starting streaming completion from context with force_refresh: {}", fo
     
     // Check if we should use cached results or perform a new search
     let force_refresh = force_refresh.unwrap_or(false);
-    let similar_docs = {
+    let similar_docs = if with_rag {
         let mut rag_cache = state.rag_cache.lock().await;
         
         if !force_refresh && rag_cache.last_context == context {
@@ -356,6 +358,9 @@ println!("Starting streaming completion from context with force_refresh: {}", fo
             
             results
         }
+    } else {
+        // If RAG is not used, just return an empty vector
+        Vec::new()
     };
     
     // Log search results info

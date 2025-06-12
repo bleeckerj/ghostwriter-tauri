@@ -54,25 +54,25 @@
       <span id="openai-api-key-btn" class="hidden diagnostics-area-button enabled">OPNAI</span>
       <span id="ingest-url-btn" class="diagnostics-area-button enabled">NGSTU</span>
       <span id="open-log-btn" class="diagnostics-area-button enabled">LOGJS</span>
-
+      
     </div>
     <!-- <div id="completion-preview" class="text-[1em] font-mono mt-2 h-[20px]"></div> -->
     <div id="diagnostics-editor" class="diagnostics-content bg-blue-700 h-full bg-2 rounded-sm">
       <div class="diagnostics bg-blue-700 rounded-sm mb-2"></div>
     </div>
-<div class="w-full grid grid-cols-[1fr_auto] gap-2 items-stretch mb-2 mt-1">
-  <div class="h-[2em] flex items-center bg-gray-200 border-[0.5px] pl-2 w-full rounded-sm">
-    <span id="greet-msg" class="greet-msg">Hello.</span>
-  </div>
-  <div id="icon-area" class="flex items-center justify-end bg-gray-200 border-[0.5px] rounded-sm w-fit px-2" >
-    <img class="h-[1.5em] m-[0.1em]" src="/images/icons/LaboratoryCircle_Guy_01_CircleTeal.webp" />
-    <div id="vibe-status-indicator" class="text-[25px] ml-2 opacity-90">🧠</div>
-  </div>
-</div>
+    <div class="w-full grid grid-cols-[1fr_auto] gap-2 items-stretch mb-2 mt-1">
+      <div class="h-[2em] flex items-center bg-gray-200 border-[0.5px] pl-2 w-full rounded-sm">
+        <span id="greet-msg" class="greet-msg">Hello.</span>
+      </div>
+      <div id="icon-area" class="flex items-center justify-end bg-gray-200 border-[0.5px] rounded-sm w-fit px-2" >
+        <img class="h-[1.5em] m-[0.1em]" src="/images/icons/LaboratoryCircle_Guy_01_CircleTeal.webp" />
+        <div id="vibe-status-indicator" class="text-[25px] ml-2 opacity-90">🧠</div>
+      </div>
+    </div>
   </div>
   <!-- Add the side panel -->
   <div id="side-panel" class="side-panel w-full">
-    <div class="text-[0.8em] font-['ESKlarheitKurrentMono'] mb-1 w-full mx-auto text-center">Incantation Preferences & Parameters</div>
+    <div class="text-[0.8em] fuppercase font-[InputMonoNarrow]  mb-1 w-full mx-auto text-center">Incantation Preferences & Parameters</div>
     <div class="fixed-buttons">
       <div class="grid grid-cols-4 gap-1 w-1/2 mb-0 mx-auto">
         <div id="prefs-load-btn" class="diagnostics-area-button enabled">LOAD</div>
@@ -84,38 +84,38 @@
     <div class="side-panel-content mx-auto p-2 mb-0 w-full bg-gray-400">
       <label class="form-control">
         <div class="label">
-          <span class="label-text text-sm font-['Haffer'] ml-1">Main Prompt</span>
+          <span class="label-text text-sm uppercase font-[InputMonoNarrow] ml-1">Main Prompt</span>
         </div>
-        <textarea id="prefs-main-prompt" type="text" placeholder="Main Prompt" class="text-pretty w-full h-[200px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
+        <textarea id="prefs-main-prompt" type="text" placeholder="Main Prompt" class="text-pretty w-full h-[200px] text-[0.7em] leading-normal font-[ESKlarheitKurrentMono] mb-4 textarea textarea-primary overscroll-none"></textarea>
       </label>
       <label class="form-control">
         <div class="label">
-          <span class="label-text text-sm font-['Haffer'] ml-1">Response Limit</span>
+          <span class="label-text text-sm uppercase font-[InputMonoNarrow] ml-1">Response Limit</span>
         </div>
-        <textarea id="prefs-response-limit" type="text" placeholder="Response Limit" class="text-pretty w-full h-[100px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
+        <textarea id="prefs-response-limit" type="text" placeholder="Response Limit" class="text-pretty w-full h-[100px] text-[0.7em] leading-normal font-[ESKlarheitKurrentMono] mb-4 textarea textarea-primary overscroll-none"></textarea>
       </label>
       <label class="form-control">
         <div class="label">
-          <span class="label-text text-sm font-['Haffer'] ml-1">Final Preamble</span>
+          <span class="label-text text-sm uppercase font-[InputMonoNarrow]  ml-1">Final Preamble</span>
         </div>
-        <textarea id="prefs-final-preamble" type="text" placeholder="Final Preamble" class="text-pretty w-full h-[100px] text-[0.7em] leading-normal font-['ESKlarheitKurrentMono'] mb-4 textarea textarea-primary overscroll-none"></textarea>
+        <textarea id="prefs-final-preamble" type="text" placeholder="Final Preamble" class="text-pretty w-full h-[100px] text-[0.7em] leading-normal font-[ESKlarheitKurrentMono] mb-4 textarea textarea-primary overscroll-none"></textarea>
       </label>
       <label class="form-control">
         <div class="label">
-          <span class="label-text text-sm font-['Haffer'] ml-1">Prose Style</span>
+          <span class="label-text text-sm uppercase font-[InputMonoNarrow] ml-1">Prose Style</span>
         </div>
-        <textarea id="prefs-prose-style" type="text" placeholder="Prose Style" class="text-pretty w-full h-[24px] text-xs font-['ESKlarheitKurrentMono'] textarea textarea-primary overscroll-none"></textarea>
+        <textarea id="prefs-prose-style" type="text" placeholder="Prose Style" class="text-pretty w-full h-[24px] text-xs font-[ESKlarheitKurrentMono] textarea textarea-primary overscroll-none mb-4"></textarea>
       </label>
-      <label class="form-control">
+      <label class="form-control mt-2">
         <div class="label">
-          <span class="label-text text-sm font-['Haffer'] ml-1">Vibe Mode Context</span>
+          <span class="label-text text-sm uppercase font-[InputMonoNarrow]  ml-1">Vibe Mode Context</span>
         </div>
-        <textarea id="prefs-vibe-mode-context" type="text" placeholder="Vibe Mode Context" class="text-pretty w-full h-[24px] text-xs font-['ESKlarheitKurrentMono'] textarea textarea-primary overscroll-none"></textarea>
+        <textarea id="prefs-vibe-mode-context" type="text" placeholder="Vibe Mode Context" class="text-pretty w-full h-[148px] text-xs font-[ESKlarheitKurrentMono] textarea textarea-primary overscroll-none"></textarea>
       </label>
       
       <div class="my-4">
         <div class="label">
-          <span class="label-text text-sm font-['Haffer'] ml-1">Vibe Mode Genre</span>
+          <span class="label-text text-sm uppercase font-[InputMonoNarrow]  ml-1">Vibe Mode Genre</span>
         </div>
         <div class="vibe-genre-selection grid grid-cols-1 gap-2 border border-gray-300 rounded-md p-3 bg-gray-50">
           <label class="radio-label cursor-pointer flex items-center gap-2">
@@ -142,19 +142,28 @@
       </div>
       
       <!-- Daisy toggle doesn't work maybe beta issues? So this is my own -->
-      <div class="my-4">
-        <label class="form-control toggle-switch">
+      <div class="my-10 grid grid-cols-2 gap-4 w-[50%]">
+        <!-- RAG Shuffle Toggle -->
+        <label class="form-control toggle-switch flex items-center">
           <div class="label">
-            <span class="label-text text-sm font-['Haffer'] ml-1">RAG Shuffle?</span>
+            <span class="label-text text-sm font-[InputMonoNarrow] ml-0">RAG SHFL</span>
           </div>
           <input id="prefs-shuffle-similars" type="checkbox" />
+          <span class="slider"></span>
+        </label>
+        <!-- STRM RAG Toggle -->
+        <label class="form-control toggle-switch flex items-center">
+          <div class="label">
+            <span class="label-text text-sm font-[InputMonoNarrow]">STRM RAG</span>
+          </div>
+          <input id="prefs-strm-rag" type="checkbox" />
           <span class="slider"></span>
         </label>
       </div>
       
       <label class="form-control my-4 block">
         <div class="label">
-          <span class="label-text text-sm font-['Haffer'] ml-1">Similarity Threshold</span>
+          <span class="label-text text-sm font-[InputMonoNarrow] ml-1">SIMILARITY THRESHOLD</span>
         </div>
         <div class="grid grid-cols-12 gap-2">
           <div class="col-span-9">
@@ -170,12 +179,12 @@
       
       <label class="form-control my-4 block">
         <div class="label">
-          <span class="label-text text-sm font-['Haffer'] ml-1">Similarity Count (RAG Results To Use)</span>
+          <span class="label-text text-sm uppercase font-[InputMonoNarrow] ml-1">Similarity Count (RAG Results To Use)</span>
         </div>
         
         <div class="grid grid-cols-12 gap-2">
           <div class="col-span-9">
-            <input id="prefs-similarity-count" type="range" min="1" max="10" class="range mb-3" step="1" />
+            <input id="prefs-similarity-count" type="range" min="1" max="10" class="range" step="1" />
           </div>
           <div class="col-span-3">
             <span id="prefs-similarity-count-value" class="ghost-text">3</span>
@@ -185,12 +194,12 @@
       
       <label class="form-control my-4 block">
         <div class="label">
-          <span class="label-text text-sm font-['Haffer'] ml-1">Temperature</span>
+          <span class="label-text text-sm uppercase font-[InputMonoNarrow] ml-1">Temperature</span>
         </div>
         
         <div class="grid grid-cols-12 gap-2">
           <div class="col-span-9">
-            <input id="prefs-temperature" type="range" min="0" max="2" class="range mb-3" step="0.1" />
+            <input id="prefs-temperature" type="range" min="0" max="2" class="range" step="0.1" />
           </div>
           <div class="col-span-3">
             <span id="prefs-temperature-value" class="ghost-text"></span>
@@ -201,11 +210,11 @@
       <!-- MAX OUTPUT TOKENS-->
       <label class="form-control my-4 block">
         <div class="label">
-          <span class="label-text text-sm font-['Haffer'] ml-1">Max Output Tokens</span>
+          <span class="label-text text-sm uppercase font-[InputMonoNarrow]  ml-1">Max Output Tokens</span>
         </div>
         <div class="grid grid-cols-12 gap-2">
           <div class="col-span-9">
-            <input id="prefs-max-output-tokens" type="range" min="50" max="800" value="100" class="range mb-3" step="25" />
+            <input id="prefs-max-output-tokens" type="range" min="50" max="800" value="100" class="range" step="25" />
           </div>
           <div class="col-span-3">
             <span id="prefs-max-output-tokens-value" class="ghost-text">100</span>
@@ -216,11 +225,11 @@
       <!-- MAX HISTORY ITEMS -->
       <label class="form-control my-4 block">
         <div class="label">
-          <span class="label-text text-sm font-['Haffer'] ml-1">Max History Items</span>
+          <span class="label-text text-sm uppercase font-[InputMonoNarrow] ml-1">Max History Items</span>
         </div>
         <div class="grid grid-cols-12 gap-2">
           <div class="col-span-9">
-            <input id="prefs-max-history-items" type="range" min="0" max="300" value="50" class="range mb-3" step="1" />
+            <input id="prefs-max-history-items" type="range" min="0" max="300" value="50" class="range" step="1" />
           </div>
           <div class="col-span-3">
             <span id="prefs-max-history-items-value" class="ghost-text">50</span>
@@ -230,11 +239,11 @@
       
       <label class="form-control my-4 block">
         <div class="label">
-          <span class="label-text text-sm font-['Haffer'] ml-1">Vibe Mode Timer</span>
+          <span class="label-text text-sm uppercase font-[InputMonoNarrow]  ml-1">Vibe Mode Timer</span>
         </div>
         <div class="grid grid-cols-12 gap-2">
           <div class="col-span-9">
-            <input id="prefs-game-time-secs" type="range" min="0" max="90" value="20" class="range mb-3" step="5" />
+            <input id="prefs-game-time-secs" type="range" min="0" max="90" value="20" class="range" step="5" />
           </div>
           <div class="col-span-3">
             <span id="prefs-game-time-secs-value" class="ghost-text">20</span>
@@ -244,7 +253,7 @@
       
       <!-- Little spot to put in OpenAI API Key -->
       <div class="label">
-        <span class="label-text text-sm font-['Haffer'] ml-1">OpenAI API Key</span>
+        <span class="label-text text-sm uppercase font-[InputMonoNarrow]  ml-1">OpenAI API Key</span>
       </div>
       <label class="input input-bordered flex items-center gap-2">
         <svg
@@ -270,46 +279,46 @@
   </div>
   <!-- Add this after "Prose Style" section and before the RAG Shuffle toggle -->
   
-  <div id="llm-preferences" class="px-8 pt-2 bg-amber-400/10">
+  <div id="llm-preferences" class="mt-8 mb-4 px-8 pt-2 bg-amber-400/10">
     <div class="label">
-      <span class="label-text text-sm font-['Haffer'] ml-1">AI Provider</span>
+      <div class="label-text text-sm uppercase font-[InputMonoNarrow]  ml-1 mb-4">AI Provider</div>
     </div>
     <div class="provider-selection flex gap-3 mb-2">
       <label class="radio-label cursor-pointer flex items-center gap-1">
         <input type="radio" name="ai-provider" value="ollama" id="provider-ollama" class="radio radio-md">
-        <span class="text-[0.8em]">Ollama</span>
+        <span class="text-[0.8em] uppercase font-[InputMonoNarrow] ">Ollama</span>
       </label>
       <label class="radio-label cursor-pointer flex items-center gap-1">
         <input type="radio" name="ai-provider" value="openai" id="provider-openai" class="radio radio-md">
-        <span class="text-[0.8em]">OpenAI</span>
+        <span class="text-[0.8em] uppercase font-[InputMonoNarrow] ">OpenAI</span>
       </label>
       <label class="radio-label cursor-pointer flex items-center gap-1">
         <input type="radio" name="ai-provider" value="lmstudio" id="provider-lmstudio" class="radio radio-md">
-        <span class="text-[0.8em]">LM Studio</span>
+        <span class="text-[0.8em] uppercase font-[InputMonoNarrow] ">LM Studio</span>
       </label>
     </div>
     
     <!-- LM Studio URL - only visible when LM Studio is selected -->
     <div id="lmstudio-url-container" class="hidden mb-3">
       <div class="label">
-        <span class="label-text text-sm font-['Haffer'] ml-1">LM Studio URL</span>
+        <span class="label-text text-sm uppercase font-[InputMonoNarrow] ml-1">LM Studio URL</span>
       </div>
       <input type="text" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" id="prefs-lmstudio-url" placeholder="http://localhost:1234/v1" 
-      class="w-full text-[0.7em] font-['ESKlarheitKurrentMono'] p-1.5 input input-bordered">
+      class="w-full text-[0.7em] font-[ESKlarheitKurrentMono] p-1.5 input input-bordered">
     </div>
     
     <div id="ollama-url-container" class="hidden mb-3">
       <div class="label">
-        <span class="label-text text-sm font-['Haffer'] ml-1">Ollama URL</span>
+        <span class="label-text text-sm uppercase font-[InputMonoNarrow] ml-1">Ollama URL</span>
       </div>
       <input type="text" id="prefs-ollama-url" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"   placeholder="http://localhost:114321" 
-      class="w-full text-[0.7em] font-['ESKlarheitKurrentMono'] p-1.5 input input-bordered">
+      class="w-full text-[0.7em] font-[ESKlarheitKurrentMono] p-1.5 input input-bordered">
     </div>
     
     <!-- Model Selection Dropdown -->
     <div class="my-3">
       <div class="label">
-        <span class="label-text text-sm font-['Haffer'] ml-1">Available Models</span>
+        <span class="label-text text-sm uppercase font-[InputMonoNarrow] ml-1">Available Models</span>
       </div>        
     </div>
     <div id="models-container" class="relative mb-[2rem] flex items-center gap-2">
