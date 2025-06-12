@@ -245,27 +245,149 @@ async fn streaming_completion_from_context(
     app_handle: tauri::AppHandle,
     context: String,
     system_message: String,
+    force_refresh: Option<bool>,
 ) -> Result<(), String> {
+    // Start overall timing
+    
+    let start_time = std::time::Instant::now();
+    
     let preferences = state.preferences.lock().await;
     let mut new_logger = NewLogger::new(app_handle.clone());
+
+    new_logger.simple_log_message(
+        "Starting streaming completion from context with force_refresh:".to_string() + &force_refresh.unwrap_or(false).to_string(), 
+        "streaming".to_string(),
+        "debug".to_string()
+    );
     
     // Get the provider
     let mut provider = get_preferred_llm_provider(&app_handle, &preferences)
     .map_err(|e| format!("Couldn't get preferred LLM provider: {}", e))?;
     
-    // Setup similar to completion_from_context but adapted for streaming
-    // ...embedding generation and context setup code...
-    
-    // Create the chat request
-    let model_name = provider.get_preferred_inference_model(&preferences.ai_model_name)
-        .await
-        .map_err(|e| format!("Failed to get preferred inference model: {}", e))?.name;
+    // Check if we should use cached results or perform a new search
+    let force_refresh = force_refresh.unwrap_or(false);
+    let similar_docs = {
+        let mut rag_cache = state.rag_cache.lock().await;
         
+        if !force_refresh && rag_cache.last_context == context {
+            // Using cached results - log timing for cache hit
+            new_logger.simple_log_message(
+                "Using cached RAG search results".to_string(),
+                "streaming".to_string(),
+                "debug".to_string()
+            );
+            rag_cache.similarity_documents.clone()
+        } else {
+            // Performing new search - log timing
+            let rag_search_start = std::time::Instant::now();
+            
+            new_logger.simple_log_message(
+                "Performing new RAG search".to_string(),
+                "streaming".to_string(),
+                "debug".to_string()
+            );
+            
+            // Create embedding for search
+            let embedding_start = std::time::Instant::now();
+            let embedding_request = EmbeddingRequest {
+                model: provider.get_preferred_embedding_model(),
+                input: vec![context.clone()],
+            };
+            
+            let embedding_result = provider.create_embeddings(embedding_request).await;
+            let embedding_duration = embedding_start.elapsed();
+            
+            new_logger.simple_log_message(
+                format!("Embedding generation took {}ms", embedding_duration.as_millis()),
+                "streaming".to_string(),
+                "info".to_string()
+            );
+            
+            // Get similarity search results
+            let search_start = std::time::Instant::now();
+            let store = state.doc_store.lock().await;
+            let similarity_count = preferences.similarity_count;
+            let similarity_threshold = preferences.similarity_threshold;
+            let shuffle_similars = preferences.shuffle_similars;
+            
+            let mut results = store.search(
+                &embedding_result, 
+                &provider, 
+                similarity_count, 
+                similarity_threshold
+            ).await.map_err(|e| format!("Search failed: {}", e))?;
+            
+            // Log each result
+            for (doc_id, doc_name, chunk_id, chunk_text, similarity) in &results {
+                new_logger.simple_log_message(
+                    format!(
+                        "Search result: doc_id={}, doc_name={}, chunk_id={}, similarity={:.4}\n{}",
+                        doc_id, doc_name, chunk_id, similarity, truncate(chunk_text, 120)
+                    ),
+                    "rag_search_result".to_string(),
+                    "debug".to_string()
+                );
+            }
+            
+            let search_duration = search_start.elapsed();
+            new_logger.simple_log_message(
+                format!("Vector search took {}ms", search_duration.as_millis()),
+                "streaming".to_string(),
+                "debug".to_string()
+            );
+            
+            // Shuffle if needed
+            if shuffle_similars {
+                let mut rng = rand::thread_rng();
+                results.shuffle(&mut rng);
+            }
+            
+            // Update the cache
+            rag_cache.last_context = context.clone();
+            rag_cache.similarity_documents = results.clone();
+            rag_cache.last_updated = Utc::now();
+            
+            let rag_search_duration = rag_search_start.elapsed();
+            new_logger.simple_log_message(
+                format!("Total RAG search process took {}ms", rag_search_duration.as_millis()),
+                "streaming".to_string(),
+                "debug".to_string()
+            );
+            
+            results
+        }
+    };
+    
+    // Log search results info
+    new_logger.simple_log_message(
+        format!("Found {} similar documents with threshold {}", similar_docs.len(), preferences.similarity_threshold),
+        "streaming".to_string(),
+        "debug".to_string()
+    );
+    
+    // Build context from similar documents
+    let mut rag_context = String::new();
+    for (_, doc_name, _, chunk_text, similarity) in &similar_docs {
+        rag_context.push_str(&format!("{}\n", chunk_text));
+    }
+    
+    // Create combined system prompt
+    let prompt_creation_start = std::time::Instant::now();
+    let mut system_content = system_message.clone();
+    system_content.push_str("\n\n<context>\n");
+    system_content.push_str(&rag_context);
+    system_content.push_str("\n</context>");
+    
+    // Create chat request
+    let model_name = provider.get_preferred_inference_model(&preferences.ai_model_name)
+    .await
+    .map_err(|e| format!("Failed to get preferred inference model: {}", e))?.name;
+    
     let chat_request = ChatCompletionRequest {
         messages: vec![
         ChatMessage {
             role: MessageRole::System,
-            content: system_message.clone(),
+            content: system_content,
             name: None,
         },
         ChatMessage {
@@ -277,31 +399,80 @@ async fn streaming_completion_from_context(
         model: model_name,
         temperature: Some(preferences.temperature),
         max_tokens: Some(preferences.max_output_tokens as u32),
-        stream: true, // Enable streaming
+        stream: true,
     };
     
-    // Create a streaming response
+    let prompt_creation_duration = prompt_creation_start.elapsed();
+    new_logger.simple_log_message(
+        format!("Prompt creation took {}ms", prompt_creation_duration.as_millis()),
+        "streaming".to_string(),
+        "debug".to_string()
+    );
+    
+    // Create streaming response and measure time
+    let stream_start = std::time::Instant::now();
+    new_logger.simple_log_message(
+        "Starting streaming completion request".to_string(),
+        "streaming".to_string(),
+        "debug".to_string()
+    );
+    
     let stream_result = provider.create_streaming_chat_completion(&chat_request).await;
     match stream_result {
         Ok(mut stream) => {
+            let mut token_count = 0;
             while let Some(result) = stream.next().await {
                 match result {
                     Ok(chunk) => {
-                        // Extract content from the chunk
                         if let Some(choice) = chunk.choices.first() {
                             if let Some(content) = &choice.delta.content {
-                                // Emit each chunk to the frontend
+                                token_count += 1;
                                 app_handle.emit("completion-chunk", content)
                                 .map_err(|e| format!("Failed to emit completion chunk: {}", e))?;
                             }
                         }
                     },
-                    Err(e) => return Err(format!("Error in streaming: {}", e))
+                    Err(e) => {
+                        let stream_duration = stream_start.elapsed();
+                        new_logger.simple_log_message(
+                            format!("Streaming error after {}ms: {}", stream_duration.as_millis(), e),
+                            "streaming".to_string(),
+                            "error".to_string()
+                        );
+                        return Err(format!("Error in streaming: {}", e));
+                    }
                 }
             }
+            
+            let stream_duration = stream_start.elapsed();
+            new_logger.simple_log_message(
+                format!("Streaming completed in {}ms with approximately {} tokens", 
+                stream_duration.as_millis(), token_count),
+                "streaming".to_string(),
+                "debug".to_string()
+            );
+            
+            // Log total time for the entire operation
+            let total_duration = start_time.elapsed();
+            new_logger.simple_log_message(
+                format!("Total RAG + streaming process completed in {}ms", total_duration.as_millis()),
+                "streaming".to_string(),
+                "debug".to_string()
+            );
+            
             Ok(())
         },
-        Err(e) => Err(format!("Failed to create streaming completion: {}", e))
+        Err(e) => {
+            let total_duration = start_time.elapsed();
+            new_logger.simple_log_message(
+                format!("Failed to create streaming completion after {}ms: {}", 
+                total_duration.as_millis(), e),
+                "streaming".to_string(),
+                "error".to_string()
+            );
+            
+            Err(format!("Failed to create streaming completion: {}", e))
+        }
     }
 }
 

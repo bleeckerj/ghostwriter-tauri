@@ -18,6 +18,7 @@ use tokio::task;
 use thiserror::Error;
 use keyring::Entry;
 use secrecy::{SecretString};
+use chrono::Utc;
 
 
 #[derive(Error, Debug)]
@@ -50,6 +51,25 @@ pub struct AppState {
     pub api_key: Arc<Mutex<String>>,
     pub preferences: Mutex<Preferences>, 
     pub app_handle: Option<AppHandle>,
+    pub rag_cache: Arc<Mutex<RagCache>>,
+}
+
+// Define a new struct for caching
+#[derive(Debug)]
+pub struct RagCache {
+    pub last_context: String,
+    pub similarity_documents: Vec<(i64, String, usize, String, f32)>,
+    pub last_updated: chrono::DateTime<Utc>,
+}
+
+impl RagCache {
+    pub fn new() -> Self {
+        Self {
+            last_context: String::new(),
+            similarity_documents: Vec::new(),
+            last_updated: Utc::now(),
+        }
+    }
 }
 
 impl AppState {
@@ -71,6 +91,7 @@ impl AppState {
             api_key: Arc::new(Mutex::new(String::new())),
             preferences: Mutex::new(Preferences::default()), // Start with default preferences
             app_handle: Some(app_handle),
+            rag_cache: Arc::new(Mutex::new(RagCache::new())),
         };
         Ok(app_state)
     }

@@ -75,6 +75,7 @@ let prefsGameTimeSecondsValue;
 
 let vibeGenreRadios;
 let selectedVibeGenre;
+let lastTriggerContext = "";
 
 let prefsAIProvider;
 let prefsAIModel;
@@ -736,23 +737,46 @@ function emanateNavigableNodeToEditor(content) {
           //() => true,
           () => {
             addSimpleLogEntry({
-              id: "",
+              id: Date.now(),
               timestamp: Date.now(),
-              message: 'Predicate check is '+ userHasTypedSinceLastCompletion + ' and editor text is: "' + editor.getText().trim() + '"',
+              message: 'Predicate check: userHasTypedSinceLastCompletion=' + userHasTypedSinceLastCompletion + 
+              ', text=' + (editor.getText().trim().length > 0),
               level: 'debug'
             });
             return userHasTypedSinceLastCompletion && editor.getText().trim()
           },
           3500,
           () => {
-            triggerCompletions();
-            userHasTypedSinceLastCompletion = false; // Reset after completion
             addSimpleLogEntry({
-              id: "",
+              id: Date.now(),
               timestamp: Date.now(),
-              message: 'Typing pause detected...',
+              message: '⚠️ Typing pause callback triggered, about to call triggerCompletions()',
               level: 'debug'
             });
+            
+            const currentContext = editor.getText();
+            // Determine if we need to force refresh based on context change
+            const forceRefresh = shouldForceRefresh(currentContext, lastTriggerContext);
+            lastTriggerContext = currentContext;
+            
+            try {
+              triggerCompletions();
+              addSimpleLogEntry({
+                id: Date.now(),
+                timestamp: Date.now(),
+                message: '✅ triggerCompletions() called successfully with forceRefresh=' + forceRefresh,
+                level: 'debug'
+              });
+            } catch (err) {
+              addSimpleLogEntry({
+                id: Date.now(),
+                timestamp: Date.now(),
+                message: '❌ Error in triggerCompletions(): ' + err.message,
+                level: 'error'
+              });
+            }
+            
+            userHasTypedSinceLastCompletion = false;
           }
         );
         
@@ -1747,6 +1771,7 @@ function emanateNavigableNodeToEditor(content) {
             
             // Re-enable the plugin after completion
             // const pluginKey = new PluginKey('inlineActionItem');
+            // console.log('Plugin Key:', pluginKey);
             // const tr = view.state.tr.setMeta(pluginKey, { disabled: false });
             // view.dispatch(tr);
             
@@ -2046,6 +2071,7 @@ function emanateNavigableNodeToEditor(content) {
   function setSelectedAIProvider(provider) {
     const radioButton = document.querySelector(`input[name="ai-provider"][value="${provider}"]`);
     if (radioButton) {
+      
       radioButton.checked = true;
     }
     // Hide all URL containers initially
@@ -2448,51 +2474,76 @@ function emanateNavigableNodeToEditor(content) {
   });
   
   
+  // Helper function to determine if we should force refresh
+  function shouldForceRefresh(currentContext, previousContext) {
+    addSimpleLogEntry({
+      id: Date.now(),
+      timestamp: Date.now(),
+      message: '🔄 Checking if we should force refresh based on context changes:<br/>currentContext='+currentContext+ '<br/>previousContext='+previousContext,
+      level: 'debug'
+    });
+    // First completion should always force refresh
+    if (!previousContext) return true;
+    
+    // Calculate how much the context has changed
+    const lengthDiff = Math.abs(currentContext.length - previousContext.length);
+    const percentChange = lengthDiff / Math.max(previousContext.length, 1);
+    
+    // Force refresh if:
+    // 1. Context changed by more than 20%
+    if (percentChange > 0.2) return true;
+    
+    // 2. Added or removed more than 100 characters
+    if (lengthDiff > 100) return true;
+    
+    // 3. The context is entirely different (optional, more expensive check)
+    // This uses a simple difference algorithm, but you could use more sophisticated methods
+    let differentChars = 0;
+    const minLength = Math.min(currentContext.length, previousContext.length);
+    for (let i = 0; i < minLength; i++) {
+      if (currentContext[i] !== previousContext[i]) {
+        differentChars++;
+      }
+    }
+    if (differentChars > minLength * 0.5) return true;
+    
+    // Otherwise, use cached results
+    return false;
+  }
   
-  
-  async function fetchStreamingCompletion(context, systemMessage, abortSignal) {
-    return new Promise((resolve, reject) => {
-      let completion = '';
-      let unlisten = null;
+  async function fetchStreamingCompletion(context, systemMessage, abortSignal, forceRefresh = false, onChunk = null) {
+    return new Promise(async (resolve, reject) => { // Added async here
+      // Create a buffer to accumulate the response
+      let fullResponse = '';
       
-      // Listen for streaming chunks
-      window.__TAURI__.event.listen('completion-chunk', (event) => {
-        if (abortSignal.aborted) {
-          if (unlisten) unlisten();
-          reject(new Error('aborted'));
-          return;
-        }
-        completion += event.payload;
-      }).then((unlistenFn) => {
-        unlisten = unlistenFn;
+      // Set up the event listener to receive chunks
+      // Fixed: await the Promise to get the actual unlisten function
+      const unlisten = await window.__TAURI__.event.listen('completion-chunk', (event) => {
+        const chunk = event.payload;
+        fullResponse += chunk;
+        // Call your callback with each chunk
+        if (onChunk) onChunk(chunk);
       });
       
-      window.__TAURI__.core.invoke('streaming_completion_from_context', {
-        context,
-        systemMessage,
-      }).then(() => {
-        if (unlisten) unlisten();
-        resolve(completion);
-      }).catch((err) => {
-        if (unlisten) unlisten();
-        reject(err);
+      // Make the streaming request
+      invoke('streaming_completion_from_context', {
+        context: context,
+        systemMessage: systemMessage,
+        forceRefresh: forceRefresh
+      })
+      .then(() => {
+        unlisten(); // Now this is a function
+        resolve(fullResponse);
+      })
+      .catch((error) => {
+        unlisten(); // Now this is a function
+        reject(error);
       });
       
+      // Handle abort signal
       abortSignal.addEventListener('abort', () => {
-        if (unlisten) unlisten();
-        // Only clear ghostStartPos if no ghost text is visible
-        const ext = editor.extensionManager.extensions.find(ext => ext.name === 'ghostCompletionDecoration');
-        const ghostVisible = ext && ext.options.suggestion && ext.options.suggestion.length > 0;
-        
-        completions = [];
-        if (!ghostVisible) {
-          setGhostSuggestion('');
-          currentCompletionIndex = 0;
-          ghostStartPos = null;
-        }
-        
+        if (unlisten) unlisten(); // Now this is a function
         reject(new Error('aborted'));
-        
       });
     });
   }
@@ -2506,60 +2557,139 @@ function emanateNavigableNodeToEditor(content) {
     }
   }
   
-  async function* loadCompletionsStream(n = 3, abortSignal) {
+  async function* loadCompletionsStream(n = 3, abortSignal, forceRefresh = false) {
+    addSimpleLogEntry({
+      id: Date.now(),
+      timestamp: Date.now(),
+      message: '🔄 loadCompletionsStream started, requesting ' + n + ' completions, forceRefresh=' + forceRefresh,
+      level: 'info'
+    });
+    
     for (let i = 0; i < n; i++) {
+      if (abortSignal.aborted) {
+        addSimpleLogEntry({
+          id: Date.now(),
+          timestamp: Date.now(),
+          message: '⚠️ Aborting loadCompletionsStream at iteration ' + i,
+          level: 'warn'
+        });
+        break;
+      }
+      
       const context = editor.getText();
       const systemMessage = prefsMainPromptTextArea.value;
-      const result = await fetchStreamingCompletion(context, systemMessage, abortSignal);
-      if (abortSignal.aborted) break;
-      yield result;
+      
+      addSimpleLogEntry({
+        id: Date.now(),
+        timestamp: Date.now(),
+        message: '🔄 Fetching completion ' + (i+1) + ' of ' + n,
+        level: 'info'
+      });
+      
+      try {
+        const result = await fetchStreamingCompletion(context, systemMessage, abortSignal, forceRefresh);
+        addSimpleLogEntry({
+          id: Date.now(),
+          timestamp: Date.now(),
+          message: '✅ Completion ' + (i+1) + ' received successfully',
+          level: 'info'
+        });
+        
+        if (abortSignal.aborted) break;
+        yield result;
+      } catch (err) {
+        addSimpleLogEntry({
+          id: Date.now(),
+          timestamp: Date.now(),
+          message: '❌ Error fetching completion ' + (i+1) + ': ' + err.message,
+          level: 'error'
+        });
+        
+        if (err.message !== 'aborted') {
+          throw err; // Re-throw non-abort errors
+        }
+      }
     }
   }
   
-  
-  async function loadCompletions(n = 3, loadMore = false) {
-    if (loadMore == false) {
+  // 2. Add more logging to triggerCompletions function
+  async function triggerCompletions() {
+    
+    updateVibeStatus('thinking', false);
+    
+    if (isRetrievingCompletions) {
+      addSimpleLogEntry({
+        id: Date.now(),
+        timestamp: Date.now(),
+        message: '⚠️ Skipping triggerCompletions because isRetrievingCompletions is true',
+        level: 'warn'
+      });
+      return;
+    }
+    
+    isRetrievingCompletions = true;
+    userHasTypedSinceLastCompletion = false;
+    completionAbortController = new AbortController();
+    completions = [];
+    currentCompletionIndex = 0;
+    
+    try {
+      // addSimpleLogEntry({
+      //   id: Date.now(),
+      //   timestamp: Date.now(),
+      //   message: '🔄 About to call loadCompletionsStream',
+      //   level: 'debug'
+      // });
+      
+      // Determine forceRefresh here, right before fetching
+      const currentContext = editor.getText();
+      const forceRefresh = shouldForceRefresh(currentContext, lastTriggerContext);
+      lastTriggerContext = currentContext;
+      
+      addSimpleLogEntry({
+        id: Date.now(),
+        timestamp: Date.now(),
+        message: '🔄 Force refresh determined: ' + forceRefresh
+        + '<br/>Current context length: ' + currentContext.length
+        + '<br/>Last trigger context length: ' + (lastTriggerContext ? lastTriggerContext.length : 'N/A'),
+        level: 'debug'
+      });
+
+      for await (const result of loadCompletionsStream(3, completionAbortController.signal, forceRefresh)) {
+        completions.push(result);
+        updateGhostCompletion();
+        addSimpleLogEntry({
+          id: Date.now(),
+          timestamp: Date.now(),
+          message: '✅ Received completion: ' + result.slice(0, 30) + '...',
+          level: 'info'
+        });
+      }
+    } catch (err) {
+      addSimpleLogEntry({
+        id: Date.now(),
+        timestamp: Date.now(),
+        message: '❌ Error in loadCompletionsStream: ' + err.message,
+        level: 'error'
+      });
+      
       completions = [];
-      currentCompletionIndex = 0; // Only reset when starting fresh
+      setGhostSuggestion('');
+      currentCompletionIndex = 0;
+      ghostStartPos = null;
+    } finally {
+      isRetrievingCompletions = false;
+      completionAbortController = null;
+      
+      addSimpleLogEntry({
+        id: Date.now(),
+        timestamp: Date.now(),
+        message: '✅ Completed triggerCompletions execution',
+        level: 'info'
+      });
     }
     
-    const dummyAbortSignal = { aborted: false, addEventListener: () => {} };
-    
-    for (let i = 0; i < n; i++) {
-      // Use your editor's current text and a system message
-      const context = editor.getText();
-      const systemMessage = prefsMainPromptTextArea.value;
-      const result = await fetchStreamingCompletion(context, systemMessage, dummyAbortSignal);
-      completions.push(result);
-    }
-    //loadingMore = false;
-    addSimpleLogEntry({
-      id: Date.now(),
-      timestamp: Date.now(),
-      message: 'Showing current completion at index: ' + (completions[currentCompletionIndex] || '(Empty)'),      level: 'debug'
-    });
-    return completions;
-  }
-  
-  // Show the current ghost completion
-  function updateGhostCompletion() {
-    //console.log('Completions is:', completions);
-    addSimpleLogEntry({
-      id: Date.now(),
-      timestamp: Date.now(),
-      message: 'Updating ghost completion with completions: ' + completions.join(', '),
-      level: 'debug'
-    });
-    
-    //console.log('Current completion index:', currentCompletionIndex);
-    addSimpleLogEntry({
-      id: Date.now(),
-      timestamp: Date.now(),  
-      message: 'Showing ghost completion at index: ' + currentCompletionIndex + ' - ' + (completions[currentCompletionIndex] || '(Empty)'),
-      level: 'debug'
-    });
-    const suggestion = completions[currentCompletionIndex] || ''
-    showGhostCompletion(editor, suggestion)
+    updateVibeStatus('writing', false);
   }
   
   
@@ -2589,40 +2719,6 @@ function emanateNavigableNodeToEditor(content) {
     editor.commands.focus();
   }
   
-  async function triggerCompletions() {
-    updateVibeStatus('thinking', false);
-    if (isRetrievingCompletions) return;
-    isRetrievingCompletions = true;
-    userHasTypedSinceLastCompletion = false;
-    completionAbortController = new AbortController();
-    completions = [];
-    currentCompletionIndex = 0;
-    try {
-      for await (const result of loadCompletionsStream(3, completionAbortController.signal)) {
-        completions.push(result);
-        updateGhostCompletion();
-        addSimpleLogEntry({
-          id: Date.now(),
-          timestamp: Date.now(),
-          message: 'Received async completion:<br/>' + result,
-          level: 'debug'
-        });
-        
-      }
-    } catch (err) {
-      // If aborted, just exit
-      completions = [];
-      setGhostSuggestion('');
-      currentCompletionIndex = 0;
-      ghostStartPos = null;
-    } finally {
-      isRetrievingCompletions = false;
-      completionAbortController = null;
-    }
-    updateVibeStatus('writing', false);
-  }
-  
-  
   
   function showGhostCompletion(editor, suggestion) {
     updateVibeStatus('emanating');
@@ -2639,6 +2735,11 @@ function emanateNavigableNodeToEditor(content) {
         updateVibeStatus('writing');
       }
     }
+  }
+  
+  function updateGhostCompletion() {
+    const suggestion = completions[currentCompletionIndex] || '';
+    showGhostCompletion(editor, suggestion);
   }
   
   window.addEventListener("DOMContentLoaded", async () => {
@@ -2743,8 +2844,3 @@ function emanateNavigableNodeToEditor(content) {
       }
     });
   });
-  
-  
-  
-  
-  
