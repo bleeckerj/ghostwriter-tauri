@@ -253,7 +253,7 @@ async fn streaming_completion_from_context(
     
     let preferences = state.preferences.lock().await;
     let mut new_logger = NewLogger::new(app_handle.clone());
-
+println!("Starting streaming completion from context with force_refresh: {}", force_refresh.unwrap_or(false));
     new_logger.simple_log_message(
         "Starting streaming completion from context with force_refresh:".to_string() + &force_refresh.unwrap_or(false).to_string(), 
         "streaming".to_string(),

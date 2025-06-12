@@ -756,17 +756,17 @@ function emanateNavigableNodeToEditor(content) {
             
             const currentContext = editor.getText();
             // Determine if we need to force refresh based on context change
-            const forceRefresh = shouldForceRefresh(currentContext, lastTriggerContext);
-            lastTriggerContext = currentContext;
+            //const forceRefresh = shouldForceRefresh(currentContext, lastTriggerContext);
+            //lastTriggerContext = currentContext;
             
             try {
               triggerCompletions();
-              addSimpleLogEntry({
-                id: Date.now(),
-                timestamp: Date.now(),
-                message: '✅ triggerCompletions() called successfully with forceRefresh=' + forceRefresh,
-                level: 'debug'
-              });
+              // addSimpleLogEntry({
+              //   id: Date.now(),
+              //   timestamp: Date.now(),
+              //   message: '✅ triggerCompletions() called successfully with forceRefresh=' + forceRefresh,
+              //   level: 'debug'
+              // });
             } catch (err) {
               addSimpleLogEntry({
                 id: Date.now(),
@@ -790,7 +790,14 @@ function emanateNavigableNodeToEditor(content) {
     });
     
     editor.view.dom.addEventListener('keydown', (e) => {
-      if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1 && !e.isComposing) {
+      if (
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey &&
+        e.key.length === 1 &&
+        !e.isComposing &&
+        !/^\s$/.test(e.key) // <-- Only set flag if NOT whitespace
+      ) {
         userHasTypedSinceLastCompletion = true;
         
         // Get ghost visibility status first
@@ -2482,8 +2489,17 @@ function emanateNavigableNodeToEditor(content) {
       message: '🔄 Checking if we should force refresh based on context changes:<br/>currentContext='+currentContext+ '<br/>previousContext='+previousContext,
       level: 'debug'
     });
+    
     // First completion should always force refresh
-    if (!previousContext) return true;
+    if (!previousContext) {
+      addSimpleLogEntry({
+        id: Date.now(),
+        timestamp: Date.now(),
+        message: '🟢 Force refresh: No previous context (first completion).',
+        level: 'debug'
+      });
+      return true;
+    }
     
     // Calculate how much the context has changed
     const lengthDiff = Math.abs(currentContext.length - previousContext.length);
@@ -2491,13 +2507,28 @@ function emanateNavigableNodeToEditor(content) {
     
     // Force refresh if:
     // 1. Context changed by more than 20%
-    if (percentChange > 0.2) return true;
+    if (percentChange > 0.2) {
+      addSimpleLogEntry({
+        id: Date.now(),
+        timestamp: Date.now(),
+        message: `🟢 Force refresh: Context changed by more than 20% (${(percentChange*100).toFixed(1)}%).`,
+        level: 'debug'
+      });
+      return true;
+    }
     
     // 2. Added or removed more than 100 characters
-    if (lengthDiff > 100) return true;
+    if (lengthDiff > 100) {
+      addSimpleLogEntry({
+        id: Date.now(),
+        timestamp: Date.now(),
+        message: `🟢 Force refresh: Length difference is more than 100 (${lengthDiff}).`,
+        level: 'debug'
+      });
+      return true;
+    }
     
     // 3. The context is entirely different (optional, more expensive check)
-    // This uses a simple difference algorithm, but you could use more sophisticated methods
     let differentChars = 0;
     const minLength = Math.min(currentContext.length, previousContext.length);
     for (let i = 0; i < minLength; i++) {
@@ -2505,9 +2536,23 @@ function emanateNavigableNodeToEditor(content) {
         differentChars++;
       }
     }
-    if (differentChars > minLength * 0.5) return true;
+    if (differentChars > minLength * 0.5) {
+      addSimpleLogEntry({
+        id: Date.now(),
+        timestamp: Date.now(),
+        message: `🟢 Force refresh: More than 50% of characters are different (${differentChars} of ${minLength}).`,
+        level: 'debug'
+      });
+      return true;
+    }
     
     // Otherwise, use cached results
+    addSimpleLogEntry({
+      id: Date.now(),
+      timestamp: Date.now(),
+      message: '🔵 No force refresh: Using cached results.',
+      level: 'debug'
+    });
     return false;
   }
   
@@ -2557,11 +2602,11 @@ function emanateNavigableNodeToEditor(content) {
     }
   }
   
-  async function* loadCompletionsStream(n = 3, abortSignal, forceRefresh = false) {
+  async function* loadCompletionsStream(n = 3, abortSignal) {
     addSimpleLogEntry({
       id: Date.now(),
       timestamp: Date.now(),
-      message: '🔄 loadCompletionsStream started, requesting ' + n + ' completions, forceRefresh=' + forceRefresh,
+      message: '🔄 loadCompletionsStream started, requesting ' + n + ' completions',
       level: 'info'
     });
     
@@ -2576,23 +2621,27 @@ function emanateNavigableNodeToEditor(content) {
         break;
       }
       
-      const context = editor.getText();
+      const currentContext = editor.getText();
       const systemMessage = prefsMainPromptTextArea.value;
       
       addSimpleLogEntry({
         id: Date.now(),
         timestamp: Date.now(),
         message: '🔄 Fetching completion ' + (i+1) + ' of ' + n,
-        level: 'info'
+        level: 'debug'
       });
       
       try {
-        const result = await fetchStreamingCompletion(context, systemMessage, abortSignal, forceRefresh);
+              // const currentContext = editor.getText();
+      const forceRefresh = shouldForceRefresh(currentContext, lastTriggerContext);
+      lastTriggerContext = currentContext;
+
+        const result = await fetchStreamingCompletion(currentContext, systemMessage, abortSignal, forceRefresh);
         addSimpleLogEntry({
           id: Date.now(),
           timestamp: Date.now(),
-          message: '✅ Completion ' + (i+1) + ' received successfully',
-          level: 'info'
+          message: '✅ Completion ' + (i+1) + ' received successfully with forceRefresh=' + forceRefresh,
+          level: 'debug'
         });
         
         if (abortSignal.aborted) break;
@@ -2642,28 +2691,28 @@ function emanateNavigableNodeToEditor(content) {
       // });
       
       // Determine forceRefresh here, right before fetching
-      const currentContext = editor.getText();
-      const forceRefresh = shouldForceRefresh(currentContext, lastTriggerContext);
-      lastTriggerContext = currentContext;
+      // const currentContext = editor.getText();
+      // const forceRefresh = shouldForceRefresh(currentContext, lastTriggerContext);
+      // lastTriggerContext = currentContext;
       
-      addSimpleLogEntry({
-        id: Date.now(),
-        timestamp: Date.now(),
-        message: '🔄 Force refresh determined: ' + forceRefresh
-        + '<br/>Current context length: ' + currentContext.length
-        + '<br/>Last trigger context length: ' + (lastTriggerContext ? lastTriggerContext.length : 'N/A'),
-        level: 'debug'
-      });
-
-      for await (const result of loadCompletionsStream(3, completionAbortController.signal, forceRefresh)) {
+      // addSimpleLogEntry({
+      //   id: Date.now(),
+      //   timestamp: Date.now(),
+      //   message: '🔄 Force refresh determined: ' + forceRefresh
+      //   + '<br/>Current context length: ' + currentContext.length
+      //   + '<br/>Last trigger context length: ' + (lastTriggerContext ? lastTriggerContext.length : 'N/A'),
+      //   level: 'debug'
+      // });
+      
+      for await (const result of loadCompletionsStream(3, completionAbortController.signal)) {
         completions.push(result);
         updateGhostCompletion();
-        addSimpleLogEntry({
-          id: Date.now(),
-          timestamp: Date.now(),
-          message: '✅ Received completion: ' + result.slice(0, 30) + '...',
-          level: 'info'
-        });
+        // addSimpleLogEntry({
+        //   id: Date.now(),
+        //   timestamp: Date.now(),
+        //   message: '✅ Received completion: ' + result.slice(0, 30) + '...',
+        //   level: 'debug'
+        // });
       }
     } catch (err) {
       addSimpleLogEntry({
@@ -2685,7 +2734,7 @@ function emanateNavigableNodeToEditor(content) {
         id: Date.now(),
         timestamp: Date.now(),
         message: '✅ Completed triggerCompletions execution',
-        level: 'info'
+        level: 'debug'
       });
     }
     
