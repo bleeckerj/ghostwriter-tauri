@@ -246,12 +246,12 @@ async fn streaming_completion_from_context(
     context: String,
     system_message: String,
     force_refresh: Option<bool>,
-    with_rag: Option<bool>,
+    with_rag_for_streaming: Option<bool>,
 ) -> Result<(), String> {
     // Start overall timing
-    
+    // WHERE'S TEMPERATURE AND SUCH...way down below after RAG
     let start_time = std::time::Instant::now();
-    let with_rag = with_rag.unwrap_or(true);
+    let with_rag = with_rag_for_streaming.unwrap_or(true);
 
     let preferences = state.preferences.lock().await;
     let mut new_logger = NewLogger::new(app_handle.clone());
@@ -406,6 +406,12 @@ println!("Starting streaming completion from context with force_refresh: {}", fo
         max_tokens: Some(preferences.max_output_tokens as u32),
         stream: true,
     };
+
+    new_logger.simple_log_message(
+        format!("Chat model is {}<br/>Chat request is {:?}", chat_request.model, chat_request),
+        "streaming".to_string(),
+        "debug".to_string()
+    );
     
     let prompt_creation_duration = prompt_creation_start.elapsed();
     new_logger.simple_log_message(

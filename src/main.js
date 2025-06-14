@@ -171,7 +171,7 @@ function removeStandByIndicator() {
 async function toggleVibeMode(enabled, backgroundClass = 'bg-blue-200') {
   try {
     if (enabled) {
-      let vibemButton = document.querySelector("#vibem-inline-action-item");
+      let vibemButton = document.querySelector("#vibe-mode-btn");
       
       // Get current text from editor
       const currentText = editor.getText().trim();
@@ -604,7 +604,9 @@ function emanateNavigableNodeToEditor(content) {
     initializeFontSizeFromCSS();
     
     // Listen for font size change events from Tauri
-    listen('font-size-change', handleFontSizeChangeEvent);    // Create the vibe status indicator element
+    listen('font-size-change', handleFontSizeChangeEvent);    
+    
+    // Create the vibe status indicator element
     
     //createVibeStatusIndicator();
     // Get all vibe genre radio buttons
@@ -663,23 +665,12 @@ function emanateNavigableNodeToEditor(content) {
       // Do something with the node
     })
     
-    let miscTestButton = document.querySelector("#misc-test-btn");
-    miscTestButton.addEventListener("click", () => {
-      insertDynamicTextWithTrailingSpace(editor, "This is AI-generated text", {
-        raw: {
-          source: 'AI model',
-          timestamp: Date.now()
-        }
-      });
-    });
-    
-    
     openaiApiKeyEl = document.querySelector("#openai-api-key");
     let actionItem = editor.extensionManager.extensions.find(extension => extension.name === 'inlineActionItem');
     let nudgeButton = document.querySelector("#nudge-inline-action-item");
-    let vibemButton = document.querySelector("#vibem-inline-action-item");
+    let vibemButton = document.querySelector("#vibe-mode-btn");
     let streamingButton = document.querySelector("#streaming-mode-btn");
-    
+    streamingNoRagButton = document.querySelector("#streaming-no-rag-mode-btn");
     /**
     * STREAMING MODE & TYPING PAUSE DETECTION
     *
@@ -696,6 +687,20 @@ function emanateNavigableNodeToEditor(content) {
     * This ensures completions are only triggered after a pause in typing, and only when streaming mode is active.
     */
     streamingButton.classList.add("enabled");
+    
+    // This button toggles the streaming mode button on as well
+    // as indicating that we do not want to use RAG (retrieval-augmented generation)
+    // for streaming completions.
+    streamingNoRagButton.classList.add("enabled");
+    streamingNoRagButton.addEventListener("click", async () => {
+      if (streamingNoRagButton.classList.contains("button-in")) {
+        streamingNoRagButton.classList.remove("button-in");
+      } else {
+        streamingNoRagButton.classList.add("button-in");
+        //streamingButton.classList.add("button-in");
+      }
+    });
+    
     streamingButton.addEventListener("click", async () => {
       // Check if button is currently enabled
       // If so, turn streaming mode OFF
@@ -732,7 +737,6 @@ function emanateNavigableNodeToEditor(content) {
           message: 'Streaming mode enabled.',
           level: 'debug'
         });
-        console.log("userHasTypedSinceLastCompletion: ", userHasTypedSinceLastCompletion);
         enableTypingPauseDetection(
           //() => true,
           () => {
@@ -1844,7 +1848,7 @@ function emanateNavigableNodeToEditor(content) {
           event.preventDefault();
           event.stopPropagation();
           
-          console.log('Clicked on dynamic text mark:', markAttrs);
+          //console.log('Clicked on dynamic text mark:', markAttrs);
           
           // Example: Show metadata about the mark
           if (markAttrs.raw) {
@@ -2556,14 +2560,30 @@ function emanateNavigableNodeToEditor(content) {
     return false;
   }
   
-  async function fetchStreamingCompletion(context, systemMessage, abortSignal, forceRefresh = false, onChunk = null) {
+  /**
+  * Fetches a streaming completion from the backend using the current context and system message.
+  *
+  * @param {string} context - The user input or editor context to send to the backend.
+  * @param {string} systemMessage - The system prompt or instructions for the LLM.
+  * @param {AbortSignal} abortSignal - Signal to allow cancellation of the streaming request.
+  * @param {boolean} [forceRefresh=false] - If true, forces a new RAG search instead of using cached results.
+  * @param {boolean} withRagForStreaming - If true, enables retrieval-augmented generation (RAG) for the completion; if false, disables RAG.
+  * @param {function} [onChunk=null] - Optional callback function that is called with each streamed chunk of text as it arrives.
+  *                                    Use this to process or display partial completions in real time.
+  * @returns {Promise<string>} - Resolves with the full concatenated completion text when streaming is finished.
+  *
+  * This function sets up an event listener for 'completion-chunk' events from the backend,
+  * invokes the streaming completion command, and accumulates the streamed chunks.
+  * The listener is cleaned up when the request completes or is aborted.
+  */
+  async function fetchStreamingCompletion(context, systemMessage, abortSignal, forceRefresh = false, withRagForStreaming, onChunk = null) {
     return new Promise(async (resolve, reject) => { // Added async here
       // Create a buffer to accumulate the response
       let fullResponse = '';
       
       // Set up the event listener to receive chunks
       // Fixed: await the Promise to get the actual unlisten function
-      const unlisten = await window.__TAURI__.event.listen('completion-chunk', (event) => {
+      const unlisten = await listen('completion-chunk', (event) => {
         const chunk = event.payload;
         fullResponse += chunk;
         // Call your callback with each chunk
@@ -2574,7 +2594,8 @@ function emanateNavigableNodeToEditor(content) {
       invoke('streaming_completion_from_context', {
         context: context,
         systemMessage: systemMessage,
-        forceRefresh: forceRefresh
+        forceRefresh: forceRefresh,
+        withRagForStreaming: withRagForStreaming
       })
       .then(() => {
         unlisten(); // Now this is a function
@@ -2602,7 +2623,7 @@ function emanateNavigableNodeToEditor(content) {
     }
   }
   
-  async function* loadCompletionsStream(n = 3, abortSignal) {
+  async function* loadCompletionsStream(n = 3, withRagForStreaming = true, abortSignal) {
     addSimpleLogEntry({
       id: Date.now(),
       timestamp: Date.now(),
@@ -2632,11 +2653,11 @@ function emanateNavigableNodeToEditor(content) {
       });
       
       try {
-              // const currentContext = editor.getText();
-      const forceRefresh = shouldForceRefresh(currentContext, lastTriggerContext);
-      lastTriggerContext = currentContext;
-
-        const result = await fetchStreamingCompletion(currentContext, systemMessage, abortSignal, forceRefresh);
+        // const currentContext = editor.getText();
+        const forceRefresh = shouldForceRefresh(currentContext, lastTriggerContext);
+        lastTriggerContext = currentContext;
+        
+        const result = await fetchStreamingCompletion(currentContext, systemMessage, abortSignal, forceRefresh, withRagForStreaming);
         addSimpleLogEntry({
           id: Date.now(),
           timestamp: Date.now(),
@@ -2661,6 +2682,26 @@ function emanateNavigableNodeToEditor(content) {
     }
   }
   
+  // Add this near your other completion helpers
+  async function loadCompletions(n = 3, withRagForStreaming = true, abortSignal = { aborted: false, addEventListener: () => {} }) {
+    // Only reset completions if not loading more
+    completions = [];
+    currentCompletionIndex = 0;
+    
+    for await (const result of loadCompletionsStream(n, withRagForStreaming, abortSignal)) {
+      completions.push(result);
+    }
+    
+    addSimpleLogEntry({
+      id: Date.now(),
+      timestamp: Date.now(),
+      message: 'Showing current completion at index: ' + (completions[currentCompletionIndex] || '(Empty)'),
+      level: 'debug'
+    });
+    
+    return completions;
+  }
+  
   // 2. Add more logging to triggerCompletions function
   async function triggerCompletions() {
     
@@ -2681,7 +2722,8 @@ function emanateNavigableNodeToEditor(content) {
     completionAbortController = new AbortController();
     completions = [];
     currentCompletionIndex = 0;
-    
+    //let streamingNoRagButton = document.querySelector("#streaming-no-rag-mode-btn");
+    const withRagForStreaming = streamingNoRagButton.classList.contains("button-in") ? false : true;
     try {
       // addSimpleLogEntry({
       //   id: Date.now(),
@@ -2704,7 +2746,7 @@ function emanateNavigableNodeToEditor(content) {
       //   level: 'debug'
       // });
       
-      for await (const result of loadCompletionsStream(3, completionAbortController.signal)) {
+      for await (const result of loadCompletionsStream(3, withRagForStreaming,completionAbortController.signal)) {
         completions.push(result);
         updateGhostCompletion();
         // addSimpleLogEntry({
@@ -2790,8 +2832,10 @@ function emanateNavigableNodeToEditor(content) {
     const suggestion = completions[currentCompletionIndex] || '';
     showGhostCompletion(editor, suggestion);
   }
+  let streamingNoRagButton; // Declare at the top
   
   window.addEventListener("DOMContentLoaded", async () => {
+    streamingNoRagButton = document.querySelector("#streaming-no-rag-mode-btn");
     
     // Cycle completions
     editor.view.dom.addEventListener('keydown', async (e) => {
@@ -2832,12 +2876,12 @@ function emanateNavigableNodeToEditor(content) {
       const docText = editor.getText();
       
       if (ghostStartPos === null) {
-        addSimpleLogEntry({
-          id: Date.now(),
-          timestamp: Date.now(),
-          message: 'Ghost start position is null, skipping ghost suggestion update.',
-          level: 'debug'
-        });
+        // addSimpleLogEntry({
+        //   id: Date.now(),
+        //   timestamp: Date.now(),
+        //   message: 'Ghost start position is null, skipping ghost suggestion update.',
+        //   level: 'debug'
+        // });
         return;
       }
       
