@@ -312,6 +312,12 @@ select#prefs-model-name option {
   /* transition: transform 180ms ease-in-out, box-shadow 100ms ease-in-out, background-color 100ms ease-in-out, border-color 100ms ease-in-out; Add this line */
 }
 
+.diagnostics-area-button.button-in.button-overline {
+  @apply bg-green-500;
+  text-decoration: overline;
+}
+
+
 .diagnostics-area-button.button-inactive {
   @apply shadow-[inset_1px_1px_0px_0px_#000000];
   @apply translate-x-[0.25px] translate-y-[0.25px] scale-[0.99];
@@ -322,6 +328,8 @@ select#prefs-model-name option {
   @apply hover:shadow-[inset_2px_2px_0px_0px_#000000];
   transition: transform 180ms ease-in-out, box-shadow 280ms ease-in-out, background-color 100ms ease-in-out, border-color 100ms ease-in-out;
 }
+
+
 
 .diagnostics-area-button.button-out {
   @apply font-['ESKlarheitKurrentMono'];

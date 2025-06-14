@@ -670,7 +670,7 @@ function emanateNavigableNodeToEditor(content) {
     let nudgeButton = document.querySelector("#nudge-inline-action-item");
     let vibemButton = document.querySelector("#vibe-mode-btn");
     let streamingButton = document.querySelector("#streaming-mode-btn");
-    streamingNoRagButton = document.querySelector("#streaming-no-rag-mode-btn");
+    //streamingNoRagButton = document.querySelector("#streaming-no-rag-mode-btn");
     /**
     * STREAMING MODE & TYPING PAUSE DETECTION
     *
@@ -691,23 +691,37 @@ function emanateNavigableNodeToEditor(content) {
     // This button toggles the streaming mode button on as well
     // as indicating that we do not want to use RAG (retrieval-augmented generation)
     // for streaming completions.
-    streamingNoRagButton.classList.add("enabled");
-    streamingNoRagButton.addEventListener("click", async () => {
-      if (streamingNoRagButton.classList.contains("button-in")) {
-        streamingNoRagButton.classList.remove("button-in");
-      } else {
-        streamingNoRagButton.classList.add("button-in");
-        //streamingButton.classList.add("button-in");
-      }
-    });
+    // streamingNoRagButton.classList.add("enabled");
+    // streamingNoRagButton.addEventListener("click", async () => {
+      //   if (streamingNoRagButton.classList.contains("button-in")) {
+    //     streamingNoRagButton.classList.remove("button-in");
+    //   } else {
+    //     streamingNoRagButton.classList.add("button-in");
+    //     //streamingButton.classList.add("button-in");
+    //   }
+    // });
+    
+    
     
     streamingButton.addEventListener("click", async () => {
+      if (streamingButton.classList.contains("button-in") && !streamingButton.classList.contains("button-overline")) {
+        // State: button-in → Next: button-in + button-overline
+        streamingButton.classList.add("button-overline");
+      } else if (streamingButton.classList.contains("button-in") && streamingButton.classList.contains("button-overline")) {
+        // State: button-in + button-overline → Next: button-out
+        streamingButton.classList.remove("button-in", "button-overline");
+        //streamingButton.classList.add("enabled");
+      } else if (!streamingButton.classList.contains("button-in")) {
+        // State: nothing → Next: button-in
+        //streamingButton.classList.remove("button-out");
+        streamingButton.classList.add("button-in");
+      } else {
+        // Default: not in any state → Next: button-in
+        streamingButton.classList.add("button-in");
+      }
       // Check if button is currently enabled
       // If so, turn streaming mode OFF
-      if (streamingButton.classList.contains("button-in")) {
-        streamingButton.classList.remove("button-in");
-        streamingButton.classList.add("enabled");
-        
+      if (!streamingButton.classList.contains("button-in")) {
         // Disable typing pause detection
         disableTypingPauseDetection();
         
@@ -730,7 +744,7 @@ function emanateNavigableNodeToEditor(content) {
         });
       } else {
         // otherwise streaming mode ON
-        streamingButton.classList.add("button-in");
+        //streamingButton.classList.add("button-in");
         addSimpleLogEntry({
           id: "",
           timestamp: Date.now(),
@@ -841,6 +855,11 @@ function emanateNavigableNodeToEditor(content) {
         ghostStartPos = null;
         userHasTypedSinceLastCompletion = false;
         updateVibeStatus('writing');
+        if (completionAbortController) {
+          completionAbortController.abort();
+          isRetrievingCompletions = false;
+          completionAbortController = null;
+        }
         e.preventDefault();
       }
     });
@@ -2723,7 +2742,7 @@ function emanateNavigableNodeToEditor(content) {
     completions = [];
     currentCompletionIndex = 0;
     //let streamingNoRagButton = document.querySelector("#streaming-no-rag-mode-btn");
-    const withRagForStreaming = streamingNoRagButton.classList.contains("button-in") ? false : true;
+    const withRagForStreaming = document.querySelector("#streaming-mode-btn").classList.contains("button-overline") ? false : true;
     try {
       // addSimpleLogEntry({
       //   id: Date.now(),
@@ -2832,10 +2851,10 @@ function emanateNavigableNodeToEditor(content) {
     const suggestion = completions[currentCompletionIndex] || '';
     showGhostCompletion(editor, suggestion);
   }
-  let streamingNoRagButton; // Declare at the top
+  //let streamingNoRagButton; // Declare at the top
   
   window.addEventListener("DOMContentLoaded", async () => {
-    streamingNoRagButton = document.querySelector("#streaming-no-rag-mode-btn");
+    //streamingNoRagButton = document.querySelector("#streaming-no-rag-mode-btn");
     
     // Cycle completions
     editor.view.dom.addEventListener('keydown', async (e) => {
