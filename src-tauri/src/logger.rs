@@ -67,7 +67,9 @@ impl Logger {
         .read(true)
         .write(true)
         .open(&log_path)?;
-        
+        let msg: String = format!("Log file is at {:?}", log_path);
+        let new_logger = NewLogger::new(app_handle.clone());  
+        new_logger.simple_log_message(msg, "".to_string(), "info".to_string());
         // Initialize empty array if file is empty
         let metadata = file.metadata()?;
         if metadata.len() == 0 {
@@ -132,7 +134,7 @@ impl Logger {
         
         // Read existing entries
         log_file.seek(SeekFrom::Start(0))?;
-        let msg = format!("Log file is at {:?}", self.log_path);
+        let msg: String = format!("Log file is at {:?}", self.log_path);
         println!("{}", msg);
         log::debug!("{}", msg);
         let app_handle_clone = self.app_handle.clone();

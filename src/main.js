@@ -74,11 +74,9 @@ let prefsGameTimeSeconds;
 let prefsGameTimeSecondsValue;
 
 let vibeGenreRadios;
-let selectedVibeGenre;
 let lastTriggerContext = "";
 
 let prefsAIProvider;
-let prefsAIModel;
 let prefsOllamaUrl;
 let prefsLMStudioUrl;
 
@@ -112,15 +110,17 @@ function updateVibeStatus(status, withStandbyIndicator = true) {
     vibeStatusIndicator.textContent = '🧠';
     vibeStatusIndicator.classList.remove('hidden');
     vibeStatusIndicator.classList.remove('thinking-mode');
-    removeStandByIndicator(); // Remove the standby text when done
-    break;
+    setTimeout(() => {
+      removeStandByIndicator(); // Remove the standby text after 1 second
+    }, 1000);    break;
     case 'emanating':
     emanationInProgress = true; // Set the flag when emanating
     vibeStatusIndicator.textContent = '🤖';
     vibeStatusIndicator.classList.remove('hidden');
     vibeStatusIndicator.classList.remove('thinking-mode');
-    removeStandByIndicator(); // Remove the standby text when done
-    break;
+    setTimeout(() => {
+      removeStandByIndicator(); // Remove the standby text after 1 second
+    }, 1000);    break;
     case 'thinking':
     emanationInProgress = true; // Getting ready to emanate..
     vibeStatusIndicator.textContent = '🤔';
@@ -132,7 +132,9 @@ function updateVibeStatus(status, withStandbyIndicator = true) {
     break;
     case 'off':
     vibeStatusIndicator.classList.add('hidden');
-    removeStandByIndicator(); // Remove the standby text when done
+    setTimeout(() => {
+      removeStandByIndicator(); // Remove the standby text after 1 second
+    }, 1000);
     break;
   }
 }
@@ -147,7 +149,7 @@ function addStandByIndicator() {
   const standby = document.createElement('div');
   standby.id = 'standby-indicator';
   standby.className = 'standby-indicator';
-  standby.textContent = 'CONJURING...';
+  standby.textContent = 'CONJURING';
   
   // Find the scroll area and append the indicator
   const scrollArea = document.querySelector('.scroll-area');
@@ -648,9 +650,12 @@ function emanateNavigableNodeToEditor(content) {
       loadModels(); 
     });
     
-    
+    async function refreshModelsAndAssign() {
+      await updatePreferences();
+      await passSelectedModelToBackend();
+    }
+    refreshModelsBtn.addEventListener('click', refreshModelsAndAssign);
     // Reload models when the refresh button is clicked
-    refreshModelsBtn.addEventListener('click', passSelectedModelToBackend);
     
     invoke("set_logger_app_data_path", {}).then((res) => {
       //console.log('Logger App Data Path:', res);
@@ -687,19 +692,6 @@ function emanateNavigableNodeToEditor(content) {
     * This ensures completions are only triggered after a pause in typing, and only when streaming mode is active.
     */
     streamingButton.classList.add("enabled");
-    
-    // This button toggles the streaming mode button on as well
-    // as indicating that we do not want to use RAG (retrieval-augmented generation)
-    // for streaming completions.
-    // streamingNoRagButton.classList.add("enabled");
-    // streamingNoRagButton.addEventListener("click", async () => {
-      //   if (streamingNoRagButton.classList.contains("button-in")) {
-    //     streamingNoRagButton.classList.remove("button-in");
-    //   } else {
-    //     streamingNoRagButton.classList.add("button-in");
-    //     //streamingButton.classList.add("button-in");
-    //   }
-    // });
     
     
     
@@ -1091,66 +1083,7 @@ function emanateNavigableNodeToEditor(content) {
     
     prefsSaveBtn = document.querySelector("#prefs-save-btn");
     prefsSaveBtn.addEventListener("click", () => {
-      //console.log("what's this ->", prefsSimilarityThreshold.value);
-      // Convert the string "true"/"false" to an actual boolean
-      const shuffleSimilarsValue = prefsShuffleSimilars.checked;
-      const openaiApiKey = document.querySelector("#openai-api-key").value;
-      addSimpleLogEntry({
-        id: "",
-        timestamp: Date.now(),
-        message: 'openaiApiKey is '+openaiApiKey,
-      });
-      if (openaiApiKey.length !== 0) {
-        invoke("save_openai_api_key_to_keyring", { key:openaiApiKey } ).then((res) => {
-          addSimpleLogEntry({
-            id: "",
-            timestamp: Date.now(),
-            message: 'OpenAI API Key saved (not empty).',
-            level: 'info'
-          });
-        }).catch((error) => { 
-          addSimpleLogEntry({
-            id: "",
-            timestamp: Date.now(),
-            message: 'Failed to save OpenAI API Key: '+error,
-            level: 'error'
-          });
-        });
-      }
-      let foo = getSelectedVibeGenre();
-      console.log("Selected vibe genre:", foo);
-      invoke("update_preferences", {
-        responselimit: prefsResponseLimitTextArea.value,
-        mainprompt: prefsMainPromptTextArea.value,
-        finalpreamble: prefsFinalPreambleTextArea.value, 
-        prosestyle: prefsProseStyleTextArea.value,
-        vibemodecontext: prefsVibeModeContextTextArea.value,
-        vibemodestartergenrename: foo,
-        similaritythreshold: prefsSimilarityThreshold.value,
-        shufflesimilars: shuffleSimilarsValue, 
-        similaritycount: prefsSimilarityCount.value,
-        maxhistory: prefsMaxHistoryItems.value,
-        maxtokens: prefsMaxOutputTokens.value,
-        temperature: prefsTemperature.value,
-        gametimerms: prefsGameTimeSeconds.value,
-        aiprovider: getSelectedAIProvider(),
-        aimodelname: getSelectedAIModel(),
-        ollamaurl: prefsOllamaUrl.value,
-        lmstudiourl: prefsLMStudioUrl.value
-      }).then((res) => {
-        console.log('Preferences Saved:', res);
-        greetMsgEl.textContent = 'Preferences saved';
-        addSimpleLogEntry({
-          id: "",
-          timestamp: Date.now(),
-          message: 'Preferences saved<br/>'+JSON.stringify(res, null, 2),
-          level: 'debug'
-        });
-      }).catch((error) => {
-        console.error('Failed to save preferences:', error);
-        greetMsgEl.textContent = 'Failed to save preferences: '+error;
-        alert('Failed to save preferences:', error);
-      });
+      savePreferences();
       console.log("Saving preferences");
     });
     
@@ -1485,6 +1418,12 @@ function emanateNavigableNodeToEditor(content) {
         const selectedProvider = document.querySelector('input[name="ai-provider"]:checked');
         if (!selectedProvider) {
           console.error('No AI provider selected');
+          addSimpleLogEntry({
+            id: "",
+            timestamp: Date.now(),
+            message: 'No AI provider selected.',
+            level: 'error'
+          });
           return;
         }
         const providerName = selectedProvider.value;
@@ -1493,7 +1432,13 @@ function emanateNavigableNodeToEditor(content) {
         const modelsDropdown = document.getElementById('prefs-model-name');
         const selectedModel = modelsDropdown.value;
         if (!selectedModel) {
-          console.error('No model selected');
+          addSimpleLogEntry({
+            id: "",
+            timestamp: Date.now(),
+            message: 'No AI model selected. Perhaps you need to reload the model list first?',
+            level: 'error'
+          });
+          await loadModels(); // <-- reload the list if none selected
           return;
         }
         
@@ -1511,6 +1456,9 @@ function emanateNavigableNodeToEditor(content) {
     
     async function loadModels() {
       try {
+        // just in case, save the preferences in case the user has changed the 
+        // provider url
+        // if the provider is Ollama or LM Studio, we need to ensure the URL is set
         
         // Determine the selected AI provider
         const selectedProvider = document.querySelector('input[name="ai-provider"]:checked').value;
@@ -1691,6 +1639,63 @@ function emanateNavigableNodeToEditor(content) {
           floatingTimer.classList.add(cornerClasses[nextCorner]);
         }, 600); // Match this to the animation duration
       });
+    }
+    
+    async function savePreferences() {
+      const shuffleSimilarsValue = prefsShuffleSimilars.checked;
+      const openaiApiKey = document.querySelector("#openai-api-key").value;
+      if (openaiApiKey.length !== 0) {
+        try {
+          await invoke("save_openai_api_key_to_keyring", { key: openaiApiKey });
+          addSimpleLogEntry({
+            id: "",
+            timestamp: Date.now(),
+            message: 'OpenAI API Key saved (not empty).',
+            level: 'info'
+          });
+        } catch (error) {
+          addSimpleLogEntry({
+            id: "",
+            timestamp: Date.now(),
+            message: 'Failed to save OpenAI API Key: ' + error,
+            level: 'error'
+          });
+        }
+      }
+      let foo = getSelectedVibeGenre();
+      try {
+        const res = await invoke("update_preferences", {
+          responselimit: prefsResponseLimitTextArea.value,
+          mainprompt: prefsMainPromptTextArea.value,
+          finalpreamble: prefsFinalPreambleTextArea.value,
+          prosestyle: prefsProseStyleTextArea.value,
+          vibemodecontext: prefsVibeModeContextTextArea.value,
+          vibemodestartergenrename: foo,
+          similaritythreshold: prefsSimilarityThreshold.value,
+          shufflesimilars: shuffleSimilarsValue,
+          similaritycount: prefsSimilarityCount.value,
+          maxhistory: prefsMaxHistoryItems.value,
+          maxtokens: prefsMaxOutputTokens.value,
+          temperature: prefsTemperature.value,
+          gametimerms: prefsGameTimeSeconds.value,
+          aiprovider: getSelectedAIProvider(),
+          aimodelname: getSelectedAIModel(),
+          ollamaurl: prefsOllamaUrl.value,
+          lmstudiourl: prefsLMStudioUrl.value
+        });
+        console.log('Preferences Saved:', res);
+        greetMsgEl.textContent = 'Preferences saved';
+        addSimpleLogEntry({
+          id: "",
+          timestamp: Date.now(),
+          message: 'Preferences saved<br/>' + JSON.stringify(res, null, 2),
+          level: 'debug'
+        });
+      } catch (error) {
+        console.error('Failed to save preferences:', error);
+        greetMsgEl.textContent = 'Failed to save preferences: ' + error;
+        alert('Failed to save preferences:', error);
+      }
     }
     
   });
@@ -1901,14 +1906,6 @@ function emanateNavigableNodeToEditor(content) {
           return true; // Handled the click
         }
         
-        // Your existing code for dynamicTextBlockNode
-        // const node = state.doc.nodeAt(pos);
-        // if (node?.type.name === 'dynamicTextBlockNode') {
-        //   event.stopPropagation();
-        //   console.log(`Clicked on: ${node.textContent}`);
-        //   alert(`Clicked on: ${node.textContent}`);
-        //   return true;
-        // }
         
         return false; // Not handled
       },
@@ -2726,31 +2723,28 @@ function emanateNavigableNodeToEditor(content) {
     }
   }
   
-  // Add this near your other completion helpers
-  async function loadCompletions(n = 3, withRagForStreaming = true, abortSignal = { aborted: false, addEventListener: () => {} }) {
-    // Only reset completions if not loading more
-    completions = [];
-    currentCompletionIndex = 0;
-    
+  // 1. Load completions with optional RAG and streaming
+  async function loadCompletions(n = 3, withRagForStreaming = true, loadMore = false, abortSignal = { aborted: false, addEventListener: () => {} }) {
+    if (!loadMore) {
+      completions = [];
+      currentCompletionIndex = 0;
+    }
     for await (const result of loadCompletionsStream(n, withRagForStreaming, abortSignal)) {
       completions.push(result);
     }
-    
     addSimpleLogEntry({
       id: Date.now(),
       timestamp: Date.now(),
       message: 'Showing current completion at index: ' + (completions[currentCompletionIndex] || '(Empty)'),
       level: 'debug'
     });
-    
     return completions;
   }
   
   // 2. Add more logging to triggerCompletions function
   async function triggerCompletions() {
     
-    updateVibeStatus('thinking', false);
-    
+    updateVibeStatus('thinking', true);
     if (isRetrievingCompletions) {
       addSimpleLogEntry({
         id: Date.now(),
@@ -2768,37 +2762,13 @@ function emanateNavigableNodeToEditor(content) {
     currentCompletionIndex = 0;
     //let streamingNoRagButton = document.querySelector("#streaming-no-rag-mode-btn");
     const withRagForStreaming = document.querySelector("#streaming-mode-btn").classList.contains("button-overline") ? false : true;
-    try {
-      // addSimpleLogEntry({
-      //   id: Date.now(),
-      //   timestamp: Date.now(),
-      //   message: '🔄 About to call loadCompletionsStream',
-      //   level: 'debug'
-      // });
-      
-      // Determine forceRefresh here, right before fetching
-      // const currentContext = editor.getText();
-      // const forceRefresh = shouldForceRefresh(currentContext, lastTriggerContext);
-      // lastTriggerContext = currentContext;
-      
-      // addSimpleLogEntry({
-      //   id: Date.now(),
-      //   timestamp: Date.now(),
-      //   message: '🔄 Force refresh determined: ' + forceRefresh
-      //   + '<br/>Current context length: ' + currentContext.length
-      //   + '<br/>Last trigger context length: ' + (lastTriggerContext ? lastTriggerContext.length : 'N/A'),
-      //   level: 'debug'
-      // });
-      
+    try {     
       for await (const result of loadCompletionsStream(3, withRagForStreaming,completionAbortController.signal)) {
         completions.push(result);
-        updateGhostCompletion();
-        // addSimpleLogEntry({
-        //   id: Date.now(),
-        //   timestamp: Date.now(),
-        //   message: '✅ Received completion: ' + result.slice(0, 30) + '...',
-        //   level: 'debug'
-        // });
+        // Only update ghost if we're at the last completion (i.e., user is viewing the latest)
+        if (currentCompletionIndex === completions.length - 1) {
+          updateGhostCompletion();
+        }
       }
     } catch (err) {
       addSimpleLogEntry({
@@ -2824,7 +2794,7 @@ function emanateNavigableNodeToEditor(content) {
       });
     }
     
-    updateVibeStatus('writing', false);
+    updateVibeStatus('writing');
   }
   
   
@@ -2883,24 +2853,67 @@ function emanateNavigableNodeToEditor(content) {
     
     // Cycle completions
     editor.view.dom.addEventListener('keydown', async (e) => {
+      if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && completions.length > 0) {
+        if (e.key === 'ArrowUp') {
+          currentCompletionIndex = (currentCompletionIndex - 1 + completions.length) % completions.length;
+          updateGhostCompletion();
+          e.preventDefault();
+          return;
+        }
+        
+        if (e.key === 'ArrowDown') {
+          // Only allow cycling if not currently loading
+          if (isRetrievingCompletions) {
+            e.preventDefault();
+            return;
+          }
+          
+          
+          // If near the end, load more and wait for it to finish before updating ghost
+          if (completions.length - currentCompletionIndex <= PRELOAD_THRESHOLD) {
+            addSimpleLogEntry({
+              id: Date.now(),
+              timestamp: Date.now(),
+              message: '🔄 Near end of completions {}, loading more...',
+              level: 'debug'
+            });
+            
+            updateVibeStatus('thinking', true);
+            isRetrievingCompletions = true;
+            const streamingButton = document.querySelector("#streaming-mode-btn");
+            const withRagForStreaming = !streamingButton.classList.contains("button-overline");
+            await loadCompletions(3, withRagForStreaming, true);
+            isRetrievingCompletions = false;
+            updateVibeStatus('writing');
+          }
+          
+          currentCompletionIndex = (currentCompletionIndex + 1) % completions.length;
+          
+          // Only update ghost after completions are loaded
+          updateGhostCompletion();
+          e.preventDefault();
+          return;
+        }
+      }
+      
       
       // Cycle with Shift+Up/Down
-      if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')  && completions.length > 0) {
-        if (e.key === 'ArrowUp') {
-          currentCompletionIndex = (currentCompletionIndex - 1 + completions.length) % completions.length
-        } else if (e.key === 'ArrowDown') {
-          currentCompletionIndex = (currentCompletionIndex + 1) % completions.length
-          // If near the end, load more
-          if ( completions.length - currentCompletionIndex <= PRELOAD_THRESHOLD ) {
-            //if (currentCompletionIndex === 0 || completions[currentCompletionIndex] === undefined) {
-            updateGhostCompletion()
-            await loadCompletions(3, true);
-            //}
-          }
-        }
-        updateGhostCompletion()
-        e.preventDefault()
-      }
+      // if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')  && completions.length > 0) {
+      //   if (e.key === 'ArrowUp') {
+      //     currentCompletionIndex = (currentCompletionIndex - 1 + completions.length) % completions.length
+      //   } else if (e.key === 'ArrowDown') {
+      //     currentCompletionIndex = (currentCompletionIndex + 1) % completions.length
+      //     // If near the end, load more
+      //     if ( completions.length - currentCompletionIndex <= PRELOAD_THRESHOLD ) {
+      //       //if (currentCompletionIndex === 0 || completions[currentCompletionIndex] === undefined) {
+      //       updateGhostCompletion()
+      //       await loadCompletions(3, true);
+      //       //}
+      //     }
+      //   }
+      //   updateGhostCompletion()
+      //   e.preventDefault()
+      // }
       
       // Accept with Tab
       if (e.key === 'Tab') {
