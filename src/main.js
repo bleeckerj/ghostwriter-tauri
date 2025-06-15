@@ -2639,7 +2639,7 @@ function emanateNavigableNodeToEditor(content) {
     }
   }
   
-  async function* loadCompletionsStream(n = 3, withRagForStreaming = true, abortSignal) {
+  async function* loadCompletionsStream(n = 5, withRagForStreaming = true, abortSignal) {
     addSimpleLogEntry({
       id: Date.now(),
       timestamp: Date.now(),
@@ -2724,7 +2724,7 @@ function emanateNavigableNodeToEditor(content) {
   }
   
   // 1. Load completions with optional RAG and streaming
-  async function loadCompletions(n = 3, withRagForStreaming = true, loadMore = false, abortSignal = { aborted: false, addEventListener: () => {} }) {
+  async function loadCompletions(n = 5, withRagForStreaming = true, loadMore = false, abortSignal = { aborted: false, addEventListener: () => {} }) {
     if (!loadMore) {
       completions = [];
       currentCompletionIndex = 0;
@@ -2763,7 +2763,7 @@ function emanateNavigableNodeToEditor(content) {
     //let streamingNoRagButton = document.querySelector("#streaming-no-rag-mode-btn");
     const withRagForStreaming = document.querySelector("#streaming-mode-btn").classList.contains("button-overline") ? false : true;
     try {     
-      for await (const result of loadCompletionsStream(3, withRagForStreaming,completionAbortController.signal)) {
+      for await (const result of loadCompletionsStream(5, withRagForStreaming,completionAbortController.signal)) {
         completions.push(result);
         // Only update ghost if we're at the last completion (i.e., user is viewing the latest)
         if (currentCompletionIndex === completions.length - 1) {
@@ -2882,7 +2882,7 @@ function emanateNavigableNodeToEditor(content) {
             isRetrievingCompletions = true;
             const streamingButton = document.querySelector("#streaming-mode-btn");
             const withRagForStreaming = !streamingButton.classList.contains("button-overline");
-            await loadCompletions(3, withRagForStreaming, true);
+            await loadCompletions(5, withRagForStreaming, true);
             isRetrievingCompletions = false;
             updateVibeStatus('writing');
           }
