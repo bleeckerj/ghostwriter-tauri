@@ -347,6 +347,7 @@ select#prefs-model-name option {
   @apply relative w-fit px-1 py-[0.5px] rounded-sm;
   @apply border border-black;
   @apply shadow-[2px_2px_0px_0px];
+  @apply bg-gray-500;
 }
 
 .diagnostics-area-button:hover.enabled {

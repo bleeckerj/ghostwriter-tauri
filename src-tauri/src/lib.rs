@@ -252,10 +252,10 @@ async fn streaming_completion_from_context(
     // WHERE'S TEMPERATURE AND SUCH...way down below after RAG
     let start_time = std::time::Instant::now();
     let with_rag = with_rag_for_streaming.unwrap_or(true);
-
+    
     let preferences = state.preferences.lock().await;
     let mut new_logger = NewLogger::new(app_handle.clone());
-println!("Starting streaming completion from context with force_refresh: {}", force_refresh.unwrap_or(false));
+    println!("Starting streaming completion from context with force_refresh: {}", force_refresh.unwrap_or(false));
     new_logger.simple_log_message(
         "Starting streaming completion from context with force_refresh:".to_string() + &force_refresh.unwrap_or(false).to_string(), 
         "streaming".to_string(),
@@ -268,7 +268,7 @@ println!("Starting streaming completion from context with force_refresh: {}", fo
     
     // Check if we should use cached results or perform a new search
     let force_refresh = force_refresh.unwrap_or(false);
-    let similar_docs = if with_rag {
+    let (similar_docs, vector_search_results) = if with_rag {
         let mut rag_cache = state.rag_cache.lock().await;
         
         if !force_refresh && rag_cache.last_context == context {
@@ -278,7 +278,18 @@ println!("Starting streaming completion from context with force_refresh: {}", fo
                 "streaming".to_string(),
                 "debug".to_string()
             );
-            rag_cache.similarity_documents.clone()
+            // Build vector_search_results from cached similarity_documents
+            let cached_results = rag_cache.similarity_documents.clone();
+            let cached_vector_search_results: Vec<VectorSearchResult> = cached_results
+                .iter()
+                .map(|(_doc_id, doc_name, chunk_id, chunk_text, similarity)| VectorSearchResult {
+                    name: doc_name.clone(),
+                    similarity: *similarity,
+                    content: chunk_text.clone(),
+                    chunk_id: *chunk_id,
+                })
+                .collect();
+            (cached_results, cached_vector_search_results)
         } else {
             // Performing new search - log timing
             let rag_search_start = std::time::Instant::now();
@@ -319,6 +330,18 @@ println!("Starting streaming completion from context with force_refresh: {}", fo
                 similarity_threshold
             ).await.map_err(|e| format!("Search failed: {}", e))?;
             
+            
+            // Convert to VectorSearchResult
+            let vector_search_results: Vec<VectorSearchResult> = results
+            .iter()
+            .map(|(_doc_id, doc_name, chunk_id, chunk_text, similarity)| VectorSearchResult {
+                name: doc_name.clone(),
+                similarity: *similarity,
+                content: chunk_text.clone(),
+                chunk_id: *chunk_id,
+            })
+            .collect();
+            
             // Log each result
             for (doc_id, doc_name, chunk_id, chunk_text, similarity) in &results {
                 new_logger.simple_log_message(
@@ -355,20 +378,20 @@ println!("Starting streaming completion from context with force_refresh: {}", fo
                 "streaming".to_string(),
                 "debug".to_string()
             );
-            
-            results
+            // Log search results info
+            new_logger.simple_log_message(
+                format!("Found {} similar documents with threshold {}", results.len(), preferences.similarity_threshold),
+                "streaming".to_string(),
+                "debug".to_string()
+            );
+            (results, vector_search_results)
         }
     } else {
         // If RAG is not used, just return an empty vector
-        Vec::new()
+        (Vec::new(), Vec::new())
     };
     
-    // Log search results info
-    new_logger.simple_log_message(
-        format!("Found {} similar documents with threshold {}", similar_docs.len(), preferences.similarity_threshold),
-        "streaming".to_string(),
-        "debug".to_string()
-    );
+    
     
     // Build context from similar documents
     let mut rag_context = String::new();
@@ -379,10 +402,16 @@ println!("Starting streaming completion from context with force_refresh: {}", fo
     // Create combined system prompt
     let prompt_creation_start = std::time::Instant::now();
     let mut system_content = system_message.clone();
-    system_content.push_str("\n\n<context>\n");
-    system_content.push_str(&rag_context);
-    system_content.push_str("\n</context>");
-    
+    if with_rag {
+        system_content.push_str("\n\nContext Injection: Here is relevant context\n");
+        system_content.push_str("\n\n<context>\n");
+        system_content.push_str(&rag_context);
+        system_content.push_str("\n</context>");
+    }
+    system_content.push_str(preferences.response_limit.as_str());
+    system_content.push_str("\n\n");
+    system_content.push_str("This is the Prose Style you should use:\n");
+    system_content.push_str(preferences.prose_style.as_str());
     // Create chat request
     let model_name = provider.get_preferred_inference_model(&preferences.ai_model_name)
     .await
@@ -406,7 +435,7 @@ println!("Starting streaming completion from context with force_refresh: {}", fo
         max_tokens: Some(preferences.max_output_tokens as u32),
         stream: true,
     };
-
+    
     new_logger.simple_log_message(
         format!("Chat model is {}<br/>Chat request is {:?}", chat_request.model, chat_request),
         "streaming".to_string(),
@@ -428,6 +457,30 @@ println!("Starting streaming completion from context with force_refresh: {}", fo
         "debug".to_string()
     );
     
+    // let timing_struct = CompletionTiming {
+    //     embedding_generation_ms: embedding_duration.as_millis(),
+    //     similarity_search_ms: search_duration.as_millis(),
+    //     llm_request_time_ms: llm_duration.as_millis(),
+    //     total_ms: total_duration.as_millis(),
+    // };
+    
+    // let entry = CompletionLogEntry {
+    //     timestamp: Utc::now(),
+    //     completion_result: completion_text.clone(),
+    //     input_text: user_input.clone(),
+    //     system_prompt: system_content.clone(),
+    //     conversation_context: conversation_context.clone(),
+    //     vector_search_results_for_log: vector_search_results, // Vec<VectorSearchResult>
+    //     canon_name: "".to_string(),
+    //     canon_path: "".to_string(),
+    //     preferences: preferences.clone(),
+    //     llm_provider_name: provider.get_provider_name(),
+    //     llm_model_name: model_name.to_string(),
+    //     timing: timing_struct, // CompletionTiming
+    //     // Add any other fields as needed
+    // };
+    //let completion = Completion { completion: entry.clone() };
+    
     let stream_result = provider.create_streaming_chat_completion(&chat_request).await;
     match stream_result {
         Ok(mut stream) => {
@@ -438,6 +491,11 @@ println!("Starting streaming completion from context with force_refresh: {}", fo
                         if let Some(choice) = chunk.choices.first() {
                             if let Some(content) = &choice.delta.content {
                                 token_count += 1;
+                                new_logger.simple_log_message(
+                                format!("chunk number {}: {}", token_count, content.clone()),
+                                "streaming".to_string(),
+                                "debug".to_string()
+                                );
                                 app_handle.emit("completion-chunk", content)
                                 .map_err(|e| format!("Failed to emit completion chunk: {}", e))?;
                             }
@@ -1133,6 +1191,8 @@ async fn load_openai_api_key_from_keyring(
         // Prepare the context for the LLM
         // This has all the document metadata..is that okay?
         let mut context = String::new();
+        context.push_str("This is the context:");
+        context.push_str("\n");
         for (i, (doc_id, doc_name, chunk_id, chunk_text, similarity)) in similar_docs.iter().enumerate() {
             context.push_str(&format!("{}\n", chunk_text));
         }
@@ -1175,7 +1235,7 @@ async fn load_openai_api_key_from_keyring(
         
         let mut system_content = main_prompt.clone();
         system_content.push_str("\n\n");
-        system_content.push_str("<style>\n");
+        system_content.push_str("Follow these instructions for your response:\n");
         system_content.push_str("Never employ correlative conjunctions such as “whether…or.”,
         Never use emphatic contrast patterns like “not only…but also” or constructions of the form “[did not]…but.”,
         Never begin a sentence with a present participle opener (e.g., “Considering…,” “Analyzing…,” “Walking through…”).,
@@ -1192,30 +1252,28 @@ async fn load_openai_api_key_from_keyring(
         Never use the phrase “In the ever-evolving landscape of…”,
         Never use the phrase “It is crucial to recognize…”,
         Never use the phrase “What sets X apart is…”,
-        Never use the phrase “In the realm of X, one can observe…”,");
-        system_content.push_str("<response_limit>\nStrictly follow these explicit instructions in terms of quantity and length of your response:\n");
-        system_content.push_str("</style>");
+        Never use the phrase “In the realm of X, one can observe…”\n\n");
+        system_content.push_str("Strictly follow these explicit instructions in terms of quantity and length of your response:\n");
         system_content.push_str(&response_limit);
-        system_content.push_str("</response_limit>");
         // system_content.push_str("<previous_exchanges>");
         // system_content.push_str(&conversation_context);
         // system_content.push_str("</previous_exchanges>");
         // system_content.push_str("<context>");
         // system_content.push_str(&context);
         // system_content.push_str("</context>");
-        system_content.push_str("<final_preamble>");
-        system_content.push_str(&final_preamble);
-        system_content.push_str("</final_preamble>");
-        system_content.push_str("<prose_style>");
+        // system_content.push_str("<final_preamble>");
+        // system_content.push_str(&final_preamble);
+        // system_content.push_str("</final_preamble>");
+        system_content.push_str("\n\n");
+        system_content.push_str("This is the prose style you must use:\n");
         system_content.push_str(&prose_style);
-        system_content.push_str("</prose_style>");
+        system_content.push_str("\n\n");
         // system_content.push_str("<user_input>");
         // system_content.push_str(&input);
         // system_content.push_str("</user_input>");
         
         new_logger.simple_log_message(
             system_content.clone(),
-            //format!("System prompt: {} Length: {}", system_content, system_content.len()),
             "system_prompt".to_string(),
             "debug".to_string()
         );

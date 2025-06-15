@@ -2667,20 +2667,45 @@ function emanateNavigableNodeToEditor(content) {
       addSimpleLogEntry({
         id: Date.now(),
         timestamp: Date.now(),
-        message: '🔄 Fetching completion ' + (i+1) + ' of ' + n,
+        message: '🔄 Fetching completion ' + (i + 1) + ' of ' + n,
         level: 'debug'
       });
       
       try {
-        // const currentContext = editor.getText();
         const forceRefresh = shouldForceRefresh(currentContext, lastTriggerContext);
         lastTriggerContext = currentContext;
         
-        const result = await fetchStreamingCompletion(currentContext, systemMessage, abortSignal, forceRefresh, withRagForStreaming);
+        let streamedText = '';
+        // Define the onChunk callback to handle streamed text
+        // This will accumulate the streamed text and show ghost suggestions
+        // for the first (active) completion
+        const onChunk = (chunk) => {
+          streamedText += chunk;
+          // Only show ghost suggestion for the first (active) completion
+          if (i === 0 && currentCompletionIndex === 0) {
+            showGhostCompletion(editor, streamedText);
+          }
+        };
+        // Call the fetchStreamingCompletion function with the onChunk callback
         addSimpleLogEntry({
           id: Date.now(),
           timestamp: Date.now(),
-          message: '✅ Completion ' + (i+1) + ' received successfully with forceRefresh=' + forceRefresh,
+          message: '🔄 Calling fetchStreamingCompletion for completion ' + (i + 1) + ' with forceRefresh=' + forceRefresh,
+          level: 'debug'
+        });
+        const result = await fetchStreamingCompletion(
+          currentContext,
+          systemMessage,
+          abortSignal,
+          forceRefresh,
+          withRagForStreaming,
+          onChunk
+        );
+        
+        addSimpleLogEntry({
+          id: Date.now(),
+          timestamp: Date.now(),
+          message: '✅ Completion ' + (i + 1) + ' received successfully with forceRefresh=' + forceRefresh,
           level: 'debug'
         });
         
@@ -2690,7 +2715,7 @@ function emanateNavigableNodeToEditor(content) {
         addSimpleLogEntry({
           id: Date.now(),
           timestamp: Date.now(),
-          message: '❌ Error fetching completion ' + (i+1) + ': ' + err.message,
+          message: '❌ Error fetching completion ' + (i + 1) + ': ' + err.message,
           level: 'error'
         });
         
