@@ -2380,11 +2380,10 @@ async fn load_openai_api_key_from_keyring(
                 )
             })
             .invoke_handler(tauri::generate_handler![
-                greet,
                 completion_from_context,
                 search_similarity,
                 ingestion_from_file_dialog,
-                test_log_emissions,
+                /*test_log_emissions,*/
                 simple_log_message,
                 rich_log_message,
                 delete_canon_entry,

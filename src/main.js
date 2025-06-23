@@ -2658,7 +2658,16 @@ function emanateNavigableNodeToEditor(content) {
         break;
       }
       
-      const currentContext = editor.getText();
+      const { state } = editor;
+      const cursorPos = state.selection.from;
+      const docText = editor.getText();
+      const leftText = docText.slice(0, cursorPos);
+      
+      // Split into words and take the last 300 (or fewer)
+      const words = leftText.split(/\s+/);
+      const limitedWords = words.slice(-300);
+      const currentContext = limitedWords.join(' ');
+      
       const systemMessage = prefsMainPromptTextArea.value;
       
       addSimpleLogEntry({
