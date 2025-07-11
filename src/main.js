@@ -1197,8 +1197,8 @@ function emanateNavigableNodeToEditor(content) {
     // let unlistenPrefsLoadFn;
     // let unlistenPrefsSaveFn;
     // let unlistenPrefsResetFn;
-    let unlistenSaveFileMessageFn;
-    let unlistenVibeRestartFn;
+    // let unlistenSaveFileMessageFn;
+    // let unlistenVibeRestartFn;
     
     
     try {

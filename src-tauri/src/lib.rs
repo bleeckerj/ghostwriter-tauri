@@ -1479,12 +1479,40 @@ async fn load_openai_api_key_from_keyring(
         
         //log::debug!("Random chunk selection took {:?}", start_time.elapsed());
         
-        let context;
+        let mut context = Preferences::DEFAULT_VIBE_MODE_CONTEXT.to_string();
         
         if random_chunks.is_empty() {
             //return Err("No content chunks found in documents".to_string());
             log::info!("No content chunks found in documents for starter text.");
-            context = preferences.vibe_mode_context.clone();
+            
+            // Get the genre context based on the selected genre in preferences
+            let genre_name = &preferences.vibe_mode_starter_genre_name;
+            let mut found_genre = false;
+            
+            // Find the selected genre from VIBE_GENRES
+            for genre in &Preferences::VIBE_GENRES {
+                if &genre.name == genre_name {
+                    context = genre.starter_context.to_string();
+                    found_genre = true;
+                    new_logger.simple_log_message(
+                        format!("Using genre '{}' starter context", genre_name),
+                        "vibe_mode".to_string(),
+                        "info".to_string()
+                    );
+                    break;
+                }
+            }
+            
+            // Fall back to preferences.vibe_mode_context if genre not found
+            if !found_genre {
+                context = preferences.vibe_mode_context.clone();
+                new_logger.simple_log_message(
+                    format!("Genre '{}' not found, using default vibe mode context", genre_name),
+                    "vibe_mode".to_string(),
+                    "warn".to_string()
+                );
+            }
+            
             new_logger.simple_log_message(format!("Vibe mode context is: {}", context), "vibe_mode".to_string(), "info".to_string());
         } else {   
             // Join all random chunks into a context string

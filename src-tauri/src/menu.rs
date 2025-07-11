@@ -80,11 +80,13 @@ pub fn build_file_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<
     let open_item = MenuItemBuilder::new("Open")
     .id(MENU_FILE_OPEN)
     .accelerator("CmdOrControl+O")
+    .enabled(false)  // disables the menu item
     .build(app)?;
     
     let new_item = MenuItemBuilder::new("New")
     .id(MENU_FILE_NEW)
     .accelerator("CmdOrControl+N")
+    .enabled(false)  // disables the menu item
     .build(app)?;
     
     SubmenuBuilder::new(app, "File")

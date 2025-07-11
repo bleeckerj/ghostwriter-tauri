@@ -70,6 +70,13 @@ Write it adhering to the syntax, grammar, and structure of a movie script.",
     index: 3
 };
 
+const SOLARPUNK: Genre = Genre {
+    starter_context: "Generate a compelling opening phrase or sentence for a creative writing exercise. Provide a paragraph of text, about 60 words, in the style of a Solarpunk science fiction adventure novel set in a fictional land where there are AI companions who are like benevolent muses for people who are now able to fully actualize their true selves as creators, craftspeople, traders, explorers, adventurers, community builders, farmers, builders of homes, and technologists. Solarpunk is a genre of science fiction that envisions a future where technology and nature coexist harmoniously, often featuring themes of sustainability, community, and social justice. The story should be set in a world where people have access to advanced AI companions that help them achieve their goals and dreams. The writing style should be engaging, imaginative, and optimistic, reflecting the hopeful and positive nature of the Solarpunk genre.",
+    name: "SOLARPUNK",
+    description: "",
+    index: 5
+};
+
 const NEO_CYBERPUNK: Genre = Genre {
     starter_context:"
 Write an opening paragraph of about 60 words of a story set in a slightly dystopian near-future where computation, artificial intelligence non-state actors, old-guard corporations and diminished governments are the main characters. The narrative should revolve around [protagonist/plot], with a focus on themes of:
@@ -169,11 +176,11 @@ impl Preferences {
     
     pub const DEFAULT_PROSE_STYLE: &'static str = "A style that is consistent with the input text.";
     pub const GAME_TIMER_MS_DEFAULT: usize = 30000;
-    pub const VIBE_MODE_CONTEXT: &'static str = "Generate a compelling opening phrase or sentence for a creative writing exercise. Provide a paragraph of text, about 60 words, in the style of a Solarpunk science fiction adventure novel set in a fictional land where there are AI companions who are like benevolent muses for people who are now able to fully actualize their true selves as creators, craftspeople, traders, explorers, adventurers, community builders, farmers, builders of homes, and technologists. Solarpunk is a genre of science fiction that envisions a future where technology and nature coexist harmoniously, often featuring themes of sustainability, community, and social justice. The story should be set in a world where people have access to advanced AI companions that help them achieve their goals and dreams. The writing style should be engaging, imaginative, and optimistic, reflecting the hopeful and positive nature of the Solarpunk genre.";
+    pub const DEFAULT_VIBE_MODE_CONTEXT: &'static str = "Generate a compelling opening phrase or sentence for a creative writing exercise. Provide a paragraph of text, about 60 words, in the style of a Solarpunk science fiction adventure novel set in a fictional land where there are AI companions who are like benevolent muses for people who are now able to fully actualize their true selves as creators, craftspeople, traders, explorers, adventurers, community builders, farmers, builders of homes, and technologists. Solarpunk is a genre of science fiction that envisions a future where technology and nature coexist harmoniously, often featuring themes of sustainability, community, and social justice. The story should be set in a world where people have access to advanced AI companions that help them achieve their goals and dreams. The writing style should be engaging, imaginative, and optimistic, reflecting the hopeful and positive nature of the Solarpunk genre.";
     pub const VIBE_GENRE: Genre = HARDBOILED;
     pub const OLLAMA_URL: &'static str = "http://localhost:11434";
     pub const LM_STUDIO_URL: &'static str = "http://localhost:1234/v1";
-    pub const VIBE_GENRES: [Genre; 5] = [HARDBOILED, FANTASY, ROMANTIC_COMEDY, POETRY, NEO_CYBERPUNK];
+    pub const VIBE_GENRES: [Genre; 6] = [HARDBOILED, FANTASY, ROMANTIC_COMEDY, SOLARPUNK, POETRY, NEO_CYBERPUNK];
     
     /// Load preferences and ensure no empty fields
     pub fn load_with_defaults(app_state: &AppState, app_handle: AppHandle) -> Self {
@@ -309,7 +316,7 @@ impl Preferences {
             self.game_timer_ms = Self::GAME_TIMER_MS_DEFAULT;
         }
         if self.vibe_mode_context.trim().is_empty() {
-            self.vibe_mode_context = Self::VIBE_MODE_CONTEXT.to_string();
+            self.vibe_mode_context = Self::DEFAULT_VIBE_MODE_CONTEXT.to_string();
         }
         if self.vibe_mode_starter_genre_name.trim().is_empty() {
             self.vibe_mode_genre_index = Self::VIBE_GENRES[0].clone().index;
