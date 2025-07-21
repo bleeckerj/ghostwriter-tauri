@@ -47,7 +47,7 @@ pub const MENU_STYLE_DECREASE_FONT: &str = "style-decrease-font";
 pub fn build_style_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
     let increase_font = MenuItemBuilder::new("Increase Font Size")
     .id(MENU_STYLE_INCREASE_FONT)
-    .accelerator("CmdOrControl+Plus")
+    .accelerator("CmdOrControl+=")
     .build(app)?;
     let decrease_font = MenuItemBuilder::new("Decrease Font Size")
     .id(MENU_STYLE_DECREASE_FONT)
