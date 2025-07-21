@@ -2111,7 +2111,7 @@ function emanateNavigableNodeToEditor(content) {
       markType.create({
         id: metadata.metadata.id || `dynamic-${Date.now()}`,
         textColor: metadata.metadata.textColor || 'white',
-        backgroundColor: metadata.metadata.backgroundColor || 'blue',
+        backgroundColor: metadata.metadata.backgroundColor || 'transparent',
         twMisc: metadata.metadata.twMisc || 'animated-highlight bg-amber-500',
         raw: metadata.metadata.raw ? JSON.stringify(metadata.metadata.raw) : null,
         rag: metadata.metadata.rag ? JSON.stringify(metadata.metadata.rag) : null,

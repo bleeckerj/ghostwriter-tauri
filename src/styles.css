@@ -343,8 +343,8 @@ select#prefs-model-name option {
   /* @apply relative w-fit px-[0.5em] py-[0.5px] rounded-sm; */
   @apply border border-black;
   @apply shadow-[1px_1px_0px_0px] shadow-black;
-  @apply bg-gray-700;
-  @apply text-white;
+  /* @apply bg-gray-100; */
+  /* @apply text-gray-800; */
   
 }
 
@@ -353,9 +353,9 @@ select#prefs-model-name option {
   /* @apply font-['ESKlarheitKurrentMono']; */
   @apply relative w-fit px-1 py-[0.5px] rounded-sm;
   @apply border border-black;
-  @apply shadow-[2px_2px_0px_0px];
+  @apply shadow-[0px_0px_0px_0px];
   @apply bg-gray-400;
-  @apply line-through;
+  /* @apply line-through; */
 }
 
 .diagnostics-area-button:hover.enabled {

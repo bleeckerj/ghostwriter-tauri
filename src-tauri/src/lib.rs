@@ -1220,8 +1220,25 @@ async fn load_openai_api_key_from_keyring(
         
         Ok("Ingested file".to_string())
     }
-    
-    
+
+    #[tauri::command]
+    async fn completion_from_context_rag_option(
+        state: tauri::State<'_, AppState>,
+        app_handle: tauri::AppHandle,
+        input: String,
+        with_rag: Option<bool>,
+    ) -> Result<(String, CompletionTiming, Completion), String> {
+        // If with_rag is None, default to true
+        let with_rag = with_rag.unwrap_or(true);
+        
+        //if with_rag {
+            (completion_from_context(state, app_handle, input).await)
+        // } else {
+        //     // If RAG is not requested, just call the completion function directly
+        //     //completion_without_(state, app_handle, input).await
+        // }
+    }
+
     // Modify the function return type to include timing
     #[tauri::command]
     async fn completion_from_context(
