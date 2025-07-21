@@ -1,3 +1,89 @@
+
+  /* 3270 Font Family */
+@font-face {
+  font-family: '3270';
+  src: url('/fonts/3270/3270NerdFont-Regular.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: '3270';
+  src: url('/fonts/3270/3270NerdFont-Condensed.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: '3270';
+  src: url('/fonts/3270/3270NerdFont-SemiCondensed.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: '3270-Mono';
+  src: url('/fonts/3270/3270NerdFontMono-Regular.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: '3270-Mono';
+  src: url('/fonts/3270/3270NerdFontMono-Condensed.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: '3270-Mono';
+  src: url('/fonts/3270/3270NerdFontMono-SemiCondensed.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: '3270-Propo';
+  src: url('/fonts/3270/3270NerdFontPropo-Regular.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: '3270-Propo';
+  src: url('/fonts/3270/3270NerdFontPropo-Condensed.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: '3270-Propo';
+  src: url('/fonts/3270/3270NerdFontPropo-SemiCondensed.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'AppleGaramond';
+  src: url('/fonts/apple-garamond/AppleGaramond.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'AppleGaramond';
+  src: url('/fonts/apple-garamond/AppleGaramond-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Apple Garamond';
+  src: url('/fonts/apple-garamond/AppleGaramond-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'AppleGaramond';
+  src: url('/fonts/apple-garamond/AppleGaramond-BoldItalic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+}
+
+
 /* 1. Extra Light */
 @font-face {
   font-family: 'ESKlarheitKurrentMono';

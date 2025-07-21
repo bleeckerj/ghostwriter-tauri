@@ -267,10 +267,9 @@ select#prefs-model-name option {
   display: flex;
   flex-direction: row;
   justify-content: flex-start;
-  @apply gap-4;
+  @apply gap-3;
   align-items: center;
   padding: 0.5rem;
-  @apply mb-2;
   @apply relative;
   @apply z-10;
 }
@@ -286,7 +285,9 @@ select#prefs-model-name option {
 
 
 .diagnostics-area-button {
-  @apply font-['ESKlarheitKurrentMono'];
+  @apply font-['3270-Mono'];
+  @apply text-[1.5em];
+  @apply font-stretch-condensed;
   @apply relative w-fit px-1 py-[0.5px] rounded-sm;
   @apply border border-black;
   @apply shadow-[3px_3px_0px_0px];
@@ -338,10 +339,10 @@ select#prefs-model-name option {
 
 
 .diagnostics-area-button.button-out {
-  @apply font-['ESKlarheitKurrentMono'];
-  @apply relative w-fit px-[0.5em] py-[0.5px] rounded-sm;
+  /* @apply font-['ESKlarheitKurrentMono']; */
+  /* @apply relative w-fit px-[0.5em] py-[0.5px] rounded-sm; */
   @apply border border-black;
-  @apply shadow-[3px_3px_0px_0px] shadow-black;
+  @apply shadow-[1px_1px_0px_0px] shadow-black;
   @apply bg-gray-700;
   @apply text-white;
   
@@ -349,11 +350,12 @@ select#prefs-model-name option {
 
 
 .diagnostics-area-button.disabled {
-  @apply font-['ESKlarheitKurrentMono'];
+  /* @apply font-['ESKlarheitKurrentMono']; */
   @apply relative w-fit px-1 py-[0.5px] rounded-sm;
   @apply border border-black;
   @apply shadow-[2px_2px_0px_0px];
-  @apply bg-gray-500;
+  @apply bg-gray-400;
+  @apply line-through;
 }
 
 .diagnostics-area-button:hover.enabled {
