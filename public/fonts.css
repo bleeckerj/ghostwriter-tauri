@@ -5,55 +5,73 @@
   src: url('/fonts/3270/3270NerdFont-Regular.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
+  font-stretch: normal;
 }
+
 @font-face {
   font-family: '3270';
   src: url('/fonts/3270/3270NerdFont-Condensed.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
+  font-stretch: condensed;
 }
+
 @font-face {
   font-family: '3270';
   src: url('/fonts/3270/3270NerdFont-SemiCondensed.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
+  font-stretch: semi-condensed;
 }
+
 @font-face {
   font-family: '3270-Mono';
   src: url('/fonts/3270/3270NerdFontMono-Regular.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
+  font-stretch: normal;
 }
+
 @font-face {
   font-family: '3270-Mono';
   src: url('/fonts/3270/3270NerdFontMono-Condensed.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
+  font-stretch: condensed;
 }
+
 @font-face {
   font-family: '3270-Mono';
   src: url('/fonts/3270/3270NerdFontMono-SemiCondensed.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
+  font-stretch: semi-condensed;
 }
+
 @font-face {
   font-family: '3270-Propo';
   src: url('/fonts/3270/3270NerdFontPropo-Regular.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
+  font-stretch: normal;
 }
+
 @font-face {
   font-family: '3270-Propo';
   src: url('/fonts/3270/3270NerdFontPropo-Condensed.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
+  font-stretch: condensed;
 }
+
 @font-face {
   font-family: '3270-Propo';
   src: url('/fonts/3270/3270NerdFontPropo-SemiCondensed.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
+  font-stretch: semi-condensed;
 }
+
 
 @font-face {
   font-family: 'AppleGaramond';
