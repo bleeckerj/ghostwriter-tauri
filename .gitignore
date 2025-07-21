@@ -1,6 +1,13 @@
 # Logs
 logs
 *.log
+*.cer
+pdfium-mac-arm64/*
+*.p8*
+certificate-base64.txt
+Certificates.p12
+__resources/
+test/*
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

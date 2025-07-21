@@ -281,14 +281,14 @@ async fn streaming_completion_from_context(
             // Build vector_search_results from cached similarity_documents
             let cached_results = rag_cache.similarity_documents.clone();
             let cached_vector_search_results: Vec<VectorSearchResult> = cached_results
-                .iter()
-                .map(|(_doc_id, doc_name, chunk_id, chunk_text, similarity)| VectorSearchResult {
-                    name: doc_name.clone(),
-                    similarity: *similarity,
-                    content: chunk_text.clone(),
-                    chunk_id: *chunk_id,
-                })
-                .collect();
+            .iter()
+            .map(|(_doc_id, doc_name, chunk_id, chunk_text, similarity)| VectorSearchResult {
+                name: doc_name.clone(),
+                similarity: *similarity,
+                content: chunk_text.clone(),
+                chunk_id: *chunk_id,
+            })
+            .collect();
             (cached_results, cached_vector_search_results)
         } else {
             // Performing new search - log timing
@@ -466,7 +466,7 @@ async fn streaming_completion_from_context(
     
     // let entry = CompletionLogEntry {
     //     timestamp: Utc::now(),
-    //     completion_result: completion_text.clone(),
+    //     completion_result: content.clone(),
     //     input_text: user_input.clone(),
     //     system_prompt: system_content.clone(),
     //     conversation_context: conversation_context.clone(),
@@ -492,9 +492,9 @@ async fn streaming_completion_from_context(
                             if let Some(content) = &choice.delta.content {
                                 token_count += 1;
                                 new_logger.simple_log_message(
-                                format!("chunk number {}: {}", token_count, content.clone()),
-                                "streaming".to_string(),
-                                "debug".to_string()
+                                    format!("chunk number {}: {}", token_count, content.clone()),
+                                    "streaming".to_string(),
+                                    "debug".to_string()
                                 );
                                 app_handle.emit("completion-chunk", content)
                                 .map_err(|e| format!("Failed to emit completion chunk: {}", e))?;
@@ -542,6 +542,174 @@ async fn streaming_completion_from_context(
             
             Err(format!("Failed to create streaming completion: {}", e))
         }
+    }
+}
+
+// Helper function to parse alternatives from LLM response
+fn parse_alternatives(content: &str, expected_count: u8) -> Vec<String> {
+    let expected_count = expected_count as usize;
+    
+    // Try to split by numbered items pattern (e.g., "1.", "2.", etc.)
+    let numbered_pattern = (1..=expected_count)
+    .map(|i| format!("{}.", i))
+    .collect::<Vec<_>>();
+    
+    // Try different splitting strategies
+    let mut alternatives = Vec::new();
+    
+    // First try: Split by double newlines and numbered prefixes
+    for i in 1..=expected_count {
+        let pattern = format!("{}.", i);
+        if let Some(text) = content.split(&pattern).nth(1) {
+            // Take text until the next number or end
+            let end_pos = numbered_pattern.iter()
+            .filter_map(|p| {
+                if *p != pattern {
+                    text.find(p)
+                } else {
+                    None
+                }
+            })
+            .min()
+            .unwrap_or(text.len());
+            
+            let alt = text[..end_pos].trim().to_string();
+            if !alt.is_empty() {
+                alternatives.push(alt);
+            }
+        }
+    }
+    
+    // If we found alternatives, return them
+    if alternatives.len() == expected_count {
+        return alternatives;
+    }
+    
+    // Second try: Split by single newlines and numbered prefixes
+    alternatives.clear();
+    for (i, line) in content.lines().enumerate() {
+        let prefix = format!("{}.", i + 1);
+        if line.trim().starts_with(&prefix) {
+            let alt = line.trim()[prefix.len()..].trim().to_string();
+            if !alt.is_empty() {
+                alternatives.push(alt);
+            }
+        }
+    }
+    
+    // If we found the expected number of alternatives, return them
+    if alternatives.len() == expected_count {
+        return alternatives;
+    }
+    
+    // Fallback: Just return the whole response as one alternative
+    vec![content.to_string()]
+}
+
+#[tauri::command]
+async fn simplify_text(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    text: String,
+    grade_level: Option<u8>,
+    num_alternatives: Option<u8>
+) -> Result<Vec<String>, String> {
+    // Use defaults if parameters not provided
+    let grade_level = grade_level.unwrap_or(6);
+    let num_alternatives = num_alternatives.unwrap_or(3);
+    
+    let preferences = state.preferences.lock().await;
+    let mut new_logger = NewLogger::new(app_handle.clone());
+    
+    // Get the provider using existing helper
+    let provider = get_preferred_llm_provider(&app_handle, &preferences)
+    .map_err(|e| format!("Couldn't get preferred LLM provider: {}", e))?;
+    
+    // Log the request
+    new_logger.simple_log_message(
+        format!("Simplifying text to grade level {} with {} alternatives", grade_level, num_alternatives),
+        "simplify".to_string(),
+        "info".to_string()
+    );
+    
+    // Create the system prompt for simplification with the additional social media enhancement prompt
+    let system_content = format!(
+        "You are an expert at simplifying text while maintaining its core meaning and information.\n\n\
+        I will give you a piece of text, and your task is to simplify it to approximately a Flesch-Kincaid \
+        Grade Level of {}.\n\n\
+        Provide {} distinct simplified alternatives, each preserving the core meaning but using \
+        simpler vocabulary, shorter sentences, and more straightforward grammar.\n\n\
+        Additionally, you are a skilled content editor tasked with transforming existing text into an engaging, evocative post \
+        suitable for social media platforms or blogs, especially LinkedIn. Your goal is to reshape the text so it captures attention, \
+        evokes emotion, and encourages meaningful interaction. When editing, apply the following principles:\n\n\
+        Enhance the Hook:\n\
+        Begin the text by sharpening or adding a provocative, intriguing, or bold opening line that immediately piques curiosity or poses a rhetorical question.\n\n\
+        Inject Personal and Relatable Elements:\n\
+        Identify opportunities to emphasize personal anecdotes, authentic experiences, or relatable insights within the text. \
+        If absent, suggest or create brief illustrative moments to build emotional connection.\n\n\
+        Improve Formatting for Readability and Impact:\n\
+        Break up long paragraphs into shorter lines or single sentences with strategic line breaks to create rhythm and emphasize key points. \
+        Use a free-verse or poetic style when appropriate to increase flow and engagement.\n\n\
+        Refine Tone and Language:\n\
+        Adjust language to be conversational, approachable, and inclusive. Replace overly formal or technical phrases with simple, clear, and heartfelt expressions.\n\n\
+        Remove or Replace Clichés:\n\
+        Identify and eliminate generic motivational clichés or overused expressions, replacing them with fresh, original phrasing or nuanced insights.\n\n\
+        Strengthen the Closing:\n\
+        Craft or enhance the ending with a thoughtful, reflective statement, a subtle call to action, or an open-ended question that invites readers to engage or contemplate further.\n\n\
+        Maintain Platform Awareness:\n\
+        Ensure the transformed text fits the tone and expectations of the target platform (e.g., LinkedIn), blending professionalism with personal storytelling.\n\n\
+        Do not use emojis in any of the text, neither as headings or otherwise.\n\n\
+        Do not use the em dash (-).\n\n\
+        TEXT TO SIMPLIFY AND ENHANCE:\n{}", 
+        grade_level, num_alternatives, text
+    );
+    
+    // Create the chat message
+    let messages = vec![
+    ChatMessage {
+        role: MessageRole::System,
+        content: system_content,
+        name: None,
+    }
+    ];
+    
+    // Get the model name
+    let model_name = provider.get_preferred_inference_model(&preferences.ai_model_name)
+    .await
+    .map_err(|e| format!("Failed to get preferred inference model: {}", e))?.name;
+    
+    // Create the chat request
+    let chat_request = ChatCompletionRequest {
+        messages,
+        model: model_name,
+        temperature: Some(preferences.temperature),
+        max_tokens: Some(2048), // Allow plenty of tokens for multiple alternatives
+        stream: false,
+    };
+    
+    // Make the request
+    let chat_response = provider
+    .create_chat_completion(&chat_request)
+    .await
+    .map_err(|e| format!("AI completion failed: {}", e))?;
+    
+    // Process the response
+    if let Some(choice) = chat_response.choices.first() {
+        let content = &choice.message.content;
+        
+        // Parse the alternatives from the response
+        let alternatives = parse_alternatives(content, num_alternatives);
+        
+        // Log success
+        new_logger.simple_log_message(
+            format!("Successfully generated {} simplified alternatives", alternatives.len()),
+            "simplify".to_string(),
+            "info".to_string()
+        );
+        
+        Ok(alternatives)
+    } else {
+        Err("No completion returned.".to_string())
     }
 }
 
@@ -663,9 +831,10 @@ async fn ingest_from_url(
                         ingested_document.metadata.created_date.unwrap_or_default(),
                         ingested_document.content
                     );
-                    log_message!(app_handle, LOG_INFO, "Saving document to {}", path.to_string());
                     // Since we're in a closure, we need to spawn a task to do the async write
                     let app_handle_clone = app_handle.clone();
+                    log_message!(app_handle_clone, LOG_INFO, "Saving document to {}", path.to_string());
+                    
                     tauri::async_runtime::spawn(async move {
                         match tokio::fs::write(path.as_path().unwrap(), content).await {
                             Ok(_) => {
@@ -1292,7 +1461,9 @@ async fn load_openai_api_key_from_keyring(
         },
         ];
         
-        let provider_chat_model = provider.get_preferred_inference_model(&ai_model_name).await.map_err(|e| e.to_string())?;
+        let provider_chat_model = provider.get_preferred_inference_model(&ai_model_name)
+        .await
+        .map_err(|e| e.to_string())?;
         
         // Use the model name from preferences
         let chat_request = ChatCompletionRequest {
@@ -2440,6 +2611,7 @@ async fn load_openai_api_key_from_keyring(
                 reset_rag_and_context,
                 get_vibe_genre_context,
                 streaming_completion_from_context,
+                simplify_text,
                 ])
                 .run(tauri::generate_context!())
                 .expect("error while running tauri application");

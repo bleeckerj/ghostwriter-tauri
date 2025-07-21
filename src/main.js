@@ -26,6 +26,7 @@ import { BlockCursorDecoration } from './extensions/BlockCursorDecoration.js'
 import { BlockOverCursorDecoration } from './extensions/BlockOverCursorDecoration.js'
 import { enableTypingPauseDetection, disableTypingPauseDetection } from './typingPause.js';
 import { handleFontSizeChangeEvent, initializeFontSizeFromCSS } from './style_handler.js';
+import { initSimplify } from './simplify.js';
 
 
 let w = getCurrentWebviewWindow();
@@ -1934,6 +1935,8 @@ function emanateNavigableNodeToEditor(content) {
       }
     },
   })
+  
+  initSimplify(editor);
   
   const diagnostics = new Editor({
     element: document.querySelector('.diagnostics'),

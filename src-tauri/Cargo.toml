@@ -1,6 +1,6 @@
 [package]
 name = "Ghostwriter"
-version = "0.3.0"
+version = "0.3.5"
 description = "Ghostwriter/Vibewriter"
 authors = ["Julian Bleecker"]
 edition = "2021"
