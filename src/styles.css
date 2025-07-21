@@ -14,8 +14,8 @@ body {
   filter: drop-shadow(0 0 2em #ffe21c);
 }
 :root {
-  --paragraph-font-size: 1.8em;
-  font-family: Inter, ESKlarheitKurrentMono, Avenir, Helvetica, Arial, sans-serif;
+  --paragraph-font-size: 1.2em;
+  font-family: NYTCheltenham, Inter, ESKlarheitKurrentMono, Avenir, Helvetica, Arial, sans-serif;
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
@@ -60,13 +60,14 @@ a:hover {
 p {
   /* @apply text-[1.8em]; */
   font-size: var(--paragraph-font-size);
-  @apply font-[WarblerText];
+  @apply font-[NYTCheltenham];
   @apply leading-[1.25em];
+  @apply mb-3;
 }
 
 .dynamic-text-mark {
   @apply text-[1em];
-  @apply font-[WarblerText];
+  @apply font-[NYTCheltenham];
 }
 
 h1 {

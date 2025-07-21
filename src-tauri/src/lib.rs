@@ -36,6 +36,8 @@ use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
 use embeddings::EmbeddingGenerator;
 use document_store::DocumentStore;
 
+use serde::Deserialize;
+
 pub mod ai;
 pub mod ingest;
 pub mod document_store;
@@ -546,64 +548,41 @@ async fn streaming_completion_from_context(
 }
 
 // Helper function to parse alternatives from LLM response
-fn parse_alternatives(content: &str, expected_count: u8) -> Vec<String> {
-    let expected_count = expected_count as usize;
-    
-    // Try to split by numbered items pattern (e.g., "1.", "2.", etc.)
-    let numbered_pattern = (1..=expected_count)
-    .map(|i| format!("{}.", i))
-    .collect::<Vec<_>>();
-    
-    // Try different splitting strategies
-    let mut alternatives = Vec::new();
-    
-    // First try: Split by double newlines and numbered prefixes
-    for i in 1..=expected_count {
-        let pattern = format!("{}.", i);
-        if let Some(text) = content.split(&pattern).nth(1) {
-            // Take text until the next number or end
-            let end_pos = numbered_pattern.iter()
-            .filter_map(|p| {
-                if *p != pattern {
-                    text.find(p)
-                } else {
-                    None
-                }
-            })
-            .min()
-            .unwrap_or(text.len());
-            
-            let alt = text[..end_pos].trim().to_string();
-            if !alt.is_empty() {
-                alternatives.push(alt);
-            }
+#[derive(Deserialize)]
+struct Alternative {
+    text: String,
+}
+
+#[derive(Deserialize)]
+struct AlternativesResponse {
+    alternatives: Vec<Alternative>,
+}
+
+fn parse_alternatives(content: &str, _expected_count: u8) -> Vec<String> {
+    match serde_json::from_str::<AlternativesResponse>(content) {
+        Ok(parsed) => parsed
+            .alternatives
+            .into_iter()
+            .map(|alt| normalize_linebreaks(&alt.text))
+            .collect(),
+        Err(_e) => {
+            // Optionally log the error here
+            vec![normalize_linebreaks(content)]
         }
     }
-    
-    // If we found alternatives, return them
-    if alternatives.len() == expected_count {
-        return alternatives;
-    }
-    
-    // Second try: Split by single newlines and numbered prefixes
-    alternatives.clear();
-    for (i, line) in content.lines().enumerate() {
-        let prefix = format!("{}.", i + 1);
-        if line.trim().starts_with(&prefix) {
-            let alt = line.trim()[prefix.len()..].trim().to_string();
-            if !alt.is_empty() {
-                alternatives.push(alt);
-            }
-        }
-    }
-    
-    // If we found the expected number of alternatives, return them
-    if alternatives.len() == expected_count {
-        return alternatives;
-    }
-    
-    // Fallback: Just return the whole response as one alternative
-    vec![content.to_string()]
+}
+// Helper function to normalize line breaks in text
+/// This function replaces escaped newlines (\\n) with real newlines and removes any accidental
+/// double newlines. It can also handle other custom normalization rules if needed.
+fn normalize_linebreaks(text: &str) -> String {
+    // Replace escaped newlines (\\n) with real newlines
+    let mut s = text.replace("\\n", "\n");
+    // Optionally: Replace two or more spaces followed by a capital letter with a newline (for LLMs that fake line breaks)
+    // s = regex::Regex::new(r"  ([A-Z])").unwrap().replace_all(&s, "\n$1").to_string();
+    // Remove any accidental double newlines
+    s = s.replace("\r\n", "\n");
+    s = s.replace("\r", "\n");
+    s
 }
 
 #[tauri::command]
@@ -633,36 +612,54 @@ async fn simplify_text(
     );
     
     // Create the system prompt for simplification with the additional social media enhancement prompt
+    let mut alternatives_json = String::new();
+    for i in 1..=num_alternatives {
+        if i < num_alternatives {
+            alternatives_json.push_str(&format!("    {{\"option\": {}, \"text\": \"...\"}},\n", i));
+        } else {
+            alternatives_json.push_str(&format!("    {{\"option\": {}, \"text\": \"...\"}}\n", i));
+        }
+    }
+    
     let system_content = format!(
-        "You are an expert at simplifying text while maintaining its core meaning and information.\n\n\
-        I will give you a piece of text, and your task is to simplify it to approximately a Flesch-Kincaid \
-        Grade Level of {}.\n\n\
-        Provide {} distinct simplified alternatives, each preserving the core meaning but using \
-        simpler vocabulary, shorter sentences, and more straightforward grammar.\n\n\
-        Additionally, you are a skilled content editor tasked with transforming existing text into an engaging, evocative post \
+        "You are a skilled content editor tasked with transforming existing text into engaging, evocative alternatives \
         suitable for social media platforms or blogs, especially LinkedIn. Your goal is to reshape the text so it captures attention, \
-        evokes emotion, and encourages meaningful interaction. When editing, apply the following principles:\n\n\
-        Enhance the Hook:\n\
+        evokes emotion, and encourages meaningful interaction.\n\n\
+        I will give you a piece of text, and your task is to adjust it to approximately a Flesch-Kincaid \
+        Grade Level of {}.\n\n\
+        Provide {} distinct alternatives, each preserving the core meaning but using vocabulary, sentence length, and grammar suited to the specified grade level. \
+        Each alternative should be a fully formed, enhanced social media-style post that follows the editorial principles below.\n\n\
+        When you want a line break in the output, use two backslashes and an n (`\\n`) in the JSON string. Do not use real newlines inside the JSON values. \
+        Do not use emojis, hashtags, or any other social media formatting. \
+        Each alternative should be a complete, standalone post.\n\n\
+        When transforming the existing text into its alternatives, apply the following editorial principles:\n\n\
+        1. Enhance the Hook:\n\
         Begin the text by sharpening or adding a provocative, intriguing, or bold opening line that immediately piques curiosity or poses a rhetorical question.\n\n\
-        Inject Personal and Relatable Elements:\n\
-        Identify opportunities to emphasize personal anecdotes, authentic experiences, or relatable insights within the text. \
-        If absent, suggest or create brief illustrative moments to build emotional connection.\n\n\
-        Improve Formatting for Readability and Impact:\n\
-        Break up long paragraphs into shorter lines or single sentences with strategic line breaks to create rhythm and emphasize key points. \
-        Use a free-verse or poetic style when appropriate to increase flow and engagement.\n\n\
-        Refine Tone and Language:\n\
+        2. Inject Personal and Relatable Elements:\n\
+        Identify opportunities to emphasize personal anecdotes, authentic experiences, or relatable insights within the text. If absent, suggest or create brief illustrative moments to build emotional connection.\n\n\
+        3. Improve Formatting for Readability and Impact:\n\
+        Break up long paragraphs into shorter lines or single sentences with strategic line breaks to create rhythm and emphasize key points. Use a free-verse or poetic style when appropriate to increase flow and engagement.\n\n\
+        4. Refine Tone and Language:\n\
         Adjust language to be conversational, approachable, and inclusive. Replace overly formal or technical phrases with simple, clear, and heartfelt expressions.\n\n\
-        Remove or Replace Clichés:\n\
+        5. Remove or Replace Clichés:\n\
         Identify and eliminate generic motivational clichés or overused expressions, replacing them with fresh, original phrasing or nuanced insights.\n\n\
-        Strengthen the Closing:\n\
+        6. Strengthen the Closing:\n\
         Craft or enhance the ending with a thoughtful, reflective statement, a subtle call to action, or an open-ended question that invites readers to engage or contemplate further.\n\n\
-        Maintain Platform Awareness:\n\
+        7. Maintain Platform Awareness:\n\
         Ensure the transformed text fits the tone and expectations of the target platform (e.g., LinkedIn), blending professionalism with personal storytelling.\n\n\
-        Do not use emojis in any of the text, neither as headings or otherwise.\n\n\
+        Do not use emojis in any of the text, neither as headings nor within paragraphs.\n\n\
         Do not use the em dash (-).\n\n\
-        TEXT TO SIMPLIFY AND ENHANCE:\n{}", 
-        grade_level, num_alternatives, text
+        Output exactly the following JSON format with no extra text or explanation. Ensure all strings are valid JSON strings with properly escaped characters.\n\n\
+        {{\n\
+        \"alternatives\": [\n\
+        {}\n\
+        ]\n\
+        }}\n\n\
+        TEXT TO SIMPLIFY AND ENHANCE:\n{}",
+        grade_level, num_alternatives, alternatives_json, text
     );
+    
+    
     
     // Create the chat message
     let messages = vec![
@@ -696,10 +693,10 @@ async fn simplify_text(
     // Process the response
     if let Some(choice) = chat_response.choices.first() {
         let content = &choice.message.content;
-        
+        print!("Response content: {}", content);
         // Parse the alternatives from the response
         let alternatives = parse_alternatives(content, num_alternatives);
-        
+        print!("Parsed alternatives: {:?}", alternatives);
         // Log success
         new_logger.simple_log_message(
             format!("Successfully generated {} simplified alternatives", alternatives.len()),
@@ -1220,7 +1217,7 @@ async fn load_openai_api_key_from_keyring(
         
         Ok("Ingested file".to_string())
     }
-
+    
     #[tauri::command]
     async fn completion_from_context_rag_option(
         state: tauri::State<'_, AppState>,
@@ -1232,13 +1229,13 @@ async fn load_openai_api_key_from_keyring(
         let with_rag = with_rag.unwrap_or(true);
         
         //if with_rag {
-            (completion_from_context(state, app_handle, input).await)
+        (completion_from_context(state, app_handle, input).await)
         // } else {
         //     // If RAG is not requested, just call the completion function directly
         //     //completion_without_(state, app_handle, input).await
         // }
     }
-
+    
     // Modify the function return type to include timing
     #[tauri::command]
     async fn completion_from_context(
