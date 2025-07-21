@@ -378,10 +378,67 @@ async function restartVibeMode() {
 }
 
 async function searchSimilarity() {
+  // Wait until greetMsgEl is visible and has a width
+  function waitForGreetMsgElReady() {
+    return new Promise(resolve => {
+      function check() {
+        if (greetMsgEl.offsetWidth > 0) {
+          resolve();
+        } else {
+          setTimeout(check, 20);
+        }
+      }
+      check();
+    });
+  }
+  
+  await waitForGreetMsgElReady();
+  // --- Bear sign animation setup ---
+  const bear = "🧸";
+  const searchMsg = `${bear} I AM SEARCHING...   `;
+  let scrollIndex = 0;
+  
+  // Ensure greetMsgEl uses monospace and preserves spaces
+  greetMsgEl.style.fontFamily = "monospace";
+  greetMsgEl.style.whiteSpace = "pre";
+  
+  // Helper to measure how many monospace chars fit
+  function getVisibleCharCount() {
+    // Create a test span
+    const testSpan = document.createElement('span');
+    testSpan.style.visibility = 'hidden';
+    testSpan.style.position = 'absolute';
+    testSpan.style.fontFamily = greetMsgEl.style.fontFamily;
+    testSpan.style.fontSize = window.getComputedStyle(greetMsgEl).fontSize;
+    testSpan.textContent = "A".repeat(100);
+    document.body.appendChild(testSpan);
+    const charWidth = testSpan.offsetWidth / 100;
+    document.body.removeChild(testSpan);
+    console.log(`Char width: ${charWidth}`);
+    console.log(`GreetMsg width: ${greetMsgEl.offsetWidth}`);
+    return Math.max(8, Math.floor(greetMsgEl.offsetWidth / charWidth)); // minimum 8 chars
+  }
+  
+  // Animation interval
+  const bearInterval = setInterval(() => {
+    const visibleChars = getVisibleCharCount();
+    const padding = " ".repeat(visibleChars); // enough space to clear the area
+    const displayString = padding + searchMsg + padding;    
+    const start = scrollIndex % (displayString.length - visibleChars + 1);
+    let toShow = displayString.substring(start, start + visibleChars);
+    greetMsgEl.textContent = toShow;
+    scrollIndex++;
+  }, 80);
+  
+  // --- Run the search ---
   const results = await invoke("search_similarity", { 
     query: editor.getText(), 
     limit: 10 
   });
+  
+  // --- Stop the animation ---
+  clearInterval(bearInterval);
+  greetMsgEl.textContent = "Search complete!";
   
   // Add log entries for the results
   results.forEach((result, index) => {
@@ -400,6 +457,30 @@ async function searchSimilarity() {
   // Return the results for further use
   return results;
 }
+
+// async function searchSimilarity() {
+//   const results = await invoke("search_similarity", { 
+//     query: editor.getText(), 
+//     limit: 10 
+//   });
+
+//   // Add log entries for the results
+//   results.forEach((result, index) => {
+  //     addSimpleLogEntry({ 
+//       id: Date.now() + "_" + index,
+//       timestamp: Date.now(),
+//       message: `<div>
+//         <div class='border-l-[4px] border-amber-300 pl-2 pr-8 text-pretty font-["InputMono"]'>${result.chunk_text}</div>
+//         <div class='mt-2 px-2 py-1 rounded-sm bg-gray-800 w-fit'>${result.similarity_score}</div>
+//         <span class='font-bold'>${result.document_name}</span>
+//       </div>`,
+//       level: 'info'
+//     });
+//   });
+
+//   // Return the results for further use
+//   return results;
+// }
 
 async function completionFromContext() {
   let dots = 0;
