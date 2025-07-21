@@ -37,29 +37,33 @@
   <div class="resize-handle" title="Drag to resize"></div>
   
   <div class="diagnostics-scroll-area bg-transparent">
-    
-    
-    <div id="action-buttons" class="diagnostics-btn-area bg-gray-200 border-[0.5px] text-[0.8em] w-full rounded-sm pl-4">
+
+    <div class="bg-gray-200 bg-gray-200 border-[0.5px] rounded-sm mb-1">
+
+    <!-- First row of buttons -->
+    <div id="action-buttons-row-1" class="diagnostics-btn-area text-[0.8em] w-full  pl-4 flex gap-x-2 gap-y-1 min-h-[2.5em] mb-1">
       <span id="incant-btn" class="diagnostics-area-button enabled">INCNT</span>
       <span id="vibe-mode-btn" class="diagnostics-area-button enabled">VIBEM</span>
       <span id="streaming-mode-btn" class="diagnostics-area-button enabled">STRMC</span>
-      <div class="bg-gray-500 rounded-md w-[4px] h-full block mx-[-0.1em] translate-y-[0.1em] translate-x-[0.1em]"></div>
-      <span id="list-canon-btn" class="diagnostics-area-button enabled">CANON</span>
-      <span id="ingest-btn" class="diagnostics-area-button enabled">INGST</span>
-            <span id="ingest-url-btn" class="diagnostics-area-button enabled">NGSTU</span>
-
-      <span id="similarity-search-btn" class="hidden diagnostics-area-button enabled">SSRCH</span>
-      <span id="nudge-inline-action-item" class="hidden diagnostics-area-button enabled">NUDGE</span>
-      <span id="streaming-no-rag-mode-btn" class="diagnostics-area-button disabled">SPEAK</span>
+      <!-- <div class="bg-gray-500 rounded-md w-[4px] h-full block mx-[-0.1em] translate-y-[0.1em] translate-x-[0.1em]"></div> -->
+      <span id="nudge-inline-action-item" class="diagnostics-area-button enabled">NUDGE</span>
       <span id="simplify-btn" class="diagnostics-area-button disabled">SMLFY</span>
-            <span id="panel-toggle-btn" class="diagnostics-area-button enabled">PREFS</span>
+      <span id="panel-toggle-btn" class="diagnostics-area-button enabled">PREFS</span>
+
+    </div>
+    <!-- Second row of buttons -->
+    <div id="action-buttons-row-2" class="diagnostics-btn-area  text-[0.8em] w-full rounded-sm pl-4 flex gap-x-2 gap-y-1 min-h-[2.5em]">
+            <span id="list-canon-btn" class="diagnostics-area-button enabled">CANON</span>
+      <span id="ingest-btn" class="diagnostics-area-button enabled">INGST</span>
+      <span id="ingest-url-btn" class="diagnostics-area-button enabled">NGSTU</span>
+      <span id="similarity-search-btn" class="diagnostics-area-button enabled">SSRCH</span>
+      <span id="streaming-no-rag-mode-btn" class="diagnostics-area-button disabled">SPEAK</span>
       <span id="clear-diagnostics-btn" class="diagnostics-area-button enabled">CLEAR</span>
       <span id="reset-rag-btn" class="diagnostics-area-button enabled">RESET</span>
-
-      <span id="open-log-btn" class="diagnostics-area-button hidden enabled">LOGJS</span>
-      
+      <span id="open-log-btn" class="diagnostics-area-button enabled">LOGJS</span>
     </div>
-    <!-- <div id="completion-preview" class="text-[1em] font-mono mt-2 h-[20px]"></div> -->
+    </div>
+    <!-- diagnostics editor and the rest follow as before -->
     <div id="diagnostics-editor" class="diagnostics-content bg-blue-700 h-full bg-2 rounded-sm">
       <div class="diagnostics bg-blue-700 rounded-sm mb-2"></div>
     </div>

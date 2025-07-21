@@ -136,9 +136,15 @@ button {
 .greet-msg {
   @apply font-['InputMonoCondensed'];
   @apply text-[0.8em];
+  display: block;
+  width: 100%;
+  min-width: 20ch;
+  white-space: pre;
   flex-shrink: 0;
   position: relative;
   z-index:10;
+  transition: opacity 0.5s linear;
+  
 }
 
 
@@ -389,12 +395,12 @@ select#prefs-model-name option {
 
 
 /* .editor-content {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  font-family: 'WarblerText';
-  font-size: 1.2rem;
+display: flex;
+flex-direction: column;
+flex: 1 1 auto;
+min-height: 0;
+font-family: 'WarblerText';
+font-size: 1.2rem;
 } */
 
 
@@ -1224,15 +1230,15 @@ transition: opacity 0.2s ease-in-out;
   pointer-events: none;
   transform: translateY(-6px);
   animation: box-cursor-blink 1s steps(1) infinite;
-    box-shadow: 0 0 10px 2px #3137e925;
-
-background:
+  box-shadow: 0 0 10px 2px #3137e925;
+  
+  background:
   repeating-linear-gradient(
-    to bottom,
-    rgba(255,255,255,0.15) 0px,
-    rgba(255,255,255,0.15) 1px,
-    transparent 1px,
-    transparent 2px
+  to bottom,
+  rgba(255,255,255,0.15) 0px,
+  rgba(255,255,255,0.15) 1px,
+  transparent 1px,
+  transparent 2px
   ),
   #3137e9;
   /* This creates a 2px white line, 2px transparent, repeat */
@@ -1264,4 +1270,15 @@ background:
 
 .ProseMirror {
   caret-color: black;
+}
+
+@keyframes fade-in-out-2 {
+  0%   { opacity: 0.1; }
+  80%  { opacity: 1; }
+  90%  { opacity: 0.1; }
+  100% { opacity: 0.1; }
+}
+
+.greet-msg.searching-anim {
+  animation: fade-in-out-2 1.5s linear infinite;
 }
