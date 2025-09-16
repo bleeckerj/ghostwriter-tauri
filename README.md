@@ -1,4 +1,4 @@
-# ✍️ Ghostwriter™
+# Ghostwriter™
 
 > _Ghostwriter writes with you… not for you._
 
@@ -6,18 +6,18 @@ Ghostwriter is a locally-run, AI-inflected writing companion for creative thinke
 
 ---
 
-## 🔮 What is Ghostwriter?
+## What is Ghostwriter?
 
 Ghostwriter is:
 
-- 🧠 A **semantic memory engine** that embeds and indexes your writing corpus
-- ✨ A **context-aware autocompleter** powered by GPT-4, Ollama, or LM Studio
-- 💻 A **terminal-based co-writer** with a beautiful TUI interface
-- 🌀 A **creative challenge mode** the world's first patented real-time writing exercise-for-your-brain —  **Vibewriter™ Mode**
+- A **semantic memory engine** that embeds and indexes your writing corpus
+- A **context-aware autocompleter** powered by GPT-4, Ollama, or LM Studio
+- A **terminal-based co-writer** with a beautiful TUI interface
+- A **creative challenge mode** the world's first patented real-time writing exercise-for-your-brain —  **Vibewriter™ Mode**
 
 ---
 
-## 🌟 What Users Say
+## What Users Say
 
 <p>
   <strong>“Ghostwriter doesn’t just finish my sentences — it finishes my thoughts.”</strong><br/>
@@ -133,12 +133,12 @@ Ghostwriter is:
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
-### 📚 Personal Document Memory
+### Personal Document Memory
 Ghostwriter ingests `.txt`, `.md`, and `.pdf` files and embeds them with your text embedding model of choice (eg `text-embedding-ada-002`, `nomic-embed-text-v1.5-GGUF`, etc.) It stores embeddings in a local vector store and recalls them using cosine similarity to enrich and make relevant completions.
 
-### 🔍 Contextual Autocomplete
+### Contextual Autocomplete
 When you type a sentence fragment, Ghostwriter finds semantically similar excerpts from your archive and builds an LLM prompt with:
 - Recent conversation context
 - Matching documents from your own corpus
@@ -146,49 +146,70 @@ When you type a sentence fragment, Ghostwriter finds semantically similar excerp
 
 Then it completes your thought — in your own voice.
 
-### 🧠 Model Agnostic
+### Model Agnostic
 Choose your backend:
-- ✅ **OpenAI** (GPT-4o)
-- ✅ **Ollama** (run Gemma3, Qwen3, and other open-source models locally)
-- ✅ **LM Studio** (point to a local inference server)
+- **OpenAI** (GPT-4o)
+- **Google Deepmind** (Gemini forthcoming)
+- **Ollama** (run Gemma3, Qwen3, and other open-source models locally)
+- **LM Studio** (point to a local inference server)
 
 
-### ⏱️ Vibewriter™ Mode
+### Vibewriter™ Mode
 Vibewriter is a timed, improvisational writing mode where you and the Ghost take turns writing under a countdown. It's like tossing a medicine ball or rolling tractor tires with your AI muse..a high-intensity morning workout for your writer's brain.
 
-- ⏳ **Timed Turns**: Set a tempo (10s, 30s, 60s, etc.)
-- 👻 **Co-Authoring**: You write, the Ghost replies. Back and forth.
-- 🎷 **Like Jazz**: It's not about control. “Trade fours” with the AI in speed rounds, learning to keep the flow going!
-- 🌀 **A Creative Writing Workout - for your brain!**
+-- **Timed Turns**: Set a tempo (10s, 30s, 60s, etc.)
+-- **Co-Authoring**: You write, the Ghost replies. Back and forth.
+-- **Like Jazz**: It's not about control. “Trade fours” with the AI in speed rounds, learning to keep the flow going!
+-- **A Creative Writing Workout - for your brain!**
 
-🎯 Use it to: break creative ruts, riff toward new ideas, warm up for writing, or just have fun.
+Use it to: break creative ruts, riff toward new ideas, warm up for writing, or just have fun.
 
   <strong>“Vibewriter feels like jamming with my muse, the source, not wrestling with my own sometimes reluctant brain.”</strong><br/>
   <em>— Trevor R., Creative Writing Coach and Beta Tester</em><br/>
 
-  <strong>“I think Vibewriter is a stand-alone product, tbh. It's like the gymnasium everyone who writes needs to hit every morning! 🏋🏽‍♂️🧠”</strong><br/>
+  <strong>“I think Vibewriter is a stand-alone product, tbh. It's like the gymnasium everyone who writes needs to hit every morning!”</strong><br/>
   <em>— B. Pilshaw, Generalist & Tarot Muse</em><br/>
 
 
 > _“Vibewriter feels like jamming with a ghost version of my own brain.”_ — Beta tester
 
-### 🧾 Completion History & Logging
+### Completion History & Logging
 Every prompt, vector match, and AI response is saved as a `.jsonl` log entry so you can:
 - Audit and reflect on your writing flow
 - Fine-tune models later
 - Export your sessions
 
-🚀 What’s New in v1.3.0 “Luminous Echo”
-    ✍️ Vibewriter Mode
-    🧠 Model-Agnostic Inference Engine
-    🗂️ Multi-format Ingestion (TXT, MD, PDF, URL)
-    📜 Logging (JSONL)
-    🔍 Smart Chunking + Semantic Recall
-    💳 Corpus 2.0! Check in and out reference materials in real time!
+What’s New in v1.3.0 “Luminous Echo"
+  Vibewriter Mode
+  Model-Agnostic Inference Engine
+  Multi-format Ingestion (TXT, MD, PDF, URL)
+  Logging (JSONL)
+  Smart Chunking + Semantic Recall
+  Corpus 2.0! Check in and out reference materials in real time!
 
 ---
 
-🤖 How It Works
+- Ghostwriter uses both inference and RAG-based patterns for collaborating with you and keeping subject matter on point
+- Ingest: Drop .txt, .md, .epub, or .pdf files
+- URLs: Ingest from a URL
+- Chunk: Text is divided into overlapping chunks
+- Embed: Each chunk gets a unique vector representation produced by the appropriate embedding model
+- Store: Chunks + embeddings saved in a bundled vector store called a Corpus.
+- Corpus: You can have multiple Corpus databases, representing different projects.
+- Search: Input is embedded and matched to similar chunks
+- Prompt: LLM gets context-rich prompt to generate completion
+- Complete: You write — Ghostwriter listens and responds
+How It Works
+- Ghostwriter uses both inference and RAG-based patterns for collaborating with you and keeping subject matter on point
+- Ingest: Drop .txt, .md, .epub, or .pdf files
+- URLs: Ingest from a URL
+- Chunk: Text is divided into overlapping chunks
+- Embed: Each chunk gets a unique vector representation produced by the appropriate embedding model
+- Store: Chunks + embeddings saved in a bundled vector store called a Corpus.
+- Corpus: You can have multiple Corpus databases, representing different projects.
+- Search: Input is embedded and matched to similar chunks
+- Prompt: LLM gets context-rich prompt to generate completion
+- Complete: You write — Ghostwriter listens and responds
 - Ghostwriter uses both inference and RAG-based patterns for collaborating with you and keeping subject matter on point
 - Ingest: Drop .txt, .md, .epub, or .pdf files
 - URLs: Ingest from a URL
@@ -202,7 +223,13 @@ Every prompt, vector match, and AI response is saved as a `.jsonl` log entry so 
 
 ---
 
-## 🧭 Coming Soon
+- **Visual Memory Overlay** — see what Ghostwriter sees when it completes.
+- **Persona Cartridges** — swap in distinct voices, tonalities, and attitudes.
+- **Multi-agent Collaboration** — have Ghostwriter integrate with Conversseract, and form an Pilshaw compliant Oraculator network — all in one interface.
+## Coming Soon
+- **Visual Memory Overlay** — see what Ghostwriter sees when it completes.
+- **Persona Cartridges** — swap in distinct voices, tonalities, and attitudes.
+- **Multi-agent Collaboration** — have Ghostwriter integrate with Conversseract, and form an Pilshaw compliant Oraculator network — all in one interface.
 
 - **Visual Memory Overlay** — see what Ghostwriter sees when it completes.
 - **Persona Cartridges** — swap in distinct voices, tonalities, and attitudes.
