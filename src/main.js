@@ -3058,3 +3058,47 @@ function emanateNavigableNodeToEditor(content) {
       }
     });
   });
+  
+  // Tour function
+  function startAppTour() {
+    const tour = new Shepherd.Tour({
+      defaultStepOptions: {
+        scrollTo: true,
+        cancelIcon: { enabled: true },
+        classes: 'shadow-lg bg-white rounded',
+        modalOverlayOpeningPadding: 8,
+        modalOverlayOpeningRadius: 6
+      }
+    });
+
+    tour.addStep({
+      id: 'menu-btn',
+      text: 'This is the menu button. Click here to open the main menu.',
+      attachTo: { element: '#panel-toggle-btn', on: 'bottom' },
+      buttons: [
+        { text: 'Next', action: tour.next }
+      ]
+    });
+
+    tour.addStep({
+      id: 'editor',
+      text: 'This is your main editor. Type your content here.',
+      attachTo: { element: '#main-editor', on: 'top' },
+      buttons: [
+        { text: 'Back', action: tour.back },
+        { text: 'Next', action: tour.next }
+      ]
+    });
+
+    tour.addStep({
+      id: 'simplify-btn',
+      text: 'Use this button to simplify your text using AI.',
+      attachTo: { element: '#simplify-btn', on: 'bottom' },
+      buttons: [
+        { text: 'Back', action: tour.back },
+        { text: 'Done', action: tour.complete }
+      ]
+    });
+
+    tour.start();
+  }

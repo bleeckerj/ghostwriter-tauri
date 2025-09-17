@@ -1,8 +1,13 @@
+![Ghostwriter Screen Shot](https://nearfuturelaboratory.com/images/projects/2025/ghostwriter/ghostwriter-selectric-screen.webp)
+
+
 # Ghostwriter™
 
 > _Ghostwriter writes with you… not for you._
 
 Ghostwriter is a locally-run, AI-inflected writing companion for creative thinkers, speculative designers, and anyone who writes to discover what they think. It doesn’t just autocomplete — it remembers your writing, retrieves your voice, and responds like a future version of yourself.
+
+[https://nearfuturelaboratory.com/projects/2025/artificial-intelligence-designed-fictions-research-studio/ghostwriter/](https://nearfuturelaboratory.com/projects/2025/artificial-intelligence-designed-fictions-research-studio/ghostwriter/)
 
 ---
 
@@ -236,7 +241,7 @@ How It Works
 - **Multi-agent Collaboration** — have Ghostwriter integrate with Conversseract, and form an Pilshaw compliant Oraculator network — all in one interface.
 
 ---
-<!-- # Ghostwriter Tauri Tiptap Vanilla Javascript
+## Ghostwriter Tauri Tiptap Vanilla Javascript
 
 `2025-02-04T22:50:52-08:00`
 Seems to build. Communicates from front to back to front again.
@@ -244,12 +249,10 @@ Lots of fiddling to get it to work.
 Consists of Vite as well.
 Moved Tauri backend from the `Ghostwriter Tauri Sandbox` repo and after much fiddling got it to build — but haven't yet run everything through.
 
-
-
-# Tauri + Vanilla
+## Tauri + Vanilla JS
 
 This template should help get you started developing with Tauri in vanilla HTML, CSS and Javascript.
 
-## Recommended IDE Setup
+## Current and Recommended IDE Setup
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer) -->
+- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
